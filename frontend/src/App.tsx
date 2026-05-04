@@ -1,3 +1,5 @@
+import { name } from "@/shared";
+
 export default function App() {
-  return <div>Hello World</div>;
+  return <div>Hello {name}</div>;
 }
