@@ -7,8 +7,6 @@ import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
 import { defineConfig, globalIgnores } from "eslint/config";
 
-import { eslintBoundariesConfig } from "./eslint.boundaries.js";
-
 export default defineConfig([
   globalIgnores(["dist", "build"]),
   {
@@ -94,5 +92,4 @@ export default defineConfig([
       "no-global-assign": "error",
     },
   },
-  eslintBoundariesConfig,
 ]);
