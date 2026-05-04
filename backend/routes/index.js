@@ -7,6 +7,10 @@ const {
   CommentController,
   LikeController,
   FollowController,
+  SkillController,
+  ProjectController,
+  ApplicationController,
+  MemberController,
 } = require("../controllers");
 const authenticateToken = require("../middleware/auth");
 
@@ -26,12 +30,13 @@ const uploads = multer({ storage });
 router.post("/register", UserController.register);
 router.post("/login", UserController.login);
 router.get("/current", authenticateToken, UserController.current);
+router.get("/users", authenticateToken, UserController.searchUsers);
 router.get("/users/:id", authenticateToken, UserController.getUserById);
 router.put(
   "/users/:id",
   authenticateToken,
   uploads.single("avatar"),
-  UserController.updateUser
+  UserController.updateUser,
 );
 
 //Роуты для постов
@@ -45,7 +50,7 @@ router.post("/comments", authenticateToken, CommentController.createComment);
 router.delete(
   "/comments/:id",
   authenticateToken,
-  CommentController.deleteComment
+  CommentController.deleteComment,
 );
 
 //Роту для лайков
@@ -57,7 +62,60 @@ router.post("/follow", authenticateToken, FollowController.followUser);
 router.delete(
   "/unfollow/:id",
   authenticateToken,
-  FollowController.unfollowUser
+  FollowController.unfollowUser,
+);
+
+//Роуты для навыков
+router.get("/skills", authenticateToken, SkillController.list);
+router.post("/skills", authenticateToken, SkillController.create);
+
+//Роуты для проектов
+router.post("/projects", authenticateToken, ProjectController.createProject);
+router.get("/projects", authenticateToken, ProjectController.getAllProjects);
+router.get(
+  "/projects/:id",
+  authenticateToken,
+  ProjectController.getProjectById,
+);
+router.put("/projects/:id", authenticateToken, ProjectController.updateProject);
+router.delete(
+  "/projects/:id",
+  authenticateToken,
+  ProjectController.deleteProject,
+);
+
+//Роуты для заявок на проект
+router.post(
+  "/projects/:id/apply",
+  authenticateToken,
+  ApplicationController.apply,
+);
+router.get(
+  "/projects/:id/applications",
+  authenticateToken,
+  ApplicationController.listApplications,
+);
+router.patch(
+  "/applications/:id",
+  authenticateToken,
+  ApplicationController.decide,
+);
+router.delete(
+  "/applications/:id",
+  authenticateToken,
+  ApplicationController.cancel,
+);
+
+//Роуты для участников проекта
+router.get(
+  "/projects/:id/members",
+  authenticateToken,
+  MemberController.listMembers,
+);
+router.delete(
+  "/projects/:id/members/:userId",
+  authenticateToken,
+  MemberController.removeMember,
 );
 
 module.exports = router;

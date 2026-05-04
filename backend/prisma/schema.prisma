@@ -17,6 +17,7 @@ datasource db {
 model User {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   email       String    @unique
+  username    String    @unique
   password    String
   name        String?
   avatarUrl   String?
@@ -25,11 +26,19 @@ model User {
   updatedAt   DateTime  @updatedAt
   bio         String?
   location    String?
-  posts       Post[]
-  likes       Like[]
-  comments    Comment[]
-  followers   Follows[] @relation("following")
-  following   Follows[] @relation("follower")
+
+  posts     Post[]
+  likes     Like[]
+  comments  Comment[]
+  followers Follows[] @relation("following")
+  following Follows[] @relation("follower")
+
+  skillIds String[] @db.ObjectId
+  skills   Skill[]  @relation(fields: [skillIds], references: [id])
+
+  ownedProjects Project[]            @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  applications  ProjectApplication[]
 }
 
 model Follows {
@@ -65,4 +74,78 @@ model Comment {
   userId  String @db.ObjectId
   post    Post   @relation(fields: [postId], references: [id])
   postId  String @db.ObjectId
+}
+
+model Skill {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+
+  userIds String[] @db.ObjectId
+  users   User[]   @relation(fields: [userIds], references: [id])
+
+  projectIds String[]  @db.ObjectId
+  projects   Project[] @relation(fields: [projectIds], references: [id])
+}
+
+model Project {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  goals       String
+  status      ProjectStatus @default(OPEN)
+
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId String @db.ObjectId
+
+  requiredSkillIds String[] @db.ObjectId
+  requiredSkills   Skill[]  @relation(fields: [requiredSkillIds], references: [id])
+
+  members      ProjectMember[]
+  applications ProjectApplication[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectMember {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  project   Project    @relation(fields: [projectId], references: [id])
+  projectId String     @db.ObjectId
+  user      User       @relation(fields: [userId], references: [id])
+  userId    String     @db.ObjectId
+  role      MemberRole @default(MEMBER)
+  joinedAt  DateTime   @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model ProjectApplication {
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  project     Project           @relation(fields: [projectId], references: [id])
+  projectId   String            @db.ObjectId
+  applicant   User              @relation(fields: [applicantId], references: [id])
+  applicantId String            @db.ObjectId
+  message     String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  decidedAt   DateTime?
+
+  @@unique([projectId, applicantId])
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
 }
