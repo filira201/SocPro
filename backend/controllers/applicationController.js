@@ -134,9 +134,7 @@ const ApplicationController = {
       }
 
       if (application.status !== "PENDING") {
-        return res
-          .status(400)
-          .json({ error: "Заявка уже обработана" });
+        return res.status(400).json({ error: "Заявка уже обработана" });
       }
 
       if (status === "ACCEPTED") {

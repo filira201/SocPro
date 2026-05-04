@@ -36,7 +36,7 @@ router.put(
   "/users/:id",
   authenticateToken,
   uploads.single("avatar"),
-  UserController.updateUser
+  UserController.updateUser,
 );
 
 //Роуты для постов
@@ -50,7 +50,7 @@ router.post("/comments", authenticateToken, CommentController.createComment);
 router.delete(
   "/comments/:id",
   authenticateToken,
-  CommentController.deleteComment
+  CommentController.deleteComment,
 );
 
 //Роту для лайков
@@ -62,7 +62,7 @@ router.post("/follow", authenticateToken, FollowController.followUser);
 router.delete(
   "/unfollow/:id",
   authenticateToken,
-  FollowController.unfollowUser
+  FollowController.unfollowUser,
 );
 
 //Роуты для навыков
@@ -75,51 +75,47 @@ router.get("/projects", authenticateToken, ProjectController.getAllProjects);
 router.get(
   "/projects/:id",
   authenticateToken,
-  ProjectController.getProjectById
+  ProjectController.getProjectById,
 );
-router.put(
-  "/projects/:id",
-  authenticateToken,
-  ProjectController.updateProject
-);
+router.put("/projects/:id", authenticateToken, ProjectController.updateProject);
 router.delete(
   "/projects/:id",
   authenticateToken,
-  ProjectController.deleteProject
+  ProjectController.deleteProject,
 );
 
 //Роуты для заявок на проект
 router.post(
   "/projects/:id/apply",
   authenticateToken,
-  ApplicationController.apply
+  ApplicationController.apply,
 );
 router.get(
   "/projects/:id/applications",
   authenticateToken,
-  ApplicationController.listApplications
+  ApplicationController.listApplications,
 );
 router.patch(
   "/applications/:id",
   authenticateToken,
-  ApplicationController.decide
+  ApplicationController.decide,
 );
 router.delete(
   "/applications/:id",
   authenticateToken,
-  ApplicationController.cancel
+  ApplicationController.cancel,
 );
 
 //Роуты для участников проекта
 router.get(
   "/projects/:id/members",
   authenticateToken,
-  MemberController.listMembers
+  MemberController.listMembers,
 );
 router.delete(
   "/projects/:id/members/:userId",
   authenticateToken,
-  MemberController.removeMember
+  MemberController.removeMember,
 );
 
 module.exports = router;
