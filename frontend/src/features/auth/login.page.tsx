@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router";
 
 import { useLoginMutation } from "./api/auth.api";
-import { AuthHeader } from "./compose/auth-header";
+import { AuthLayout } from "./compose/auth-layout";
 import { loginSchema, type LoginFormValues } from "./model/schemas";
 import { selectIsAuthenticated } from "./model/selectors";
 
@@ -21,13 +21,11 @@ import {
   CardTitle,
 } from "@/shared/ui/kit/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/ui/kit/form";
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
 
 const inputClass = "h-11 text-base";
@@ -55,6 +53,11 @@ function LoginPage() {
     },
     mode: "onTouched",
   });
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+  } = form;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -78,77 +81,76 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <AuthHeader />
+    <AuthLayout>
+      <Card className="w-full max-w-md p-1 sm:p-4">
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl sm:text-2xl">Вход</CardTitle>
+          <CardDescription>
+            Введите почту и пароль для входа в аккаунт
+          </CardDescription>
+        </CardHeader>
 
-      <div className="flex flex-1 items-center justify-center px-3 py-6 sm:px-4 sm:py-8">
-        <Card className="w-full max-w-md p-1 sm:p-4">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl">Вход</CardTitle>
-            <CardDescription>
-              Введите почту и пароль для входа в аккаунт
-            </CardDescription>
-          </CardHeader>
+        <CardContent>
+          {state?.justRegistered ? (
+            <div
+              role="status"
+              className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
+            >
+              Регистрация прошла успешно. Войдите, используя свои данные.
+            </div>
+          ) : null}
 
-          <CardContent>
-            {state?.justRegistered ? (
-              <div
-                role="status"
-                className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
-              >
-                Регистрация прошла успешно. Войдите, используя свои данные.
-              </div>
-            ) : null}
-
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                aria-busy={isLoading}
-                className="grid gap-5"
-                noValidate
-              >
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Почта</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          autoComplete="email"
-                          placeholder="you@example.com"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            aria-busy={isLoading}
+            noValidate
+          >
+            <FieldGroup>
+              <Field data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="email">Почта</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className={inputClass}
+                  disabled={isLoading}
+                  aria-invalid={!!errors.email}
+                  {...register("email")}
                 />
+                {errors.email?.message ? (
+                  <FieldDescription
+                    role="alert"
+                    className="text-destructive"
+                  >
+                    {errors.email.message}
+                  </FieldDescription>
+                ) : null}
+              </Field>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Пароль</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          autoComplete="current-password"
-                          placeholder="••••••"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <Field data-invalid={!!errors.password}>
+                <FieldLabel htmlFor="password">Пароль</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••"
+                  className={inputClass}
+                  disabled={isLoading}
+                  aria-invalid={!!errors.password}
+                  {...register("password")}
                 />
+                {errors.password?.message ? (
+                  <FieldDescription
+                    role="alert"
+                    className="text-destructive"
+                  >
+                    {errors.password.message}
+                  </FieldDescription>
+                ) : null}
+              </Field>
 
+              <Field>
                 <Button
                   type="submit"
                   size="lg"
@@ -166,29 +168,24 @@ function LoginPage() {
                 </Button>
 
                 {globalError ? (
-                  <p
+                  <FieldDescription
                     role="alert"
-                    className="text-center text-sm text-destructive"
+                    className="text-center text-destructive"
                   >
                     {globalError}
-                  </p>
+                  </FieldDescription>
                 ) : null}
-              </form>
-            </Form>
 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Нет аккаунта?{" "}
-              <Link
-                to={ROUTES.REGISTER}
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                Зарегистрироваться
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                <FieldDescription className="text-center">
+                  Нет аккаунта?{" "}
+                  <Link to={ROUTES.REGISTER}>Зарегистрироваться</Link>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </AuthLayout>
   );
 }
 

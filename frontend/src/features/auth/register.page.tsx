@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 
 import { useRegisterMutation } from "./api/auth.api";
-import { AuthHeader } from "./compose/auth-header";
+import { AuthLayout } from "./compose/auth-layout";
 import { registerSchema, type RegisterFormValues } from "./model/schemas";
 import { selectIsAuthenticated } from "./model/selectors";
 
@@ -21,13 +21,11 @@ import {
   CardTitle,
 } from "@/shared/ui/kit/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/ui/kit/form";
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
 
 const inputClass = "h-11 text-base";
@@ -49,6 +47,11 @@ function RegisterPage() {
     },
     mode: "onTouched",
   });
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+  } = form;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -88,118 +91,123 @@ function RegisterPage() {
   };
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <AuthHeader />
+    <AuthLayout>
+      <Card className="w-full max-w-md p-1 sm:p-4">
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl sm:text-2xl">Регистрация</CardTitle>
+          <CardDescription>
+            Создайте аккаунт, чтобы пользоваться платформой
+          </CardDescription>
+        </CardHeader>
 
-      <div className="flex flex-1 items-center justify-center px-3 py-6 sm:px-4 sm:py-8">
-        <Card className="w-full max-w-md p-1 sm:p-4">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl">Регистрация</CardTitle>
-            <CardDescription>
-              Создайте аккаунт, чтобы пользоваться платформой
-            </CardDescription>
-          </CardHeader>
+        <CardContent>
+          {globalError ? (
+            <div
+              role="alert"
+              className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {globalError}
+            </div>
+          ) : null}
 
-          <CardContent>
-            {globalError ? (
-              <div
-                role="alert"
-                className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              >
-                {globalError}
-              </div>
-            ) : null}
-
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                aria-busy={isLoading}
-                className="grid gap-5"
-                noValidate
-              >
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Почта</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          autoComplete="email"
-                          placeholder="you@example.com"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            aria-busy={isLoading}
+            noValidate
+          >
+            <FieldGroup>
+              <Field data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="email">Почта</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className={inputClass}
+                  disabled={isLoading}
+                  aria-invalid={!!errors.email}
+                  {...register("email")}
                 />
+                {errors.email?.message ? (
+                  <FieldDescription
+                    role="alert"
+                    className="text-destructive"
+                  >
+                    {errors.email.message}
+                  </FieldDescription>
+                ) : null}
+              </Field>
 
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Имя пользователя</FormLabel>
-                      <FormControl>
-                        <Input
-                          autoComplete="username"
-                          placeholder="имя_пользователя"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <Field data-invalid={!!errors.username}>
+                <FieldLabel htmlFor="username">Имя пользователя</FieldLabel>
+                <Input
+                  id="username"
+                  autoComplete="username"
+                  placeholder="имя_пользователя"
+                  className={inputClass}
+                  disabled={isLoading}
+                  aria-invalid={!!errors.username}
+                  {...register("username")}
                 />
+                {errors.username?.message ? (
+                  <FieldDescription
+                    role="alert"
+                    className="text-destructive"
+                  >
+                    {errors.username.message}
+                  </FieldDescription>
+                ) : null}
+              </Field>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Пароль</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          autoComplete="new-password"
-                          placeholder="••••••"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Field className="grid gap-4 sm:grid-cols-2">
+                <Field data-invalid={!!errors.password}>
+                  <FieldLabel htmlFor="password">Пароль</FieldLabel>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••"
+                    className={inputClass}
+                    disabled={isLoading}
+                    aria-invalid={!!errors.password}
+                    {...register("password")}
+                  />
+                  {errors.password?.message ? (
+                    <FieldDescription
+                      role="alert"
+                      className="text-destructive"
+                    >
+                      {errors.password.message}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
 
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Повторите пароль</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          autoComplete="new-password"
-                          placeholder="••••••"
-                          className={inputClass}
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <Field data-invalid={!!errors.confirmPassword}>
+                  <FieldLabel htmlFor="confirm-password">
+                    Повторите пароль
+                  </FieldLabel>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••"
+                    className={inputClass}
+                    disabled={isLoading}
+                    aria-invalid={!!errors.confirmPassword}
+                    {...register("confirmPassword")}
+                  />
+                  {errors.confirmPassword?.message ? (
+                    <FieldDescription
+                      role="alert"
+                      className="text-destructive"
+                    >
+                      {errors.confirmPassword.message}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
+              </Field>
 
+              <Field>
                 <Button
                   type="submit"
                   size="lg"
@@ -215,22 +223,16 @@ function RegisterPage() {
                     "Зарегистрироваться"
                   )}
                 </Button>
-              </form>
-            </Form>
 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Уже есть аккаунт?{" "}
-              <Link
-                to={ROUTES.LOGIN}
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                Войти
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                <FieldDescription className="text-center">
+                  Уже есть аккаунт? <Link to={ROUTES.LOGIN}>Войти</Link>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </AuthLayout>
   );
 }
 
