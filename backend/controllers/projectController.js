@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
+const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const PROJECT_STATUSES = new Set(["OPEN", "IN_PROGRESS", "CLOSED"]);
@@ -47,7 +48,7 @@ const ProjectController = {
         },
       });
 
-      res.status(201).json(project);
+      res.status(201).json(sanitizeUser(project));
     } catch (error) {
       console.error("Error in createProject", error);
       res.status(500).json({ error: "Internal server error" });
@@ -103,7 +104,7 @@ const ProjectController = {
         prisma.project.count({ where: finalWhere }),
       ]);
 
-      res.json({ items, total, take, skip });
+      res.json({ items: sanitizeUser(items), total, take, skip });
     } catch (error) {
       console.error("Error in getAllProjects", error);
       res.status(500).json({ error: "Internal server error" });
@@ -152,11 +153,13 @@ const ProjectController = {
       }
 
       res.json({
-        ...project,
+        ...sanitizeUser(project),
         isOwner,
         isMember,
         myApplication,
-        ...(applications !== undefined ? { applications } : {}),
+        ...(applications !== undefined
+          ? { applications: sanitizeUser(applications) }
+          : {}),
       });
     } catch (error) {
       console.error("Error in getProjectById", error);
@@ -213,7 +216,7 @@ const ProjectController = {
         },
       });
 
-      res.json(updated);
+      res.json(sanitizeUser(updated));
     } catch (error) {
       console.error("Error in updateProject", error);
       res.status(500).json({ error: "Internal server error" });

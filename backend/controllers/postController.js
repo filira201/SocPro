@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
+const { sanitizeUser } = require("./_utils");
 
 const PostController = {
   createPost: async (req, res) => {
@@ -40,7 +41,7 @@ const PostController = {
       });
 
       const postWithLikeInfo = posts.map((post) => ({
-        ...post,
+        ...sanitizeUser(post),
         likedByUser: post.likes.some((like) => like.userId === userId),
       }));
 
@@ -73,7 +74,7 @@ const PostController = {
       }
 
       const postWithLikeInfo = {
-        ...post,
+        ...sanitizeUser(post),
         likedByUser: post.likes.some((like) => like.userId === userId),
       };
 

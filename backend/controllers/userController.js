@@ -5,10 +5,19 @@ const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 
+const {
+  validateRegister,
+  validateLogin,
+  sanitizeUser,
+} = require("./_utils");
+
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 const parseCsvIds = (value) => {
-  if (!value) return [];
+  if (!value) {
+    return [];
+  }
+
   return String(value)
     .split(",")
     .map((s) => s.trim())
@@ -17,12 +26,11 @@ const parseCsvIds = (value) => {
 
 const UserController = {
   register: async (req, res) => {
-    const { email, username, password, name } = req.body;
+    const { email, username, password } = req.body;
 
-    if (!email || !username || !password) {
-      return res
-        .status(400)
-        .json({ error: "Email, username и пароль обязательны" });
+    const validationError = validateRegister({ email, username, password });
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
 
     try {
@@ -34,9 +42,12 @@ const UserController = {
         if (existingUser.email === email) {
           return res
             .status(400)
-            .json({ error: "Пользователь с таким email уже существует" });
+            .json({ error: "Пользователь с такой почтой уже существует" });
         }
-        return res.status(400).json({ error: "Username уже занят" });
+
+        return res
+          .status(400)
+          .json({ error: "Имя пользователя уже занято" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -51,12 +62,11 @@ const UserController = {
           email,
           username,
           password: hashedPassword,
-          name: name || username,
           avatarUrl: `/uploads/${avatarName}`,
         },
       });
 
-      res.json(user);
+      res.json(sanitizeUser(user));
     } catch (error) {
       console.error("Error in register", error);
       res.status(500).json({ error: "Internal server error" });
@@ -66,21 +76,22 @@ const UserController = {
   login: async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Все поля обязательны" });
+    const validationError = validateLogin({ email, password });
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
 
     try {
       const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
-        return res.status(400).json({ error: "Неверный логин или пароль" });
+        return res.status(400).json({ error: "Неверная почта или пароль" });
       }
 
       const valid = await bcrypt.compare(password, user.password);
 
       if (!valid) {
-        return res.status(400).json({ error: "Неверный логин или пароль" });
+        return res.status(400).json({ error: "Неверная почта или пароль" });
       }
 
       const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY);
@@ -118,7 +129,10 @@ const UserController = {
         where: { AND: [{ followerId: userId }, { followingId: id }] },
       });
 
-      res.json({ ...user, isFollowing: Boolean(isFollowing) });
+      res.json({
+        ...sanitizeUser(user),
+        isFollowing: Boolean(isFollowing),
+      });
     } catch (error) {
       console.error("Error in getUserById", error);
       res.status(500).json({ error: "Internal server error" });
@@ -127,7 +141,7 @@ const UserController = {
 
   updateUser: async (req, res) => {
     const { id } = req.params;
-    const { email, username, name, dateOfBirth, bio, location } = req.body;
+    const { email, username, dateOfBirth, bio, location } = req.body;
 
     let filePath;
 
@@ -148,6 +162,10 @@ const UserController = {
 
     try {
       if (email) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+          return res.status(400).json({ error: "Некорректная почта" });
+        }
+
         const exisingUser = await prisma.user.findFirst({
           where: { email },
         });
@@ -158,12 +176,18 @@ const UserController = {
       }
 
       if (username) {
+        if (!/^[a-zA-Z0-9_-]{3,32}$/.test(String(username))) {
+          return res
+            .status(400)
+            .json({ error: "Имя пользователя: 3-32 символа, латиница/цифры/_-" });
+        }
+
         const existingByUsername = await prisma.user.findFirst({
           where: { username },
         });
 
         if (existingByUsername && existingByUsername.id !== id) {
-          return res.status(400).json({ error: "Username уже занят" });
+          return res.status(400).json({ error: "Имя пользователя уже занято" });
         }
       }
 
@@ -172,7 +196,6 @@ const UserController = {
         data: {
           email: email || undefined,
           username: username || undefined,
-          name: name || undefined,
           avatarUrl: filePath ? `/${filePath}` : undefined,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           bio: bio || undefined,
@@ -182,7 +205,7 @@ const UserController = {
         include: { skills: true },
       });
 
-      res.json(user);
+      res.json(sanitizeUser(user));
     } catch (error) {
       console.error("Error in updateUser", error);
       res.status(500).json({ error: "Internal server error" });
@@ -211,10 +234,10 @@ const UserController = {
       if (!user) {
         return res
           .status(400)
-          .json({ error: "Не удалось найти пользователся" });
+          .json({ error: "Не удалось найти пользователя" });
       }
 
-      res.json(user);
+      res.json(sanitizeUser(user));
     } catch (error) {
       console.error("Error in get current", error);
       res.status(500).json({ error: "Internal server error" });
@@ -235,6 +258,7 @@ const UserController = {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
+
         if (names.length) {
           const matched = await prisma.skill.findMany({
             where: { name: { in: names, mode: "insensitive" } },
@@ -250,10 +274,7 @@ const UserController = {
 
       if (q) {
         where.AND.push({
-          OR: [
-            { username: { contains: String(q), mode: "insensitive" } },
-            { name: { contains: String(q), mode: "insensitive" } },
-          ],
+          username: { contains: String(q), mode: "insensitive" },
         });
       }
 
@@ -276,9 +297,7 @@ const UserController = {
         prisma.user.count({ where: finalWhere }),
       ]);
 
-      const sanitized = items.map(({ password, ...rest }) => rest);
-
-      res.json({ items: sanitized, total, take, skip });
+      res.json({ items: sanitizeUser(items), total, take, skip });
     } catch (error) {
       console.error("Error in searchUsers", error);
       res.status(500).json({ error: "Internal server error" });

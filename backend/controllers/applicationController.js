@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
+const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -99,7 +100,7 @@ const ApplicationController = {
         orderBy: { createdAt: "desc" },
       });
 
-      res.json(applications);
+      res.json(sanitizeUser(applications));
     } catch (error) {
       console.error("Error in listApplications", error);
       res.status(500).json({ error: "Internal server error" });
