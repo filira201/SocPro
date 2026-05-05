@@ -5,8 +5,11 @@ import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export function AuthHeader() {
   return (
-    <header className="flex items-center justify-between border-b bg-background px-4 py-3">
-      <Link to={ROUTES.HOME} className="font-heading text-lg font-medium">
+    <header className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-3 py-3 sm:px-4">
+      <Link
+        to={ROUTES.HOME}
+        className="min-w-0 truncate font-heading text-base font-medium sm:text-lg"
+      >
         СоцПро
       </Link>
 

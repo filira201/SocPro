@@ -20,23 +20,31 @@ export function AppHeader() {
   };
 
   return (
-    <header className="flex items-center justify-between border-b bg-background px-4 py-3">
-      <Link to={ROUTES.POSTS} className="font-heading text-lg font-medium">
+    <header className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-3 py-3 sm:px-4">
+      <Link
+        to={ROUTES.POSTS}
+        className="min-w-0 truncate font-heading text-base font-medium sm:text-lg"
+      >
         СоцПро
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
         {currentUser ? (
-          <span className="text-sm text-muted-foreground">
+          <span className="max-w-24 truncate text-sm text-muted-foreground sm:max-w-48">
             @{currentUser.username}
           </span>
         ) : null}
 
         <ThemeToggle />
 
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          aria-label="Выйти"
+        >
           <LogOut />
-          Выйти
+          <span className="hidden sm:inline">Выйти</span>
         </Button>
       </div>
     </header>

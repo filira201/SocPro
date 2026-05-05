@@ -78,13 +78,13 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-dvh flex flex-col">
       <AuthHeader />
 
-      <div className="flex flex-1 items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md p-2 sm:p-4">
+      <div className="flex flex-1 items-center justify-center px-3 py-6 sm:px-4 sm:py-8">
+        <Card className="w-full max-w-md p-1 sm:p-4">
           <CardHeader>
-            <CardTitle className="text-2xl">Вход</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Вход</CardTitle>
             <CardDescription>
               Введите почту и пароль для входа в аккаунт
             </CardDescription>
