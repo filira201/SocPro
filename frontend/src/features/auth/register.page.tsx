@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 
 import { useRegisterMutation } from "./api/auth.api";
+import { AuthHeader } from "./compose/auth-header";
 import { registerSchema, type RegisterFormValues } from "./model/schemas";
 import { selectIsAuthenticated } from "./model/selectors";
 
@@ -87,144 +88,148 @@ function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md p-2 sm:p-4">
-        <CardHeader>
-          <CardTitle className="text-2xl">Регистрация</CardTitle>
-          <CardDescription>
-            Создайте аккаунт, чтобы пользоваться платформой
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex flex-col">
+      <AuthHeader />
 
-        <CardContent>
-          {globalError ? (
-            <div
-              role="alert"
-              className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {globalError}
-            </div>
-          ) : null}
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md p-2 sm:p-4">
+          <CardHeader>
+            <CardTitle className="text-2xl">Регистрация</CardTitle>
+            <CardDescription>
+              Создайте аккаунт, чтобы пользоваться платформой
+            </CardDescription>
+          </CardHeader>
 
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              aria-busy={isLoading}
-              className="grid gap-5"
-              noValidate
-            >
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Почта</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Имя пользователя</FormLabel>
-                    <FormControl>
-                      <Input
-                        autoComplete="username"
-                        placeholder="имя_пользователя"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Пароль</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="••••••"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Повторите пароль</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="••••••"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                size="lg"
-                className={buttonClass}
-                disabled={isLoading}
+          <CardContent>
+            {globalError ? (
+              <div
+                role="alert"
+                className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    Создаём аккаунт...
-                  </>
-                ) : (
-                  "Зарегистрироваться"
-                )}
-              </Button>
-            </form>
-          </Form>
+                {globalError}
+              </div>
+            ) : null}
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Уже есть аккаунт?{" "}
-            <Link
-              to={ROUTES.LOGIN}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Войти
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                aria-busy={isLoading}
+                className="grid gap-5"
+                noValidate
+              >
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Почта</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Имя пользователя</FormLabel>
+                      <FormControl>
+                        <Input
+                          autoComplete="username"
+                          placeholder="имя_пользователя"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Пароль</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          autoComplete="new-password"
+                          placeholder="••••••"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Повторите пароль</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          autoComplete="new-password"
+                          placeholder="••••••"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  className={buttonClass}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Создаём аккаунт...
+                    </>
+                  ) : (
+                    "Зарегистрироваться"
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Уже есть аккаунт?{" "}
+              <Link
+                to={ROUTES.LOGIN}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Войти
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

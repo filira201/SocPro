@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router";
 
 import { useLoginMutation } from "./api/auth.api";
+import { AuthHeader } from "./compose/auth-header";
 import { loginSchema, type LoginFormValues } from "./model/schemas";
 import { selectIsAuthenticated } from "./model/selectors";
 
@@ -77,112 +78,116 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md p-2 sm:p-4">
-        <CardHeader>
-          <CardTitle className="text-2xl">Вход</CardTitle>
-          <CardDescription>
-            Введите почту и пароль для входа в аккаунт
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex flex-col">
+      <AuthHeader />
 
-        <CardContent>
-          {state?.justRegistered ? (
-            <div
-              role="status"
-              className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
-            >
-              Регистрация прошла успешно. Войдите, используя свои данные.
-            </div>
-          ) : null}
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md p-2 sm:p-4">
+          <CardHeader>
+            <CardTitle className="text-2xl">Вход</CardTitle>
+            <CardDescription>
+              Введите почту и пароль для входа в аккаунт
+            </CardDescription>
+          </CardHeader>
 
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              aria-busy={isLoading}
-              className="grid gap-5"
-              noValidate
-            >
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Почта</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Пароль</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="current-password"
-                        placeholder="••••••"
-                        className={inputClass}
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                size="lg"
-                className={buttonClass}
-                disabled={isLoading}
+          <CardContent>
+            {state?.justRegistered ? (
+              <div
+                role="status"
+                className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    Вход...
-                  </>
-                ) : (
-                  "Войти"
-                )}
-              </Button>
+                Регистрация прошла успешно. Войдите, используя свои данные.
+              </div>
+            ) : null}
 
-              {globalError ? (
-                <p
-                  role="alert"
-                  className="text-center text-sm text-destructive"
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                aria-busy={isLoading}
+                className="grid gap-5"
+                noValidate
+              >
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Почта</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Пароль</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          autoComplete="current-password"
+                          placeholder="••••••"
+                          className={inputClass}
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  className={buttonClass}
+                  disabled={isLoading}
                 >
-                  {globalError}
-                </p>
-              ) : null}
-            </form>
-          </Form>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin" />
+                      Вход...
+                    </>
+                  ) : (
+                    "Войти"
+                  )}
+                </Button>
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Нет аккаунта?{" "}
-            <Link
-              to={ROUTES.REGISTER}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Зарегистрироваться
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+                {globalError ? (
+                  <p
+                    role="alert"
+                    className="text-center text-sm text-destructive"
+                  >
+                    {globalError}
+                  </p>
+                ) : null}
+              </form>
+            </Form>
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Нет аккаунта?{" "}
+              <Link
+                to={ROUTES.REGISTER}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Зарегистрироваться
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
