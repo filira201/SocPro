@@ -4,10 +4,10 @@ import { AppHeader } from "@/features/navigation";
 
 export function ProtectedLayout() {
   return (
-    <div className="h-dvh min-h-dvh flex flex-col overflow-hidden">
+    <div className="min-h-dvh flex flex-col">
       <AppHeader />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <ProtectedRoute />
       </div>
     </div>

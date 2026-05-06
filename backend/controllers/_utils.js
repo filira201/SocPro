@@ -1,5 +1,18 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,32}$/;
+const USERNAME_REGEX = /^[\p{L}\p{N}_-]{3,32}$/u;
+
+/** Multer often delivers UTF-8 names as latin1; normalize for UI / DB originalName. */
+function decodeUploadOriginalName(name) {
+  if (!name || typeof name !== "string") {
+    return "";
+  }
+
+  try {
+    return Buffer.from(name, "latin1").toString("utf8");
+  } catch {
+    return name;
+  }
+}
 
 function validateRegister({ email, username, password }) {
   if (!email || !EMAIL_REGEX.test(String(email))) {
@@ -7,7 +20,7 @@ function validateRegister({ email, username, password }) {
   }
 
   if (!username || !USERNAME_REGEX.test(String(username))) {
-    return "Имя пользователя: 3-32 символа, латиница/цифры/_-";
+    return "Имя пользователя: 3-32 символа, буквы/цифры/_-";
   }
 
   if (!password || String(password).length < 6) {
@@ -62,6 +75,7 @@ function sanitizeUser(value) {
 module.exports = {
   EMAIL_REGEX,
   USERNAME_REGEX,
+  decodeUploadOriginalName,
   validateRegister,
   validateLogin,
   sanitizeUser,

@@ -1,7 +1,39 @@
+import { Loader2 } from "lucide-react";
+import { Link, useParams } from "react-router";
+
+import { PostCard, useGetPostByIdQuery } from "@/features/posts";
+import { ROUTES } from "@/shared/model/routes";
+
 function PostPage() {
+  const { postId } = useParams();
+  const { data: post, isLoading } = useGetPostByIdQuery(postId ?? "", {
+    skip: !postId,
+  });
+
   return (
     <section className="w-full max-w-3xl mx-auto px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
-      <h1 className="text-xl font-semibold sm:text-2xl">Публикация</h1>
+      <div className="grid gap-4">
+        <Link
+          to={ROUTES.POSTS}
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Назад к ленте
+        </Link>
+
+        {isLoading ? (
+          <div className="flex justify-center py-8 text-muted-foreground">
+            <Loader2 className="animate-spin" />
+          </div>
+        ) : null}
+
+        {post ? <PostCard post={post} showCommentsInitially /> : null}
+
+        {!isLoading && !post ? (
+          <p className="rounded-xl border bg-card p-4 text-center text-muted-foreground">
+            Пост не найден
+          </p>
+        ) : null}
+      </div>
     </section>
   );
 }

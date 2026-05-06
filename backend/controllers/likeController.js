@@ -1,11 +1,25 @@
 const { prisma } = require("../prisma/prismaClient");
 
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+async function getLikeState(postId, userId) {
+  const [likeCount, likedByUser] = await Promise.all([
+    prisma.like.count({ where: { postId } }),
+    prisma.like.findFirst({ where: { postId, userId } }),
+  ]);
+
+  return {
+    likeCount,
+    likedByUser: Boolean(likedByUser),
+  };
+}
+
 const LikeController = {
   likePost: async (req, res) => {
     const { postId } = req.body;
     const userId = req.user.userId;
 
-    if (!postId) {
+    if (!postId || !OBJECT_ID_REGEX.test(postId)) {
       return res.status(400).json({ error: "Все поля обязательны" });
     }
 
@@ -22,7 +36,9 @@ const LikeController = {
         data: { postId, userId },
       });
 
-      res.json(like);
+      const state = await getLikeState(postId, userId);
+
+      res.json({ ...like, ...state });
     } catch (error) {
       console.error("Error in likePost", error);
       res.status(500).json({ error: "Internal server error" });
@@ -33,7 +49,7 @@ const LikeController = {
     const { id } = req.params;
     const userId = req.user.userId;
 
-    if (!id) {
+    if (!id || !OBJECT_ID_REGEX.test(id)) {
       return res.status(400).json({ error: "Вы уже поставили дизлайк" });
     }
 
@@ -50,7 +66,9 @@ const LikeController = {
         where: { postId: id, userId },
       });
 
-      res.json(like);
+      const state = await getLikeState(id, userId);
+
+      res.json({ ...like, ...state });
     } catch (error) {
       console.error("Error in unlikePost", error);
       res.status(500).json({ error: "Internal server error" });

@@ -1,6 +1,8 @@
 const express = require("express");
+const path = require("path");
 const router = express.Router();
 const multer = require("multer");
+const { decodeUploadOriginalName } = require("../controllers/_utils");
 const {
   UserController,
   PostController,
@@ -20,7 +22,15 @@ const destination = "uploads";
 const storage = multer.diskStorage({
   destination,
   filename: function (req, file, cb) {
-    cb(null, file.originalname);
+    const decoded = decodeUploadOriginalName(file.originalname);
+    let ext = path.extname(decoded);
+
+    if (!ext) {
+      ext = path.extname(file.originalname) || "";
+    }
+
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${uniqueSuffix}${ext}`);
   },
 });
 
@@ -40,13 +50,40 @@ router.put(
 );
 
 //Роуты для постов
-router.post("/posts", authenticateToken, PostController.createPost);
+router.post(
+  "/posts",
+  authenticateToken,
+  uploads.array("files"),
+  PostController.createPost,
+);
 router.get("/posts", authenticateToken, PostController.getAllPosts);
 router.get("/posts/:id", authenticateToken, PostController.getPostById);
+router.get(
+  "/posts/:id/comments",
+  authenticateToken,
+  CommentController.listComments,
+);
+router.patch(
+  "/posts/:id",
+  authenticateToken,
+  uploads.array("files"),
+  PostController.updatePost,
+);
 router.delete("/posts/:id", authenticateToken, PostController.deletePost);
 
 //Роуты для комментариев
-router.post("/comments", authenticateToken, CommentController.createComment);
+router.post(
+  "/comments",
+  authenticateToken,
+  uploads.array("files"),
+  CommentController.createComment,
+);
+router.patch(
+  "/comments/:id",
+  authenticateToken,
+  uploads.array("files"),
+  CommentController.updateComment,
+);
 router.delete(
   "/comments/:id",
   authenticateToken,

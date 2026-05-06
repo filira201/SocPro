@@ -49,13 +49,15 @@ model Follows {
 }
 
 model Post {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  content   String
-  author    User      @relation(fields: [authorId], references: [id])
-  authorId  String    @db.ObjectId
-  likes     Like[]
-  comments  Comment[]
-  createdAt DateTime  @default(now())
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  content     String
+  author      User             @relation(fields: [authorId], references: [id])
+  authorId    String           @db.ObjectId
+  likes       Like[]
+  comments    Comment[]
+  attachments PostAttachment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Like {
@@ -64,15 +66,46 @@ model Like {
   userId String @db.ObjectId
   post   Post   @relation(fields: [postId], references: [id])
   postId String @db.ObjectId
+
+  @@unique([userId, postId])
 }
 
 model Comment {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
-  content String
-  user    User   @relation(fields: [userId], references: [id])
-  userId  String @db.ObjectId
-  post    Post   @relation(fields: [postId], references: [id])
-  postId  String @db.ObjectId
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  content     String
+  user        User                @relation(fields: [userId], references: [id])
+  userId      String              @db.ObjectId
+  post        Post                @relation(fields: [postId], references: [id])
+  postId      String              @db.ObjectId
+  attachments CommentAttachment[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model PostAttachment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  post         Post     @relation(fields: [postId], references: [id])
+  postId       String   @db.ObjectId
+  url          String
+  filename     String
+  originalName String?
+  mimeType     String
+  size         Int
+  kind         String
+  createdAt    DateTime @default(now())
+}
+
+model CommentAttachment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  comment      Comment  @relation(fields: [commentId], references: [id])
+  commentId    String   @db.ObjectId
+  url          String
+  filename     String
+  originalName String?
+  mimeType     String
+  size         Int
+  kind         String
+  createdAt    DateTime @default(now())
 }
 
 model Skill {

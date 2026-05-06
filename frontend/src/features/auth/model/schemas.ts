@@ -14,7 +14,7 @@ export const registerSchema = z
       .string()
       .min(3, "Минимум 3 символа")
       .max(32, "Максимум 32 символа")
-      .regex(/^[a-zA-Z0-9_-]+$/, "Только латиница, цифры, _ и -"),
+      .regex(/^[\p{L}\p{N}_-]+$/u, "Только буквы, цифры, _ и -"),
     password: z.string().min(6, "Минимум 6 символов"),
     confirmPassword: z.string().min(6, "Минимум 6 символов"),
   })

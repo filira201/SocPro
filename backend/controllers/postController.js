@@ -1,25 +1,88 @@
 const { prisma } = require("../prisma/prismaClient");
-const { sanitizeUser } = require("./_utils");
+const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
+
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 30;
+
+function normalizeLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_LIMIT);
+}
+
+function attachmentData(file) {
+  return {
+    url: `/uploads/${file.filename}`,
+    filename: file.filename,
+    originalName: decodeUploadOriginalName(file.originalname),
+    mimeType: file.mimetype,
+    size: file.size,
+    kind: file.mimetype.startsWith("image/") ? "image" : "document",
+  };
+}
+
+function mapPost(post, userId) {
+  const sanitized = sanitizeUser(post);
+  const likeCount = post.likes?.length ?? 0;
+  const commentCount = post.comments?.length ?? 0;
+  const isEdited =
+    post.updatedAt &&
+    post.createdAt &&
+    new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime();
+
+  return {
+    ...sanitized,
+    likeCount,
+    commentCount,
+    likedByUser: post.likes?.some((like) => like.userId === userId) ?? false,
+    isOwner: post.authorId === userId,
+    isEdited,
+  };
+}
+
+async function getPostForResponse(id, userId) {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: {
+      attachments: true,
+      author: true,
+      comments: true,
+      likes: true,
+    },
+  });
+
+  return post ? mapPost(post, userId) : null;
+}
 
 const PostController = {
   createPost: async (req, res) => {
     const { content } = req.body;
-
     const authorId = req.user.userId;
+    const files = req.files || [];
 
-    if (!content) {
+    if (!String(content || "").trim() && files.length === 0) {
       return res.status(400).json({ error: "Все поля обязательны" });
     }
 
     try {
       const post = await prisma.post.create({
         data: {
-          content,
+          content: String(content || "").trim(),
           authorId,
+          attachments: {
+            create: files.map(attachmentData),
+          },
         },
       });
 
-      res.json(post);
+      const created = await getPostForResponse(post.id, authorId);
+
+      res.json(created);
     } catch (error) {
       console.error("Error in createPost", error);
       res.status(500).json({ error: "Internal server error" });
@@ -27,10 +90,24 @@ const PostController = {
   },
   getAllPosts: async (req, res) => {
     const userId = req.user.userId;
+    const { cursor } = req.query;
+    const limit = normalizeLimit(req.query.limit);
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
+    }
 
     try {
       const posts = await prisma.post.findMany({
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
         include: {
+          attachments: true,
           likes: true,
           author: true,
           comments: true,
@@ -40,12 +117,13 @@ const PostController = {
         },
       });
 
-      const postWithLikeInfo = posts.map((post) => ({
-        ...sanitizeUser(post),
-        likedByUser: post.likes.some((like) => like.userId === userId),
-      }));
+      const hasNextPage = posts.length > limit;
+      const items = (hasNextPage ? posts.slice(0, limit) : posts).map((post) =>
+        mapPost(post, userId),
+      );
+      const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
 
-      res.json(postWithLikeInfo);
+      res.json({ items, nextCursor });
     } catch (error) {
       console.error("Error in getAllPosts", error);
       res.status(500).json({ error: "Internal server error" });
@@ -55,15 +133,16 @@ const PostController = {
     const { id } = req.params;
     const userId = req.user.userId;
 
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректный id" });
+    }
+
     try {
       const post = await prisma.post.findUnique({
         where: { id },
         include: {
-          comments: {
-            include: {
-              user: true,
-            },
-          },
+          attachments: true,
+          comments: true,
           likes: true,
           author: true,
         },
@@ -73,32 +152,86 @@ const PostController = {
         return res.status(404).json({ error: "Пост не найден" });
       }
 
-      const postWithLikeInfo = {
-        ...sanitizeUser(post),
-        likedByUser: post.likes.some((like) => like.userId === userId),
-      };
-
-      res.json(postWithLikeInfo);
+      res.json(mapPost(post, userId));
     } catch (error) {
       console.error("Error in getPostById", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+  updatePost: async (req, res) => {
+    const { id } = req.params;
+    const { content } = req.body;
+    const files = req.files || [];
+    const userId = req.user.userId;
+
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректный id" });
+    }
+
+    if (!String(content || "").trim() && files.length === 0) {
+      return res.status(400).json({ error: "Все поля обязательны" });
+    }
+
+    try {
+      const post = await prisma.post.findUnique({ where: { id } });
+
+      if (!post) {
+        return res.status(404).json({ error: "Пост не найден" });
+      }
+
+      if (post.authorId !== userId) {
+        return res.status(403).json({ error: "Нет доступа" });
+      }
+
+      await prisma.post.update({
+        where: { id },
+        data: {
+          ...(String(content || "").trim()
+            ? { content: String(content).trim() }
+            : {}),
+          attachments: {
+            create: files.map(attachmentData),
+          },
+        },
+      });
+
+      const updated = await getPostForResponse(id, userId);
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error in updatePost", error);
       res.status(500).json({ error: "Internal server error" });
     }
   },
   deletePost: async (req, res) => {
     const { id } = req.params;
 
-    const post = await prisma.post.findUnique({ where: { id } });
-
-    if (!post) {
-      return res.status(404).json({ error: "Пост не найден" });
-    }
-
-    if (post.authorId !== req.user.userId) {
-      return res.status("403").json({ error: "Нет доступа" });
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректный id" });
     }
 
     try {
+      const post = await prisma.post.findUnique({ where: { id } });
+
+      if (!post) {
+        return res.status(404).json({ error: "Пост не найден" });
+      }
+
+      if (post.authorId !== req.user.userId) {
+        return res.status(403).json({ error: "Нет доступа" });
+      }
+
+      const comments = await prisma.comment.findMany({
+        where: { postId: id },
+        select: { id: true },
+      });
+      const commentIds = comments.map((comment) => comment.id);
+
       const transaction = await prisma.$transaction([
+        prisma.commentAttachment.deleteMany({
+          where: { commentId: { in: commentIds } },
+        }),
+        prisma.postAttachment.deleteMany({ where: { postId: id } }),
         prisma.comment.deleteMany({ where: { postId: id } }),
         prisma.like.deleteMany({ where: { postId: id } }),
         prisma.post.delete({ where: { id } }),

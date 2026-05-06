@@ -6,6 +6,7 @@ const fs = require("fs");
 const jwt = require("jsonwebtoken");
 
 const {
+  USERNAME_REGEX,
   validateRegister,
   validateLogin,
   sanitizeUser,
@@ -53,7 +54,7 @@ const UserController = {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const png = jdenticon.toPng(`${username}${Date.now()}`, 200);
-      const avatarName = `${username}_${Date.now()}.png`;
+      const avatarName = `avatar_${Date.now()}.png`;
       const avatarPath = path.join(__dirname, "/../uploads", avatarName);
       fs.writeFileSync(avatarPath, png);
 
@@ -176,10 +177,10 @@ const UserController = {
       }
 
       if (username) {
-        if (!/^[a-zA-Z0-9_-]{3,32}$/.test(String(username))) {
+        if (!USERNAME_REGEX.test(String(username))) {
           return res
             .status(400)
-            .json({ error: "Имя пользователя: 3-32 символа, латиница/цифры/_-" });
+            .json({ error: "Имя пользователя: 3-32 символа, буквы/цифры/_-" });
         }
 
         const existingByUsername = await prisma.user.findFirst({
