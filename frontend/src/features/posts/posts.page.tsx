@@ -17,7 +17,9 @@ function PostsPage() {
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel) {return;}
+    if (!sentinel) {
+      return;
+    }
 
     const observer = new IntersectionObserver(([entry]) => {
       const nextCursor = data?.nextCursor ?? null;
@@ -44,7 +46,9 @@ function PostsPage() {
         <h1 className="text-xl font-semibold sm:text-2xl">Лента публикаций</h1>
         <PostComposer />
 
-        {data?.items.map((post) => <PostCard key={post.id} post={post} />)}
+        {data?.items.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
 
         {isLoading || isFetching ? (
           <div className="flex justify-center py-4 text-muted-foreground">

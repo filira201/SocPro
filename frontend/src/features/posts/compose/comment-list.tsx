@@ -14,6 +14,7 @@ import { AttachmentList } from "./attachment-list";
 import { CommentComposer } from "./comment-composer";
 
 import { Button } from "@/shared/ui/kit/button";
+import { Textarea } from "@/shared/ui/kit/textarea";
 
 type CommentListProps = {
   postId: string;
@@ -54,7 +55,8 @@ export function CommentList({ postId }: CommentListProps) {
   const comments = deduped
     .map((comment) => overrides[comment.id] ?? comment)
     .filter((comment) => !deletedIds.includes(comment.id));
-  const cursorToLoad = nextCursor === undefined ? firstPage?.nextCursor : nextCursor;
+  const cursorToLoad =
+    nextCursor === undefined ? firstPage?.nextCursor : nextCursor;
 
   const loadPage = async (cursor?: string | null) => {
     const result = await loadComments({ postId, cursor, limit: 10 }).unwrap();
@@ -74,7 +76,7 @@ export function CommentList({ postId }: CommentListProps) {
     setExtraComments((current) =>
       current.some((item) => item.id === comment.id)
         ? current
-        : [...current, comment],
+        : [...current, comment]
     );
   };
 
@@ -95,7 +97,11 @@ export function CommentList({ postId }: CommentListProps) {
   };
 
   return (
-    <div className="grid gap-4 border-t pt-4" onClick={stopBubble} onKeyDown={stopBubble}>
+    <div
+      className="grid gap-4 border-t pt-4"
+      onClick={stopBubble}
+      onKeyDown={stopBubble}
+    >
       <CommentComposer postId={postId} onCreated={handleCreated} />
 
       <div className="grid gap-3">
@@ -119,7 +125,9 @@ export function CommentList({ postId }: CommentListProps) {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                    <span className="font-medium">@{comment.user.username}</span>
+                    <span className="font-medium">
+                      @{comment.user.username}
+                    </span>
                     <span className="text-muted-foreground">
                       {comment.isEdited ? "Изменено " : ""}
                       {formatPostDate(displayDate)}
@@ -127,12 +135,14 @@ export function CommentList({ postId }: CommentListProps) {
                   </div>
                   {editingId === comment.id ? (
                     <div className="mt-2 grid gap-2">
-                      <textarea
+                      <Textarea
                         value={editingContent}
-                        onChange={(event) => setEditingContent(event.target.value)}
+                        onChange={(event) =>
+                          setEditingContent(event.target.value)
+                        }
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
-                        className="min-h-20 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="min-h-20 resize-y text-sm"
                       />
                       <div className="flex justify-end gap-2">
                         <Button

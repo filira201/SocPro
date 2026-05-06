@@ -9,6 +9,7 @@ import type { Comment } from "../model/types";
 
 import { Button } from "@/shared/ui/kit/button";
 import { FieldDescription } from "@/shared/ui/kit/field";
+import { Textarea } from "@/shared/ui/kit/textarea";
 
 type CommentComposerProps = {
   postId: string;
@@ -61,11 +62,11 @@ export function CommentComposer({ postId, onCreated }: CommentComposerProps) {
       className="grid gap-2"
       noValidate
     >
-      <textarea
+      <Textarea
         rows={2}
         placeholder="Напишите комментарий"
         disabled={isLoading}
-        className="min-h-20 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-h-20 resize-y text-sm"
         {...register("content")}
       />
 
@@ -82,7 +83,7 @@ export function CommentComposer({ postId, onCreated }: CommentComposerProps) {
                 type="button"
                 onClick={() =>
                   setFiles((current) =>
-                    current.filter((_, itemIndex) => itemIndex !== index),
+                    current.filter((_, itemIndex) => itemIndex !== index)
                   )
                 }
               >

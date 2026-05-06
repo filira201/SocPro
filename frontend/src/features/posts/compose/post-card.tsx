@@ -16,14 +16,17 @@ import { CommentList } from "./comment-list";
 
 import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
-
+import { Textarea } from "@/shared/ui/kit/textarea";
 
 type PostCardProps = {
   post: Post;
   showCommentsInitially?: boolean;
 };
 
-export function PostCard({ post, showCommentsInitially = false }: PostCardProps) {
+export function PostCard({
+  post,
+  showCommentsInitially = false,
+}: PostCardProps) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(showCommentsInitially);
   const [isEditing, setIsEditing] = useState(false);
@@ -122,10 +125,10 @@ export function PostCard({ post, showCommentsInitially = false }: PostCardProps)
 
       {isEditing ? (
         <div className="grid gap-2" onClick={stop} onKeyDown={stop}>
-          <textarea
+          <Textarea
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            className="min-h-28 w-full resize-y rounded-lg border bg-background px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="min-h-28 resize-y text-base"
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -138,7 +141,11 @@ export function PostCard({ post, showCommentsInitially = false }: PostCardProps)
             >
               Отмена
             </Button>
-            <Button type="button" onClick={() => void handleSave()} disabled={isUpdating}>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={isUpdating}
+            >
               Сохранить
             </Button>
           </div>

@@ -11,7 +11,7 @@ type AttachmentListProps = {
 
 export function AttachmentList({ attachments }: AttachmentListProps) {
   const [preview, setPreview] = useState<{ url: string; alt: string } | null>(
-    null,
+    null
   );
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
           onClick={(event) => event.stopPropagation()}
         />
       </div>,
-      document.body,
+      document.body
     );
 
   return (

@@ -13,6 +13,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/shared/ui/kit/field";
+import { Textarea } from "@/shared/ui/kit/textarea";
 
 type SelectedFile = {
   file: File;
@@ -50,7 +51,9 @@ export function PostComposer() {
     setFiles((current) => {
       const file = current[index];
 
-      if (file?.previewUrl) {URL.revokeObjectURL(file.previewUrl);}
+      if (file?.previewUrl) {
+        URL.revokeObjectURL(file.previewUrl);
+      }
 
       return current.filter((_, itemIndex) => itemIndex !== index);
     });
@@ -73,7 +76,9 @@ export function PostComposer() {
       await createPost(body).unwrap();
       reset();
       files.forEach((file) => {
-        if (file.previewUrl) {URL.revokeObjectURL(file.previewUrl);}
+        if (file.previewUrl) {
+          URL.revokeObjectURL(file.previewUrl);
+        }
       });
       setFiles([]);
     } catch {
@@ -91,12 +96,12 @@ export function PostComposer() {
       <FieldGroup>
         <Field data-invalid={!!errors.content || !!formError}>
           <FieldLabel htmlFor="post-content">Новый пост</FieldLabel>
-          <textarea
+          <Textarea
             id="post-content"
             rows={4}
             placeholder="Что нового?"
             disabled={isLoading}
-            className="min-h-28 w-full resize-y rounded-lg border bg-background px-3 py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-28 resize-y text-base"
             aria-invalid={!!errors.content || !!formError}
             {...register("content")}
           />
