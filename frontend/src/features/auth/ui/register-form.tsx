@@ -11,7 +11,7 @@ import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Field,
-  FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/shared/ui/kit/field";
@@ -94,9 +94,7 @@ export function RegisterForm() {
               {...register("email")}
             />
             {errors.email?.message ? (
-              <FieldDescription role="alert" className="text-destructive">
-                {errors.email.message}
-              </FieldDescription>
+              <FieldError>{errors.email.message}</FieldError>
             ) : null}
           </Field>
 
@@ -112,9 +110,7 @@ export function RegisterForm() {
               {...register("username")}
             />
             {errors.username?.message ? (
-              <FieldDescription role="alert" className="text-destructive">
-                {errors.username.message}
-              </FieldDescription>
+              <FieldError>{errors.username.message}</FieldError>
             ) : null}
           </Field>
 
@@ -132,9 +128,7 @@ export function RegisterForm() {
                 {...register("password")}
               />
               {errors.password?.message ? (
-                <FieldDescription role="alert" className="text-destructive">
-                  {errors.password.message}
-                </FieldDescription>
+                <FieldError>{errors.password.message}</FieldError>
               ) : null}
             </Field>
 
@@ -153,9 +147,7 @@ export function RegisterForm() {
                 {...register("confirmPassword")}
               />
               {errors.confirmPassword?.message ? (
-                <FieldDescription role="alert" className="text-destructive">
-                  {errors.confirmPassword.message}
-                </FieldDescription>
+                <FieldError>{errors.confirmPassword.message}</FieldError>
               ) : null}
             </Field>
           </Field>

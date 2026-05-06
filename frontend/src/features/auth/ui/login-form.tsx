@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleCheck } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
@@ -11,11 +12,17 @@ import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Field,
-  FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+} from "@/shared/ui/kit/item";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
 type LoginFormProps = {
@@ -60,12 +67,20 @@ export function LoginForm({
   return (
     <>
       {showRegisteredBanner ? (
-        <div
+        <Item
           role="status"
-          className="mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
+          variant="outline"
+          className="mb-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
         >
-          Регистрация прошла успешно. Войдите, используя свои данные.
-        </div>
+          <ItemMedia variant="icon">
+            <CircleCheck className="text-emerald-600 dark:text-emerald-400" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemDescription className="line-clamp-none text-emerald-700 dark:text-emerald-400">
+              Регистрация прошла успешно. Войдите, используя свои данные.
+            </ItemDescription>
+          </ItemContent>
+        </Item>
       ) : null}
 
       <form onSubmit={handleSubmit(onSubmit)} aria-busy={isLoading} noValidate>
@@ -83,9 +98,7 @@ export function LoginForm({
               {...register("email")}
             />
             {errors.email?.message ? (
-              <FieldDescription role="alert" className="text-destructive">
-                {errors.email.message}
-              </FieldDescription>
+              <FieldError>{errors.email.message}</FieldError>
             ) : null}
           </Field>
 
@@ -102,9 +115,7 @@ export function LoginForm({
               {...register("password")}
             />
             {errors.password?.message ? (
-              <FieldDescription role="alert" className="text-destructive">
-                {errors.password.message}
-              </FieldDescription>
+              <FieldError>{errors.password.message}</FieldError>
             ) : null}
           </Field>
 
@@ -126,12 +137,7 @@ export function LoginForm({
             </Button>
 
             {globalError ? (
-              <FieldDescription
-                role="alert"
-                className="text-center text-destructive"
-              >
-                {globalError}
-              </FieldDescription>
+              <FieldError className="text-center">{globalError}</FieldError>
             ) : null}
           </Field>
         </FieldGroup>
