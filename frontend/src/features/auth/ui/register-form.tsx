@@ -70,15 +70,6 @@ export function RegisterForm() {
 
   return (
     <>
-      {globalError ? (
-        <div
-          role="alert"
-          className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {globalError}
-        </div>
-      ) : null}
-
       <form onSubmit={handleSubmit(onSubmit)} aria-busy={isLoading} noValidate>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
@@ -168,6 +159,10 @@ export function RegisterForm() {
                 "Зарегистрироваться"
               )}
             </Button>
+
+            {globalError ? (
+              <FieldError className="text-center">{globalError}</FieldError>
+            ) : null}
           </Field>
         </FieldGroup>
       </form>
