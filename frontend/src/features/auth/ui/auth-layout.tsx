@@ -39,7 +39,7 @@ export function AuthLayout({
     <div className="min-h-dvh flex flex-col">
       <AuthHeader />
       <main className="flex flex-1 items-center justify-center px-3 py-6 sm:px-4 sm:py-8">
-        <Card className="w-full max-w-md p-1 sm:p-4">
+        <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-xl sm:text-2xl">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
