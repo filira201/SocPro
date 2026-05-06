@@ -129,10 +129,7 @@ function RegisterPage() {
                   {...register("email")}
                 />
                 {errors.email?.message ? (
-                  <FieldDescription
-                    role="alert"
-                    className="text-destructive"
-                  >
+                  <FieldDescription role="alert" className="text-destructive">
                     {errors.email.message}
                   </FieldDescription>
                 ) : null}
@@ -150,10 +147,7 @@ function RegisterPage() {
                   {...register("username")}
                 />
                 {errors.username?.message ? (
-                  <FieldDescription
-                    role="alert"
-                    className="text-destructive"
-                  >
+                  <FieldDescription role="alert" className="text-destructive">
                     {errors.username.message}
                   </FieldDescription>
                 ) : null}
@@ -173,10 +167,7 @@ function RegisterPage() {
                     {...register("password")}
                   />
                   {errors.password?.message ? (
-                    <FieldDescription
-                      role="alert"
-                      className="text-destructive"
-                    >
+                    <FieldDescription role="alert" className="text-destructive">
                       {errors.password.message}
                     </FieldDescription>
                   ) : null}
@@ -197,10 +188,7 @@ function RegisterPage() {
                     {...register("confirmPassword")}
                   />
                   {errors.confirmPassword?.message ? (
-                    <FieldDescription
-                      role="alert"
-                      className="text-destructive"
-                    >
+                    <FieldDescription role="alert" className="text-destructive">
                       {errors.confirmPassword.message}
                     </FieldDescription>
                   ) : null}

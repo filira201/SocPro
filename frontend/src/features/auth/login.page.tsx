@@ -119,10 +119,7 @@ function LoginPage() {
                   {...register("email")}
                 />
                 {errors.email?.message ? (
-                  <FieldDescription
-                    role="alert"
-                    className="text-destructive"
-                  >
+                  <FieldDescription role="alert" className="text-destructive">
                     {errors.email.message}
                   </FieldDescription>
                 ) : null}
@@ -141,10 +138,7 @@ function LoginPage() {
                   {...register("password")}
                 />
                 {errors.password?.message ? (
-                  <FieldDescription
-                    role="alert"
-                    className="text-destructive"
-                  >
+                  <FieldDescription role="alert" className="text-destructive">
                     {errors.password.message}
                   </FieldDescription>
                 ) : null}
