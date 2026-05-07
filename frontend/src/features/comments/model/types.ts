@@ -33,6 +33,10 @@ export type Comment = {
   isEdited: boolean;
 };
 
+export type DeleteCommentResponse = Comment & {
+  deletedCount?: number;
+};
+
 export type PaginatedResponse<T> = {
   items: T[];
   nextCursor: string | null;

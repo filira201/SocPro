@@ -1,4 +1,9 @@
-import type { Comment, CommentsQuery, PaginatedResponse } from "../model/types";
+import type {
+  Comment,
+  CommentsQuery,
+  DeleteCommentResponse,
+  PaginatedResponse,
+} from "../model/types";
 
 import { postsApi } from "@/features/posts/api/posts.api";
 import { api } from "@/shared/api/api";
@@ -57,27 +62,24 @@ export const commentsApi = api.injectEndpoints({
       }),
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         const postId = String(arg.get("postId") || "");
-        const parentId = String(arg.get("parentId") || "");
 
         try {
           const { data } = await queryFulfilled;
 
-          if (!parentId) {
-            dispatch(
-              postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-                const post = draft.items.find((item) => item.id === postId);
+          dispatch(
+            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.items.find((item) => item.id === postId);
 
-                if (post) {
-                  post.commentCount += 1;
-                }
-              })
-            );
-            dispatch(
-              postsApi.util.updateQueryData("getPostById", postId, (draft) => {
-                draft.commentCount += 1;
-              })
-            );
-          }
+              if (post) {
+                post.commentCount += 1;
+              }
+            })
+          );
+          dispatch(
+            postsApi.util.updateQueryData("getPostById", postId, (draft) => {
+              draft.commentCount += 1;
+            })
+          );
 
           dispatch(
             api.util.invalidateTags([
@@ -146,7 +148,10 @@ export const commentsApi = api.injectEndpoints({
           : []),
       ],
     }),
-    deleteComment: builder.mutation<Comment, { id: string; postId: string }>({
+    deleteComment: builder.mutation<
+      DeleteCommentResponse,
+      { id: string; postId: string }
+    >({
       query: ({ id }) => ({
         url: `/comments/${id}`,
         method: "DELETE",
@@ -154,23 +159,22 @@ export const commentsApi = api.injectEndpoints({
       async onQueryStarted({ postId }, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+          const decreaseBy = Math.max(1, data.deletedCount ?? 1);
 
-          if (!data.parentId) {
-            dispatch(
-              postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-                const post = draft.items.find((item) => item.id === postId);
+          dispatch(
+            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.items.find((item) => item.id === postId);
 
-                if (post) {
-                  post.commentCount = Math.max(0, post.commentCount - 1);
-                }
-              })
-            );
-            dispatch(
-              postsApi.util.updateQueryData("getPostById", postId, (draft) => {
-                draft.commentCount = Math.max(0, draft.commentCount - 1);
-              })
-            );
-          }
+              if (post) {
+                post.commentCount = Math.max(0, post.commentCount - decreaseBy);
+              }
+            })
+          );
+          dispatch(
+            postsApi.util.updateQueryData("getPostById", postId, (draft) => {
+              draft.commentCount = Math.max(0, draft.commentCount - decreaseBy);
+            })
+          );
 
           dispatch(
             api.util.invalidateTags([
@@ -178,6 +182,22 @@ export const commentsApi = api.injectEndpoints({
               { type: "Post", id: `${postId}-comments-root-new` },
               { type: "Post", id: `${postId}-comments-root-old` },
               { type: "Post", id: `${postId}-comments-root-top` },
+              ...(data.parentId
+                ? [
+                    {
+                      type: "Post" as const,
+                      id: `${postId}-comments-${data.parentId}-new`,
+                    },
+                    {
+                      type: "Post" as const,
+                      id: `${postId}-comments-${data.parentId}-old`,
+                    },
+                    {
+                      type: "Post" as const,
+                      id: `${postId}-comments-${data.parentId}-top`,
+                    },
+                  ]
+                : []),
             ])
           );
         } catch {

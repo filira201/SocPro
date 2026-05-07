@@ -157,6 +157,7 @@ type ThreadItemProps = {
   postId: string;
   comment: Comment;
   sort: CommentsSort;
+  onRemoved?: (comment: Comment) => void;
 };
 
 type SelectedFile = {
@@ -164,7 +165,12 @@ type SelectedFile = {
   previewUrl: string | null;
 };
 
-function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
+function CommentThreadItem({
+  postId,
+  comment,
+  sort,
+  onRemoved,
+}: ThreadItemProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(
@@ -229,7 +235,8 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
     : (likeVisual?.count ?? comment.likeCount);
 
   const handleDelete = async (commentId: string) => {
-    await deleteComment({ id: commentId, postId }).unwrap();
+    const deleted = await deleteComment({ id: commentId, postId }).unwrap();
+    onRemoved?.(deleted);
   };
 
   const handleUpdate = async (commentId: string) => {
@@ -657,6 +664,11 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
               postId={postId}
               comment={reply}
               sort={sort}
+              onRemoved={(deleted) => {
+                setExtraReplies((current) =>
+                  current.filter((item) => item.id !== deleted.id)
+                );
+              }}
             />
           ))}
           {replyCursorToLoad ? (
@@ -782,6 +794,11 @@ export function CommentList({ postId }: CommentListProps) {
             postId={postId}
             comment={comment}
             sort={sort}
+            onRemoved={(deleted) => {
+              setExtraComments((current) =>
+                current.filter((item) => item.id !== deleted.id)
+              );
+            }}
           />
         ))}
       </div>

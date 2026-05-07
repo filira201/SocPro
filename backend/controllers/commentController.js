@@ -432,7 +432,10 @@ const CommentController = {
         ...deleteCommentOperations,
       ]);
 
-      res.json(comment);
+      res.json({
+        ...comment,
+        deletedCount: commentIds.length,
+      });
     } catch (error) {
       console.error("Error in deleteComment", error);
       res.status(500).json({ error: "Internal server error" });
