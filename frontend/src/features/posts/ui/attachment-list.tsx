@@ -26,6 +26,9 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
   const imageAttachments = attachments.filter(
     (attachment) => attachment.kind === "image"
   );
+  const documentAttachments = attachments.filter(
+    (attachment) => attachment.kind !== "image"
+  );
   const totalSlides = imageAttachments.length;
 
   useEffect(() => {
@@ -54,15 +57,11 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
 
   return (
     <>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {attachments.map((attachment) => {
-          const url = toAbsoluteUploadUrl(attachment.url);
-
-          if (attachment.kind === "image") {
+      {imageAttachments.length ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {imageAttachments.map((attachment, index) => {
+            const url = toAbsoluteUploadUrl(attachment.url);
             const alt = attachment.originalName || attachment.filename;
-            const index = imageAttachments.findIndex(
-              (image) => image.id === attachment.id
-            );
 
             return (
               <button
@@ -71,7 +70,7 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
                 className="overflow-hidden rounded-lg border bg-muted p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setPreviewIndex(Math.max(index, 0));
+                  setPreviewIndex(index);
                   setIsPreviewOpen(true);
                 }}
               >
@@ -82,25 +81,32 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
                 />
               </button>
             );
-          }
+          })}
+        </div>
+      ) : null}
+      {documentAttachments.length ? (
+        <div className="grid gap-2">
+          {documentAttachments.map((attachment) => {
+            const url = toAbsoluteUploadUrl(attachment.url);
 
-          return (
-            <a
-              key={attachment.id}
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <FileText className="size-4 shrink-0" />
-              <span className="min-w-0 truncate">
-                {attachment.originalName || attachment.filename}
-              </span>
-            </a>
-          );
-        })}
-      </div>
+            return (
+              <a
+                key={attachment.id}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <FileText className="size-4 shrink-0" />
+                <span className="min-w-0 truncate">
+                  {attachment.originalName || attachment.filename}
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      ) : null}
       <ImagePreviewModal
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}

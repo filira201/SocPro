@@ -316,16 +316,19 @@ const CommentController = {
       return res.status(400).json({ error: "Некорректный id" });
     }
 
-    if (
-      !String(content || "").trim() &&
-      files.length === 0 &&
-      removeAttachmentIds.length === 0
-    ) {
-      return res.status(400).json({ error: "Все поля обязательны" });
-    }
-
     try {
-      const comment = await prisma.comment.findUnique({ where: { id } });
+      const comment = await prisma.comment.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          userId: true,
+          _count: {
+            select: {
+              attachments: true,
+            },
+          },
+        },
+      });
 
       if (!comment) {
         return res.status(404).json({ error: "Комментарий не найден" });
@@ -349,6 +352,19 @@ const CommentController = {
             .status(400)
             .json({ error: "Некорректные вложения для удаления" });
         }
+      }
+
+      const remainingExistingAttachments = Math.max(
+        0,
+        (comment._count?.attachments ?? 0) - removeAttachmentIds.length,
+      );
+
+      if (
+        !String(content || "").trim() &&
+        files.length === 0 &&
+        remainingExistingAttachments === 0
+      ) {
+        return res.status(400).json({ error: "Все поля обязательны" });
       }
 
       await prisma.comment.update({

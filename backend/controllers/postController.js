@@ -183,16 +183,19 @@ const PostController = {
       return res.status(400).json({ error: "Некорректный id" });
     }
 
-    if (
-      !String(content || "").trim() &&
-      files.length === 0 &&
-      removeAttachmentIds.length === 0
-    ) {
-      return res.status(400).json({ error: "Все поля обязательны" });
-    }
-
     try {
-      const post = await prisma.post.findUnique({ where: { id } });
+      const post = await prisma.post.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          authorId: true,
+          _count: {
+            select: {
+              attachments: true,
+            },
+          },
+        },
+      });
 
       if (!post) {
         return res.status(404).json({ error: "Пост не найден" });
@@ -218,12 +221,23 @@ const PostController = {
         }
       }
 
+      const remainingExistingAttachments = Math.max(
+        0,
+        (post._count?.attachments ?? 0) - removeAttachmentIds.length,
+      );
+
+      if (
+        !String(content || "").trim() &&
+        files.length === 0 &&
+        remainingExistingAttachments === 0
+      ) {
+        return res.status(400).json({ error: "Все поля обязательны" });
+      }
+
       await prisma.post.update({
         where: { id },
         data: {
-          ...(String(content || "").trim()
-            ? { content: String(content).trim() }
-            : {}),
+          ...(content !== undefined ? { content: String(content).trim() } : {}),
           attachments: {
             ...(removeAttachmentIds.length
               ? {
