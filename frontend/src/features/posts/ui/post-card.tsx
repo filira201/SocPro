@@ -1,11 +1,14 @@
 import {
   ExternalLink,
+  FileText,
   Heart,
   MessageCircle,
+  Paperclip,
   Pencil,
   Trash2,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
 import {
@@ -32,6 +35,11 @@ type PostCardProps = {
   showOpenPostButton?: boolean;
 };
 
+type SelectedFile = {
+  file: File;
+  previewUrl: string | null;
+};
+
 export function PostCard({
   post,
   showCommentsInitially = true,
@@ -41,6 +49,12 @@ export function PostCard({
   const [showComments, setShowComments] = useState(showCommentsInitially);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(post.content);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(
+    []
+  );
+  const [newFiles, setNewFiles] = useState<SelectedFile[]>([]);
+  const newFilesRef = useRef<SelectedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [likePost] = useLikePostMutation();
   const [unlikePost] = useUnlikePostMutation();
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
@@ -67,9 +81,50 @@ export function PostCard({
   const handleSave = async () => {
     const body = new FormData();
     body.append("content", content);
+    removedAttachmentIds.forEach((attachmentId) =>
+      body.append("removeAttachmentIds", attachmentId)
+    );
+    newFiles.forEach(({ file }) => body.append("files", file));
     await updatePost({ id: post.id, body }).unwrap();
+    newFiles.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+    setRemovedAttachmentIds([]);
+    setNewFiles([]);
     setIsEditing(false);
   };
+
+  useEffect(() => {
+    newFilesRef.current = newFiles;
+  }, [newFiles]);
+
+  useEffect(() => {
+    return () => {
+      newFilesRef.current.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+    };
+  }, []);
+
+  const removeNewFile = (index: number) => {
+    setNewFiles((current) => {
+      const target = current[index];
+
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
+  const visibleAttachments = post.attachments.filter(
+    (attachment) => !removedAttachmentIds.includes(attachment.id)
+  );
 
   return (
     <article className="grid gap-4 rounded-xl border bg-card p-3 shadow-sm sm:p-4">
@@ -141,12 +196,144 @@ export function PostCard({
             onChange={(event) => setContent(event.target.value)}
             className="min-h-28 resize-y text-base"
           />
+          {visibleAttachments.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {visibleAttachments.map((attachment) => {
+                const url = toAbsoluteUploadUrl(attachment.url);
+
+                if (attachment.kind === "image") {
+                  return (
+                    <div
+                      key={attachment.id}
+                      className="relative overflow-hidden rounded-lg border"
+                    >
+                      <img
+                        src={url}
+                        alt={attachment.originalName || attachment.filename}
+                        className="aspect-video w-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="absolute right-1 top-1 bg-background/80"
+                        onClick={() =>
+                          setRemovedAttachmentIds((current) => [
+                            ...current,
+                            attachment.id,
+                          ])
+                        }
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={attachment.id}
+                    className="relative rounded-lg border p-2"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">
+                        {attachment.originalName || attachment.filename}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="absolute right-1 top-1 bg-background/80"
+                      onClick={() =>
+                        setRemovedAttachmentIds((current) => [
+                          ...current,
+                          attachment.id,
+                        ])
+                      }
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {newFiles.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {newFiles.map((item, index) => (
+                <div
+                  key={`${item.file.name}-${index}`}
+                  className="relative rounded-lg border p-2"
+                >
+                  {item.previewUrl ? (
+                    <img
+                      src={item.previewUrl}
+                      alt={item.file.name}
+                      className="aspect-video w-full rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{item.file.name}</span>
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute right-1 top-1 bg-background/80"
+                    onClick={() => removeNewFile(index)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip />
+              Файлы
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                const selected = Array.from(event.target.files || []).map(
+                  (file) => ({
+                    file,
+                    previewUrl: file.type.startsWith("image/")
+                      ? URL.createObjectURL(file)
+                      : null,
+                  })
+                );
+                setNewFiles((current) => [...current, ...selected]);
+                event.target.value = "";
+              }}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => {
+                newFiles.forEach((item) => {
+                  if (item.previewUrl) {
+                    URL.revokeObjectURL(item.previewUrl);
+                  }
+                });
                 setContent(post.content);
+                setRemovedAttachmentIds([]);
+                setNewFiles([]);
                 setIsEditing(false);
               }}
             >
@@ -165,7 +352,7 @@ export function PostCard({
         <p className="whitespace-pre-wrap text-base">{post.content}</p>
       ) : null}
 
-      <AttachmentList attachments={post.attachments} />
+      {isEditing ? null : <AttachmentList attachments={post.attachments} />}
 
       <footer className="flex items-center gap-2 border-t pt-2">
         <Toggle

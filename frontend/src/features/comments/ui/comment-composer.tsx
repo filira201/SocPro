@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Paperclip, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router";
 import { z } from "zod";
@@ -27,6 +27,11 @@ type CommentComposerProps = {
   onCancelReply?: () => void;
 };
 
+type SelectedFile = {
+  file: File;
+  previewUrl: string | null;
+};
+
 export function CommentComposer({
   postId,
   parentId,
@@ -36,7 +41,8 @@ export function CommentComposer({
   onCancelReply,
 }: CommentComposerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [files, setFiles] = useState<File[]>([]);
+  const filesRef = useRef<SelectedFile[]>([]);
+  const [files, setFiles] = useState<SelectedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [createComment, { isLoading }] = useCreateCommentMutation();
 
@@ -44,10 +50,7 @@ export function CommentComposer({
     replyToUsername && parentId ? `@${replyToUsername}, ` : "";
 
   const schema = useMemo(() => {
-    const maxBody = Math.max(
-      0,
-      MAX_COMMENT_LENGTH - replyPrefixPlain.length
-    );
+    const maxBody = Math.max(0, MAX_COMMENT_LENGTH - replyPrefixPlain.length);
 
     return z.object({
       body: z.string().max(maxBody, "Максимум 2000 символов"),
@@ -87,11 +90,16 @@ export function CommentComposer({
       body.append("parentId", parentId);
     }
 
-    files.forEach((file) => body.append("files", file));
+    files.forEach(({ file }) => body.append("files", file));
 
     try {
       const comment = await createComment(body).unwrap();
       reset();
+      files.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
       setFiles([]);
       onCreated?.(comment);
 
@@ -106,6 +114,32 @@ export function CommentComposer({
   const stopBubble = (event: React.SyntheticEvent) => {
     event.stopPropagation();
   };
+
+  const removeFile = (index: number) => {
+    setFiles((current) => {
+      const target = current[index];
+
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      filesRef.current.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+    };
+  }, []);
 
   return (
     <form
@@ -136,26 +170,34 @@ export function CommentComposer({
       />
 
       {files.length ? (
-        <div className="flex flex-wrap gap-2">
-          {files.map((file, index) => (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {files.map((item, index) => (
             <div
-              key={`${file.name}-${index}`}
-              className="relative inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 pr-10 text-xs"
+              key={`${item.file.name}-${index}`}
+              className="relative rounded-lg border p-2"
             >
-              <FileText className="size-3" />
-              <span className="truncate">{file.name}</span>
-              <button
+              {item.previewUrl ? (
+                <img
+                  src={item.previewUrl}
+                  alt={item.file.name}
+                  className="aspect-video w-full rounded-md object-cover"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm">
+                  <FileText className="size-4 shrink-0" />
+                  <span className="min-w-0 truncate">{item.file.name}</span>
+                </div>
+              )}
+              <Button
                 type="button"
-                className="absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm ring-1 ring-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                variant="ghost"
+                size="icon-xs"
+                className="absolute right-1 top-1 bg-background/80"
                 aria-label="Убрать файл"
-                onClick={() =>
-                  setFiles((current) =>
-                    current.filter((_, itemIndex) => itemIndex !== index)
-                  )
-                }
+                onClick={() => removeFile(index)}
               >
-                <X className="size-3.5" />
-              </button>
+                <X />
+              </Button>
             </div>
           ))}
         </div>
@@ -195,10 +237,15 @@ export function CommentComposer({
           multiple
           className="hidden"
           onChange={(event) => {
-            setFiles((current) => [
-              ...current,
-              ...Array.from(event.target.files || []),
-            ]);
+            const selected = Array.from(event.target.files || []).map(
+              (file) => ({
+                file,
+                previewUrl: file.type.startsWith("image/")
+                  ? URL.createObjectURL(file)
+                  : null,
+              })
+            );
+            setFiles((current) => [...current, ...selected]);
             event.target.value = "";
           }}
         />

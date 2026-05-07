@@ -2,6 +2,18 @@ const { prisma } = require("../prisma/prismaClient");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+function parseRemoveAttachmentIds(value) {
+  if (!value) {
+    return [];
+  }
+
+  const list = Array.isArray(value) ? value : [value];
+
+  return list
+    .map((item) => String(item))
+    .filter((item) => OBJECT_ID_REGEX.test(item));
+}
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
 
@@ -162,13 +174,20 @@ const PostController = {
     const { id } = req.params;
     const { content } = req.body;
     const files = req.files || [];
+    const removeAttachmentIds = parseRemoveAttachmentIds(
+      req.body.removeAttachmentIds,
+    );
     const userId = req.user.userId;
 
     if (!OBJECT_ID_REGEX.test(id)) {
       return res.status(400).json({ error: "Некорректный id" });
     }
 
-    if (!String(content || "").trim() && files.length === 0) {
+    if (
+      !String(content || "").trim() &&
+      files.length === 0 &&
+      removeAttachmentIds.length === 0
+    ) {
       return res.status(400).json({ error: "Все поля обязательны" });
     }
 
@@ -183,6 +202,22 @@ const PostController = {
         return res.status(403).json({ error: "Нет доступа" });
       }
 
+      if (removeAttachmentIds.length) {
+        const existingAttachments = await prisma.postAttachment.findMany({
+          where: {
+            postId: id,
+            id: { in: removeAttachmentIds },
+          },
+          select: { id: true },
+        });
+
+        if (existingAttachments.length !== removeAttachmentIds.length) {
+          return res
+            .status(400)
+            .json({ error: "Некорректные вложения для удаления" });
+        }
+      }
+
       await prisma.post.update({
         where: { id },
         data: {
@@ -190,6 +225,13 @@ const PostController = {
             ? { content: String(content).trim() }
             : {}),
           attachments: {
+            ...(removeAttachmentIds.length
+              ? {
+                  deleteMany: {
+                    id: { in: removeAttachmentIds },
+                  },
+                }
+              : {}),
             create: files.map(attachmentData),
           },
         },

@@ -159,13 +159,18 @@ type ThreadItemProps = {
   sort: CommentsSort;
 };
 
+type SelectedFile = {
+  file: File;
+  previewUrl: string | null;
+};
+
 function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(
     []
   );
-  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [newFiles, setNewFiles] = useState<SelectedFile[]>([]);
   const [likeVisual, setLikeVisual] = useState<{
     liked: boolean;
     count: number;
@@ -196,6 +201,7 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
   const [likeComment] = useLikeCommentMutation();
   const [unlikeComment] = useUnlikeCommentMutation();
   const newFilesInputRef = useRef<HTMLInputElement | null>(null);
+  const newFilesRef = useRef<SelectedFile[]>([]);
   const mergedReplies = dedupeComments([
     ...(firstReplies?.items ?? []),
     ...extraReplies,
@@ -238,9 +244,14 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
     removedAttachmentIds.forEach((attachmentId) =>
       body.append("removeAttachmentIds", attachmentId)
     );
-    newFiles.forEach((file) => body.append("files", file));
+    newFiles.forEach(({ file }) => body.append("files", file));
     const updated = await updateComment({ id: commentId, body }).unwrap();
 
+    newFiles.forEach((item) => {
+      if (item.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
     setEditingId(null);
     setEditingContent("");
     setRemovedAttachmentIds([]);
@@ -315,6 +326,32 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
     });
   }, [isReplying, mergedReplies.length]);
 
+  useEffect(() => {
+    newFilesRef.current = newFiles;
+  }, [newFiles]);
+
+  useEffect(() => {
+    return () => {
+      newFilesRef.current.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+    };
+  }, []);
+
+  const removeNewFile = (index: number) => {
+    setNewFiles((current) => {
+      const target = current[index];
+
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
   return (
     <div className="grid gap-3">
       <article className="rounded-lg border p-3">
@@ -368,9 +405,11 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                               }
                               className="aspect-video w-full object-cover"
                             />
-                            <button
+                            <Button
                               type="button"
-                              className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md ring-2 ring-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              variant="ghost"
+                              size="icon-xs"
+                              className="absolute right-1 top-1 bg-background/80"
                               aria-label="Удалить вложение"
                               onClick={() =>
                                 setRemovedAttachmentIds((current) => [
@@ -379,8 +418,8 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                                 ])
                               }
                             >
-                              <X className="size-4" />
-                            </button>
+                              <X />
+                            </Button>
                           </div>
                         );
                       }
@@ -388,15 +427,19 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                       return (
                         <div
                           key={attachment.id}
-                          className="relative flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                          className="relative rounded-lg border p-2"
                         >
-                          <FileText className="size-4 shrink-0" />
-                          <span className="min-w-0 truncate pr-8">
-                            {attachment.originalName || attachment.filename}
-                          </span>
-                          <button
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="size-4 shrink-0" />
+                            <span className="min-w-0 truncate">
+                              {attachment.originalName || attachment.filename}
+                            </span>
+                          </div>
+                          <Button
                             type="button"
-                            className="absolute right-2 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md ring-2 ring-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="absolute right-1 top-1 bg-background/80"
                             aria-label="Удалить вложение"
                             onClick={() =>
                               setRemovedAttachmentIds((current) => [
@@ -405,36 +448,44 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                               ])
                             }
                           >
-                            <X className="size-4" />
-                          </button>
+                            <X />
+                          </Button>
                         </div>
                       );
                     })}
                   </div>
                 ) : null}
                 {newFiles.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {newFiles.map((file, index) => (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {newFiles.map((item, index) => (
                       <div
-                        key={`${file.name}-${index}`}
-                        className="relative inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 pr-10 text-xs"
+                        key={`${item.file.name}-${index}`}
+                        className="relative rounded-lg border p-2"
                       >
-                        <FileText className="size-3" />
-                        <span className="truncate">{file.name}</span>
-                        <button
+                        {item.previewUrl ? (
+                          <img
+                            src={item.previewUrl}
+                            alt={item.file.name}
+                            className="aspect-video w-full rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="size-4 shrink-0" />
+                            <span className="min-w-0 truncate">
+                              {item.file.name}
+                            </span>
+                          </div>
+                        )}
+                        <Button
                           type="button"
-                          className="absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm ring-1 ring-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="absolute right-1 top-1 bg-background/80"
                           aria-label="Убрать файл"
-                          onClick={() =>
-                            setNewFiles((current) =>
-                              current.filter(
-                                (_, itemIndex) => itemIndex !== index
-                              )
-                            )
-                          }
+                          onClick={() => removeNewFile(index)}
                         >
-                          <X className="size-3.5" />
-                        </button>
+                          <X />
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -455,10 +506,15 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                     multiple
                     className="hidden"
                     onChange={(event) => {
-                      setNewFiles((current) => [
-                        ...current,
-                        ...Array.from(event.target.files || []),
-                      ]);
+                      const selected = Array.from(event.target.files || []).map(
+                        (file) => ({
+                          file,
+                          previewUrl: file.type.startsWith("image/")
+                            ? URL.createObjectURL(file)
+                            : null,
+                        })
+                      );
+                      setNewFiles((current) => [...current, ...selected]);
                       event.target.value = "";
                     }}
                   />
@@ -469,6 +525,11 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      newFiles.forEach((item) => {
+                        if (item.previewUrl) {
+                          URL.revokeObjectURL(item.previewUrl);
+                        }
+                      });
                       setEditingId(null);
                       setEditingContent("");
                       setRemovedAttachmentIds([]);
@@ -525,9 +586,7 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                     : "Поставить лайк комментария"
                 }
               >
-                <Heart
-                  className={likedByUserDisplay ? "fill-current" : ""}
-                />
+                <Heart className={likedByUserDisplay ? "fill-current" : ""} />
                 {likeCountDisplay}
               </Toggle>
               <Button
@@ -559,6 +618,11 @@ function CommentThreadItem({ postId, comment, sort }: ThreadItemProps) {
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => {
+                      newFiles.forEach((item) => {
+                        if (item.previewUrl) {
+                          URL.revokeObjectURL(item.previewUrl);
+                        }
+                      });
                       setEditingId(comment.id);
                       setEditingContent(comment.content);
                       setRemovedAttachmentIds([]);
