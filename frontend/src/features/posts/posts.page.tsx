@@ -1,9 +1,10 @@
-import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useGetPostsQuery } from "./api/posts.api";
 import { PostCard } from "./compose/post-card";
 import { PostComposer } from "./compose/post-composer";
+
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 function PostsPage() {
   const [cursor, setCursor] = useState<string | null>(null);
@@ -52,7 +53,7 @@ function PostsPage() {
 
         {isLoading || isFetching ? (
           <div className="flex justify-center py-4 text-muted-foreground">
-            <Loader2 className="animate-spin" />
+            <Spinner />
           </div>
         ) : null}
 

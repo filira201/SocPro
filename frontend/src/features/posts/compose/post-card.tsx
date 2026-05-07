@@ -1,4 +1,10 @@
-import { Heart, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import {
+  ExternalLink,
+  Heart,
+  MessageCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -12,20 +18,24 @@ import { formatPostDate, toAbsoluteUploadUrl } from "../lib/format";
 import type { Post } from "../model/types";
 
 import { AttachmentList } from "./attachment-list";
-import { CommentList } from "./comment-list";
 
+import { CommentList } from "@/features/comments";
 import { ROUTES } from "@/shared/model/routes";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
 import { Textarea } from "@/shared/ui/kit/textarea";
+import { Toggle } from "@/shared/ui/kit/toggle";
 
 type PostCardProps = {
   post: Post;
   showCommentsInitially?: boolean;
+  showOpenPostButton?: boolean;
 };
 
 export function PostCard({
   post,
   showCommentsInitially = false,
+  showOpenPostButton = true,
 }: PostCardProps) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(showCommentsInitially);
@@ -36,6 +46,7 @@ export function PostCard({
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
   const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
   const displayDate = post.isEdited ? post.updatedAt : post.createdAt;
+  const authorFallback = post.author.username.slice(0, 2).toUpperCase();
 
   const openPost = () => {
     navigate(ROUTES.POST_DETAILS.replace(":postId", post.id));
@@ -61,32 +72,19 @@ export function PostCard({
   };
 
   return (
-    <article
-      role="button"
-      tabIndex={0}
-      onClick={openPost}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) {
-          return;
-        }
-
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openPost();
-        }
-      }}
-      className="grid cursor-pointer gap-4 rounded-xl border bg-card p-3 shadow-sm transition-colors hover:bg-muted/30 sm:p-4"
-    >
+    <article className="grid gap-4 rounded-xl border bg-card p-3 shadow-sm sm:p-4">
       <header className="flex items-start gap-3">
-        {post.author.avatarUrl ? (
-          <img
-            src={toAbsoluteUploadUrl(post.author.avatarUrl)}
+        <Avatar size="lg">
+          <AvatarImage
+            src={
+              post.author.avatarUrl
+                ? toAbsoluteUploadUrl(post.author.avatarUrl)
+                : ""
+            }
             alt={post.author.username}
-            className="size-10 rounded-full object-cover"
           />
-        ) : (
-          <div className="size-10 rounded-full bg-muted" />
-        )}
+          <AvatarFallback>{authorFallback}</AvatarFallback>
+        </Avatar>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -98,29 +96,42 @@ export function PostCard({
           </div>
         </div>
 
-        {post.isOwner ? (
-          <div className="flex shrink-0 gap-1" onClick={stop}>
+        <div className="flex shrink-0 gap-1">
+          {showOpenPostButton ? (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              onClick={() => setIsEditing((value) => !value)}
-              aria-label="Редактировать пост"
+              onClick={openPost}
+              aria-label="Открыть пост"
             >
-              <Pencil />
+              <ExternalLink />
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              disabled={isDeleting}
-              onClick={() => void deletePost(post.id)}
-              aria-label="Удалить пост"
-            >
-              <Trash2 />
-            </Button>
-          </div>
-        ) : null}
+          ) : null}
+          {post.isOwner ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setIsEditing((value) => !value)}
+                aria-label="Редактировать пост"
+              >
+                <Pencil />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={isDeleting}
+                onClick={() => void deletePost(post.id)}
+                aria-label="Удалить пост"
+              >
+                <Trash2 />
+              </Button>
+            </>
+          ) : null}
+        </div>
       </header>
 
       {isEditing ? (
@@ -156,16 +167,18 @@ export function PostCard({
 
       <AttachmentList attachments={post.attachments} />
 
-      <footer className="flex items-center gap-2 border-t pt-2" onClick={stop}>
-        <Button
+      <footer className="flex items-center gap-2 border-t pt-2">
+        <Toggle
           type="button"
-          variant={post.likedByUser ? "secondary" : "ghost"}
+          pressed={post.likedByUser}
+          variant="outline"
           size="sm"
-          onClick={handleLike}
+          onPressedChange={() => handleLike()}
+          aria-label={post.likedByUser ? "Убрать лайк" : "Поставить лайк"}
         >
           <Heart className={post.likedByUser ? "fill-current" : ""} />
           {post.likeCount}
-        </Button>
+        </Toggle>
         <Button
           type="button"
           variant="ghost"

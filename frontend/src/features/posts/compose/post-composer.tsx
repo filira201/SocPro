@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, Image, Loader2, X } from "lucide-react";
+import { FileText, Image, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -13,6 +13,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/shared/ui/kit/field";
+import { Spinner } from "@/shared/ui/kit/spinner";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 type SelectedFile = {
@@ -166,8 +167,8 @@ export function PostComposer() {
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="animate-spin" />
                 Публикуем...
+                <Spinner data-icon="inline-end" />
               </>
             ) : (
               "Опубликовать"

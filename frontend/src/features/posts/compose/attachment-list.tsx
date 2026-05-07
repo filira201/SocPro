@@ -1,74 +1,56 @@
-import { FileText, X } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { toAbsoluteUploadUrl } from "../lib/format";
 import type { Attachment } from "../model/types";
+
+import { ImagePreviewModal } from "@/shared/ui/image-preview-modal";
+import {
+  type CarouselApi,
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/shared/ui/kit/carousel";
 
 type AttachmentListProps = {
   attachments: Attachment[];
 };
 
 export function AttachmentList({ attachments }: AttachmentListProps) {
-  const [preview, setPreview] = useState<{ url: string; alt: string } | null>(
-    null
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(1);
+  const imageAttachments = attachments.filter(
+    (attachment) => attachment.kind === "image"
   );
+  const totalSlides = imageAttachments.length;
 
   useEffect(() => {
-    if (!preview) {
-      return undefined;
+    if (!carouselApi || !isPreviewOpen) {
+      return;
     }
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreview(null);
-      }
+    const updateCurrent = () => {
+      setCurrentSlide(carouselApi.selectedScrollSnap() + 1);
     };
 
-    document.addEventListener("keydown", onKeyDown);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    carouselApi.scrollTo(previewIndex, true);
+    updateCurrent();
+    carouselApi.on("select", updateCurrent);
+    carouselApi.on("reInit", updateCurrent);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = prevOverflow;
+      carouselApi.off("select", updateCurrent);
+      carouselApi.off("reInit", updateCurrent);
     };
-  }, [preview]);
+  }, [carouselApi, isPreviewOpen, previewIndex]);
 
   if (!attachments.length) {
     return null;
   }
-
-  const modal =
-    preview &&
-    createPortal(
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Просмотр изображения"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-        onClick={() => setPreview(null)}
-      >
-        <button
-          type="button"
-          className="absolute top-4 right-4 rounded-md bg-background/90 p-2 shadow-md hover:bg-background"
-          aria-label="Закрыть"
-          onClick={(event) => {
-            event.stopPropagation();
-            setPreview(null);
-          }}
-        >
-          <X className="size-5" />
-        </button>
-        <img
-          src={preview.url}
-          alt={preview.alt}
-          className="max-h-[90dvh] max-w-full object-contain"
-          onClick={(event) => event.stopPropagation()}
-        />
-      </div>,
-      document.body
-    );
 
   return (
     <>
@@ -78,6 +60,9 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
 
           if (attachment.kind === "image") {
             const alt = attachment.originalName || attachment.filename;
+            const index = imageAttachments.findIndex(
+              (image) => image.id === attachment.id
+            );
 
             return (
               <button
@@ -86,7 +71,8 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
                 className="overflow-hidden rounded-lg border bg-muted p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setPreview({ url, alt });
+                  setPreviewIndex(Math.max(index, 0));
+                  setIsPreviewOpen(true);
                 }}
               >
                 <img
@@ -115,7 +101,57 @@ export function AttachmentList({ attachments }: AttachmentListProps) {
           );
         })}
       </div>
-      {modal}
+      <ImagePreviewModal
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        title="Просмотр изображений"
+      >
+        {totalSlides > 1 ? (
+          <div className="absolute left-4 top-4 z-20 rounded-md border border-border bg-background/80 px-2 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
+            {currentSlide} / {totalSlides}
+          </div>
+        ) : null}
+        <Carousel
+          setApi={setCarouselApi}
+          opts={{
+            startIndex: previewIndex,
+          }}
+          className="h-full w-full"
+        >
+          <CarouselContent className="h-full">
+            {imageAttachments.map((attachment) => {
+              const imageUrl = toAbsoluteUploadUrl(attachment.url);
+              const alt = attachment.originalName || attachment.filename;
+
+              return (
+                <CarouselItem key={attachment.id} className="h-full">
+                  <div className="flex h-[78dvh] items-center justify-center p-4 sm:h-[82dvh] sm:p-6">
+                    <div className="flex h-full w-full max-w-5xl items-center justify-center overflow-hidden rounded-md border border-border/60 bg-muted/40">
+                      <img
+                        src={imageUrl}
+                        alt={alt}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+          {imageAttachments.length > 1 ? (
+            <div className="pointer-events-none absolute inset-0 z-10">
+              <CarouselPrevious
+                size="icon-lg"
+                className="pointer-events-auto left-4 top-1/2 z-20 -translate-y-1/2 border-border bg-background/85 text-foreground shadow-sm transition-colors hover:bg-foreground/15 sm:left-6"
+              />
+              <CarouselNext
+                size="icon-lg"
+                className="pointer-events-auto right-4 top-1/2 z-20 -translate-y-1/2 border-border bg-background/85 text-foreground shadow-sm transition-colors hover:bg-foreground/15 sm:right-6"
+              />
+            </div>
+          ) : null}
+        </Carousel>
+      </ImagePreviewModal>
     </>
   );
 }

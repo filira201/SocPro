@@ -1,8 +1,8 @@
-import { Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router";
 
 import { PostCard, useGetPostByIdQuery } from "@/features/posts";
 import { ROUTES } from "@/shared/model/routes";
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 function PostPage() {
   const { postId } = useParams();
@@ -22,11 +22,17 @@ function PostPage() {
 
         {isLoading ? (
           <div className="flex justify-center py-8 text-muted-foreground">
-            <Loader2 className="animate-spin" />
+            <Spinner />
           </div>
         ) : null}
 
-        {post ? <PostCard post={post} showCommentsInitially /> : null}
+        {post ? (
+          <PostCard
+            post={post}
+            showCommentsInitially
+            showOpenPostButton={false}
+          />
+        ) : null}
 
         {!isLoading && !post ? (
           <p className="rounded-xl border bg-card p-4 text-center text-muted-foreground">

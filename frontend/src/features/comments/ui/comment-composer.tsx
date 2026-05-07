@@ -1,14 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, Loader2, Paperclip, X } from "lucide-react";
+import { FileText, Paperclip, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { useCreateCommentMutation } from "../api/posts.api";
+import { useCreateCommentMutation } from "../api/comments.api";
 import { commentSchema, type CommentFormValues } from "../model/schemas";
 import type { Comment } from "../model/types";
 
 import { Button } from "@/shared/ui/kit/button";
 import { FieldDescription } from "@/shared/ui/kit/field";
+import { Spinner } from "@/shared/ui/kit/spinner";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 type CommentComposerProps = {
@@ -125,7 +126,7 @@ export function CommentComposer({ postId, onCreated }: CommentComposerProps) {
           }}
         />
         <Button type="submit" size="sm" disabled={isLoading}>
-          {isLoading ? <Loader2 className="animate-spin" /> : "Отправить"}
+          {isLoading ? <Spinner data-icon="inline-end" /> : "Отправить"}
         </Button>
       </div>
     </form>

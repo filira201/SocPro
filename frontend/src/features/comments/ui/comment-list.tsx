@@ -1,4 +1,4 @@
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -6,14 +6,19 @@ import {
   useGetCommentsQuery,
   useLazyGetCommentsQuery,
   useUpdateCommentMutation,
-} from "../api/posts.api";
-import { formatPostDate, toAbsoluteUploadUrl } from "../lib/format";
+} from "../api/comments.api";
 import type { Comment } from "../model/types";
 
-import { AttachmentList } from "./attachment-list";
 import { CommentComposer } from "./comment-composer";
 
+import { AttachmentList } from "@/features/posts/compose/attachment-list";
+import {
+  formatPostDate,
+  toAbsoluteUploadUrl,
+} from "@/features/posts/lib/format";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
+import { Spinner } from "@/shared/ui/kit/spinner";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 type CommentListProps = {
@@ -113,15 +118,19 @@ export function CommentList({ postId }: CommentListProps) {
           return (
             <article key={comment.id} className="rounded-lg border p-3">
               <div className="flex items-start gap-3">
-                {comment.user.avatarUrl ? (
-                  <img
-                    src={toAbsoluteUploadUrl(comment.user.avatarUrl)}
+                <Avatar size="default">
+                  <AvatarImage
+                    src={
+                      comment.user.avatarUrl
+                        ? toAbsoluteUploadUrl(comment.user.avatarUrl)
+                        : ""
+                    }
                     alt={comment.user.username}
-                    className="size-8 rounded-full object-cover"
                   />
-                ) : (
-                  <div className="size-8 rounded-full bg-muted" />
-                )}
+                  <AvatarFallback>
+                    {comment.user.username.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -215,7 +224,7 @@ export function CommentList({ postId }: CommentListProps) {
           onClick={() => void loadPage(cursorToLoad)}
           disabled={isFetching || isFirstPageFetching}
         >
-          {isFetching ? <Loader2 className="animate-spin" /> : "Загрузить ещё"}
+          {isFetching ? <Spinner /> : "Загрузить ещё"}
         </Button>
       ) : null}
     </div>

@@ -13,17 +13,15 @@ export type Attachment = {
   createdAt: string;
 };
 
-export type Post = {
+export type Comment = {
   id: string;
   content: string;
-  authorId: string;
-  author: User;
+  userId: string;
+  user: User;
+  postId: string;
   attachments: Attachment[];
   createdAt: string;
   updatedAt: string;
-  likeCount: number;
-  commentCount: number;
-  likedByUser: boolean;
   isOwner: boolean;
   isEdited: boolean;
 };
@@ -33,7 +31,8 @@ export type PaginatedResponse<T> = {
   nextCursor: string | null;
 };
 
-export type PostsQuery = {
+export type CommentsQuery = {
+  postId: string;
   cursor?: string | null;
   limit?: number;
 };
