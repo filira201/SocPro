@@ -28,6 +28,10 @@ export const router = createBrowserRouter([
             path: ROUTES.POST_DETAILS,
             lazy: () => import("@/features/post/post.page"),
           },
+          {
+            path: ROUTES.USER_DETAILS,
+            lazy: () => import("@/features/user/user.page"),
+          },
         ],
       },
 

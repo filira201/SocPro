@@ -34,7 +34,7 @@ type PostCardProps = {
 
 export function PostCard({
   post,
-  showCommentsInitially = false,
+  showCommentsInitially = true,
   showOpenPostButton = true,
 }: PostCardProps) {
   const navigate = useNavigate();

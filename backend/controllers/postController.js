@@ -231,6 +231,9 @@ const PostController = {
         prisma.commentAttachment.deleteMany({
           where: { commentId: { in: commentIds } },
         }),
+        prisma.commentLike.deleteMany({
+          where: { commentId: { in: commentIds } },
+        }),
         prisma.postAttachment.deleteMany({ where: { postId: id } }),
         prisma.comment.deleteMany({ where: { postId: id } }),
         prisma.like.deleteMany({ where: { postId: id } }),

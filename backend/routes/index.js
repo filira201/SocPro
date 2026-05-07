@@ -89,6 +89,16 @@ router.delete(
   authenticateToken,
   CommentController.deleteComment,
 );
+router.post(
+  "/comments/:id/like",
+  authenticateToken,
+  CommentController.likeComment,
+);
+router.delete(
+  "/comments/:id/like",
+  authenticateToken,
+  CommentController.unlikeComment,
+);
 
 //Роту для лайков
 router.post("/likes", authenticateToken, LikeController.likePost);

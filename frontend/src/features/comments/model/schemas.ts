@@ -1,7 +1,9 @@
 import { z } from "zod";
 
-export const commentSchema = z.object({
-  content: z.string().max(2000, "Максимум 2000 символов"),
+export const MAX_COMMENT_LENGTH = 2000;
+
+export const commentBodySchema = z.object({
+  body: z.string().max(MAX_COMMENT_LENGTH, "Максимум 2000 символов"),
 });
 
-export type CommentFormValues = z.infer<typeof commentSchema>;
+export type CommentBodyFormValues = z.infer<typeof commentBodySchema>;

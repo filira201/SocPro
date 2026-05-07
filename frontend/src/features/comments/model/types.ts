@@ -19,9 +19,16 @@ export type Comment = {
   userId: string;
   user: User;
   postId: string;
+  parentId: string | null;
+  replyToUserId: string | null;
+  replyToUsername: string | null;
   attachments: Attachment[];
   createdAt: string;
   updatedAt: string;
+  likeCount: number;
+  replyCount: number;
+  likedByUser: boolean;
+  isReply: boolean;
   isOwner: boolean;
   isEdited: boolean;
 };
@@ -33,6 +40,10 @@ export type PaginatedResponse<T> = {
 
 export type CommentsQuery = {
   postId: string;
+  parentId?: string | null;
+  sort?: CommentsSort;
   cursor?: string | null;
   limit?: number;
 };
+
+export type CommentsSort = "new" | "old" | "top";

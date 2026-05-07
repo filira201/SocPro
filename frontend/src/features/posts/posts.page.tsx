@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useGetPostsQuery } from "./api/posts.api";
-import { PostCard } from "./compose/post-card";
-import { PostComposer } from "./compose/post-composer";
+import { PostCard } from "./ui/post-card";
+import { PostComposer } from "./ui/post-composer";
 
 import { Spinner } from "@/shared/ui/kit/spinner";
 
