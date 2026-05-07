@@ -38,6 +38,58 @@ function attachmentData(file) {
   };
 }
 
+function collectCommentLevelsByPost(comments) {
+  if (!comments.length) {
+    return [];
+  }
+
+  const ids = new Set(comments.map((comment) => comment.id));
+  const childrenByParent = new Map();
+
+  comments.forEach((comment) => {
+    const parentId =
+      comment.parentId && ids.has(comment.parentId) ? comment.parentId : null;
+    const bucket = childrenByParent.get(parentId) || [];
+    bucket.push(comment.id);
+    childrenByParent.set(parentId, bucket);
+  });
+
+  const levels = [];
+  const visited = new Set();
+  let currentLevel = childrenByParent.get(null) || [];
+
+  while (currentLevel.length) {
+    const nextLevel = [];
+    const normalizedLevel = [];
+
+    currentLevel.forEach((id) => {
+      if (visited.has(id)) {
+        return;
+      }
+
+      visited.add(id);
+      normalizedLevel.push(id);
+      nextLevel.push(...(childrenByParent.get(id) || []));
+    });
+
+    if (normalizedLevel.length) {
+      levels.push(normalizedLevel);
+    }
+
+    currentLevel = nextLevel;
+  }
+
+  const remaining = comments
+    .map((comment) => comment.id)
+    .filter((id) => !visited.has(id));
+
+  if (remaining.length) {
+    levels.push(remaining);
+  }
+
+  return levels;
+}
+
 function mapPost(post, userId) {
   const sanitized = sanitizeUser(post);
   const likeCount = post.likes?.length ?? 0;
@@ -279,19 +331,31 @@ const PostController = {
 
       const comments = await prisma.comment.findMany({
         where: { postId: id },
-        select: { id: true },
+        select: { id: true, parentId: true },
       });
       const commentIds = comments.map((comment) => comment.id);
+      const commentLevels = collectCommentLevelsByPost(comments);
+      const deleteCommentOperations = [...commentLevels]
+        .reverse()
+        .map((levelIds) =>
+          prisma.comment.deleteMany({
+            where: { id: { in: levelIds } },
+          }),
+        );
 
       const transaction = await prisma.$transaction([
-        prisma.commentAttachment.deleteMany({
-          where: { commentId: { in: commentIds } },
-        }),
-        prisma.commentLike.deleteMany({
-          where: { commentId: { in: commentIds } },
-        }),
+        ...(commentIds.length
+          ? [
+              prisma.commentAttachment.deleteMany({
+                where: { commentId: { in: commentIds } },
+              }),
+              prisma.commentLike.deleteMany({
+                where: { commentId: { in: commentIds } },
+              }),
+              ...deleteCommentOperations,
+            ]
+          : []),
         prisma.postAttachment.deleteMany({ where: { postId: id } }),
-        prisma.comment.deleteMany({ where: { postId: id } }),
         prisma.like.deleteMany({ where: { postId: id } }),
         prisma.post.delete({ where: { id } }),
       ]);
