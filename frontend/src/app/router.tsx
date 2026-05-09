@@ -32,6 +32,18 @@ export const router = createBrowserRouter([
             path: ROUTES.USER_DETAILS,
             lazy: () => import("@/features/user/user.page"),
           },
+          {
+            path: ROUTES.FOLLOWERS,
+            lazy: () => import("@/features/followers/followers.page"),
+          },
+          {
+            path: ROUTES.FOLLOWING,
+            lazy: () => import("@/features/following/following.page"),
+          },
+          {
+            path: ROUTES.NOTIFICATIONS,
+            lazy: () => import("@/features/notifications/notifications.page"),
+          },
         ],
       },
 

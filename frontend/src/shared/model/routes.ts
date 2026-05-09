@@ -10,6 +10,9 @@ export const APP_ROUTES = {
   POSTS: "/posts",
   POST_DETAILS: "/posts/:postId",
   USER_DETAILS: "/users/:userId",
+  FOLLOWERS: "/followers",
+  FOLLOWING: "/following",
+  NOTIFICATIONS: "/notifications",
 } as const;
 
 export const ROUTES = {

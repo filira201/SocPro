@@ -1,15 +1,19 @@
 import { ProtectedRoute } from "./protected-route";
 
-import { AppHeader } from "@/features/navigation";
+import { AppContentHeader } from "@/features/navigation/app-content-header";
+import { AppSidebar } from "@/features/navigation/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/shared/ui/kit/sidebar";
 
 export function ProtectedLayout() {
   return (
-    <div className="min-h-dvh flex flex-col">
-      <AppHeader />
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <ProtectedRoute />
-      </div>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <AppContentHeader />
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <ProtectedRoute />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
