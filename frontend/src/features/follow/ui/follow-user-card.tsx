@@ -3,8 +3,13 @@ import { Link } from "react-router";
 import { FollowToggleButton } from "./follow-toggle-button";
 
 import type { User } from "@/features/auth";
-import { displayPublicName, userInitials } from "@/features/auth";
+import {
+  displayPublicName,
+  selectCurrentUser,
+  userInitials,
+} from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
+import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 
@@ -14,6 +19,9 @@ type FollowUserCardProps = {
 };
 
 export function FollowUserCard({ user, isFollowing }: FollowUserCardProps) {
+  const currentUser = useAppSelector(selectCurrentUser);
+  const isSelf = Boolean(currentUser?.id && currentUser.id === user.id);
+
   const title = displayPublicName(user);
   const profileHref = ROUTES.USER_DETAILS.replace(":userId", user.id);
   const avatarSrc = user.avatarUrl ? toAbsoluteUploadUrl(user.avatarUrl) : "";
@@ -35,7 +43,11 @@ export function FollowUserCard({ user, isFollowing }: FollowUserCardProps) {
         </Link>
         <span className="min-w-0 truncate font-medium">{title}</span>
       </div>
-      <FollowToggleButton targetUserId={user.id} isFollowing={isFollowing} />
+      {isSelf ? (
+        <span className="shrink-0 text-sm text-muted-foreground">Вы</span>
+      ) : (
+        <FollowToggleButton targetUserId={user.id} isFollowing={isFollowing} />
+      )}
     </div>
   );
 }

@@ -1,8 +1,17 @@
 import { Fragment, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 
-import { breadcrumbSegmentsFromPath } from "./lib/breadcrumb-from-path";
+import {
+  breadcrumbSegmentsFromPath,
+  extractProfileUserIdFromPathname,
+} from "./lib/breadcrumb-from-path";
 
+import {
+  displayPublicName,
+  selectCurrentUser,
+  useGetUserByIdQuery,
+} from "@/features/auth";
+import { useAppSelector } from "@/shared/lib/redux";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,9 +26,42 @@ import { ThemeToggle } from "@/shared/ui/theme-toggle";
 
 export function AppContentHeader() {
   const location = useLocation();
-  const segments = useMemo(
-    () => breadcrumbSegmentsFromPath(location.pathname),
+  const currentUser = useAppSelector(selectCurrentUser);
+
+  const profileUserId = useMemo(
+    () => extractProfileUserIdFromPathname(location.pathname),
     [location.pathname]
+  );
+
+  const { data: profileUserForCrumb } = useGetUserByIdQuery(
+    profileUserId ?? "",
+    {
+      skip: !profileUserId || profileUserId === currentUser?.id,
+    }
+  );
+
+  const profileCrumbLabel = useMemo(() => {
+    if (!profileUserId) {
+      return undefined;
+    }
+
+    if (profileUserId === currentUser?.id) {
+      return "Ваш профиль";
+    }
+
+    if (profileUserForCrumb) {
+      return displayPublicName(profileUserForCrumb);
+    }
+
+    return undefined;
+  }, [profileUserId, currentUser?.id, profileUserForCrumb]);
+
+  const segments = useMemo(
+    () =>
+      breadcrumbSegmentsFromPath(location.pathname, {
+        profileCrumbLabel,
+      }),
+    [location.pathname, profileCrumbLabel]
   );
 
   return (
@@ -33,7 +75,7 @@ export function AppContentHeader() {
               const isLast = index === segments.length - 1;
 
               return (
-                <Fragment key={`${segment.label}-${index}`}>
+                <Fragment key={`${segment.to ?? ""}-${segment.label}-${index}`}>
                   {index > 0 ? <BreadcrumbSeparator /> : null}
                   <BreadcrumbItem>
                     {isLast || !segment.to ? (

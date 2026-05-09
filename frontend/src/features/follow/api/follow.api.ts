@@ -1,4 +1,3 @@
-import type { RootState } from "@/app/store";
 import type { User } from "@/features/auth";
 import { api } from "@/shared/api/api";
 
@@ -35,25 +34,9 @@ export const followApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { followingId }) => [
         "User",
         { type: "User", id: followingId },
-        { type: "FollowList", id: `followers-${followingId}` },
+        /** Все списки подписчиков/подписок (в т.ч. текущая страница «Подписчики» с флагом isFollowing) */
+        "FollowList",
       ],
-      async onQueryStarted(_arg, { dispatch, queryFulfilled, getState }) {
-        try {
-          await queryFulfilled;
-
-          const uid = (getState() as RootState).user.user?.id;
-
-          if (uid) {
-            dispatch(
-              api.util.invalidateTags([
-                { type: "FollowList", id: `following-${uid}` },
-              ])
-            );
-          }
-        } catch {
-          // мутация упала — инвалидация уже не нужна
-        }
-      },
     }),
 
     unfollowUser: builder.mutation<void, { followingId: string }>({
@@ -64,25 +47,8 @@ export const followApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { followingId }) => [
         "User",
         { type: "User", id: followingId },
-        { type: "FollowList", id: `followers-${followingId}` },
+        "FollowList",
       ],
-      async onQueryStarted(_arg, { dispatch, queryFulfilled, getState }) {
-        try {
-          await queryFulfilled;
-
-          const uid = (getState() as RootState).user.user?.id;
-
-          if (uid) {
-            dispatch(
-              api.util.invalidateTags([
-                { type: "FollowList", id: `following-${uid}` },
-              ])
-            );
-          }
-        } catch {
-          // ignore
-        }
-      },
     }),
   }),
 });
