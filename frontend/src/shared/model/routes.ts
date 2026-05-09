@@ -10,6 +10,7 @@ export const APP_ROUTES = {
   POSTS: "/posts",
   POST_DETAILS: "/posts/:postId",
   USER_DETAILS: "/users/:userId",
+  USER_PROFILE_EDIT: "/users/:userId/edit",
   FOLLOWERS: "/followers",
   FOLLOWING: "/following",
   NOTIFICATIONS: "/notifications",
@@ -25,6 +26,9 @@ type PathParams = {
     postId: string;
   };
   [ROUTES.USER_DETAILS]: {
+    userId: string;
+  };
+  [ROUTES.USER_PROFILE_EDIT]: {
     userId: string;
   };
 };

@@ -1,25 +1,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  format,
-  isAfter,
-  isValid,
-  parse,
-  startOfDay,
-} from "date-fns";
+import { format, isAfter, isValid, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 
 import { buildProfileFormData } from "../lib/build-profile-form-data";
 import { parseBirthDateToInput } from "../lib/format-profile";
-
+import { mapProfileApiErrorToFormFields } from "../lib/map-profile-api-error";
 import {
-  fioPartOptionalSchema,
-  fioPartRequiredSchema,
-  type User,
-} from "@/features/auth";
+  defaultContactsFieldArray,
+  profileEditSchema,
+  type ProfileEditFormValues,
+} from "../model/profile-edit-schema";
+
+import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
@@ -39,32 +34,6 @@ import {
 } from "@/shared/ui/kit/popover";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
-const profileSchema = z.object({
-  firstName: fioPartRequiredSchema,
-  lastName: fioPartOptionalSchema,
-  patronymic: fioPartOptionalSchema,
-  bio: z.string(),
-  university: z.string(),
-  course: z.string(),
-  faculty: z.string(),
-  country: z.string(),
-  city: z.string(),
-  dateOfBirth: z.string(),
-});
-
-type ProfileFormValues = {
-  firstName: string;
-  lastName: string;
-  patronymic: string;
-  bio: string;
-  university: string;
-  course: string;
-  faculty: string;
-  country: string;
-  city: string;
-  dateOfBirth: string;
-};
-
 type UserProfileEditFormProps = {
   user: User;
   onCancel: () => void;
@@ -82,16 +51,10 @@ export function UserProfileEditForm({
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [removeResume, setRemoveResume] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [contactsApiError, setContactsApiError] = useState<string | null>(null);
 
-  const initialContacts =
-    user.contacts?.length && user.contacts.some((c) => c.trim())
-      ? [...user.contacts]
-      : [""];
-
-  const [contactLines, setContactLines] = useState<string[]>(initialContacts);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
+  const form = useForm<ProfileEditFormValues>({
+    resolver: zodResolver(profileEditSchema),
     defaultValues: {
       firstName: user.firstName,
       lastName: user.lastName ?? "",
@@ -103,7 +66,13 @@ export function UserProfileEditForm({
       country: user.country ?? "",
       city: user.city ?? "",
       dateOfBirth: parseBirthDateToInput(user.dateOfBirth),
+      contacts: defaultContactsFieldArray(user.contacts),
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "contacts",
   });
 
   const dateBirthStr =
@@ -120,6 +89,8 @@ export function UserProfileEditForm({
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    setContactsApiError(null);
+    form.clearErrors();
 
     try {
       await updateUser({
@@ -134,7 +105,7 @@ export function UserProfileEditForm({
           faculty: values.faculty,
           country: values.country,
           city: values.city,
-          contacts: contactLines,
+          contacts: values.contacts.map((row) => row.value),
           dateOfBirth: values.dateOfBirth,
           avatarFile,
           resumeFile,
@@ -154,9 +125,20 @@ export function UserProfileEditForm({
         typeof (err.data as { error: unknown }).error === "string"
           ? (err.data as { error: string }).error
           : "Не удалось сохранить профиль";
-      setFormError(message);
+
+      if (message === "Некорректные контакты") {
+        setContactsApiError(message);
+
+        return;
+      }
+
+      if (!mapProfileApiErrorToFormFields(message, form.setError)) {
+        setFormError(message);
+      }
     }
   });
+
+  const errors = form.formState.errors;
 
   return (
     <form
@@ -202,12 +184,12 @@ export function UserProfileEditForm({
             <Input
               id="profile-firstName"
               autoComplete="given-name"
-              aria-invalid={Boolean(form.formState.errors.firstName)}
+              aria-invalid={Boolean(errors.firstName)}
               {...form.register("firstName")}
             />
-            {form.formState.errors.firstName ? (
+            {errors.firstName?.message ? (
               <p className="text-sm text-destructive">
-                {form.formState.errors.firstName.message}
+                {errors.firstName.message}
               </p>
             ) : null}
           </Field>
@@ -216,12 +198,12 @@ export function UserProfileEditForm({
             <Input
               id="profile-lastName"
               autoComplete="family-name"
-              aria-invalid={Boolean(form.formState.errors.lastName)}
+              aria-invalid={Boolean(errors.lastName)}
               {...form.register("lastName")}
             />
-            {form.formState.errors.lastName ? (
+            {errors.lastName?.message ? (
               <p className="text-sm text-destructive">
-                {form.formState.errors.lastName.message}
+                {errors.lastName.message}
               </p>
             ) : null}
           </Field>
@@ -230,12 +212,12 @@ export function UserProfileEditForm({
             <Input
               id="profile-patronymic"
               autoComplete="additional-name"
-              aria-invalid={Boolean(form.formState.errors.patronymic)}
+              aria-invalid={Boolean(errors.patronymic)}
               {...form.register("patronymic")}
             />
-            {form.formState.errors.patronymic ? (
+            {errors.patronymic?.message ? (
               <p className="text-sm text-destructive">
-                {form.formState.errors.patronymic.message}
+                {errors.patronymic.message}
               </p>
             ) : null}
           </Field>
@@ -270,40 +252,52 @@ export function UserProfileEditForm({
             id="profile-bio"
             rows={4}
             className="min-h-24 resize-y"
+            aria-invalid={Boolean(errors.bio)}
             {...form.register("bio")}
           />
+          {errors.bio?.message ? (
+            <p className="text-sm text-destructive">{errors.bio.message}</p>
+          ) : null}
         </Field>
       </FieldSet>
 
       <FieldSet>
         <FieldLegend>Контакты</FieldLegend>
+        {contactsApiError ? (
+          <p className="mb-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {contactsApiError}
+          </p>
+        ) : null}
+        {errors.contacts?.message ? (
+          <p className="mb-2 text-sm text-destructive">
+            {errors.contacts.message}
+          </p>
+        ) : null}
         <FieldGroup className="gap-3">
-          {contactLines.map((line, index) => (
-            <div key={`contact-${index}`} className="flex gap-2">
-              <Input
-                placeholder="Телефон, почта, ссылка…"
-                aria-label={`Контакт ${index + 1}`}
-                value={line}
-                onChange={(e) => {
-                  const v = e.target.value;
-
-                  setContactLines((rows) => {
-                    const next = [...rows];
-                    next[index] = v;
-
-                    return next;
-                  });
-                }}
-              />
-              {contactLines.length > 1 ? (
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  placeholder="Телефон, почта, ссылка…"
+                  aria-label={`Контакт ${index + 1}`}
+                  aria-invalid={Boolean(
+                    errors.contacts?.[index]?.value?.message
+                  )}
+                  {...form.register(`contacts.${index}.value`)}
+                />
+                {errors.contacts?.[index]?.value?.message ? (
+                  <p className="mt-1 text-sm text-destructive">
+                    {errors.contacts[index]?.value?.message}
+                  </p>
+                ) : null}
+              </div>
+              {fields.length > 1 ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="shrink-0"
-                  onClick={() =>
-                    setContactLines((rows) => rows.filter((_, i) => i !== index))
-                  }
+                  className="shrink-0 self-start"
+                  onClick={() => remove(index)}
                   aria-label="Удалить контакт"
                 >
                   <Trash2 className="size-4" />
@@ -316,7 +310,7 @@ export function UserProfileEditForm({
             variant="outline"
             size="sm"
             className="w-fit"
-            onClick={() => setContactLines((rows) => [...rows, ""])}
+            onClick={() => append({ value: "" })}
           >
             <Plus className="mr-1 size-4" />
             Добавить контакт
@@ -333,6 +327,7 @@ export function UserProfileEditForm({
               <Button
                 type="button"
                 variant="outline"
+                aria-invalid={Boolean(errors.dateOfBirth)}
                 className={cn(
                   "w-full max-w-xs justify-start font-normal",
                   !dateBirthStr && "text-muted-foreground"
@@ -342,10 +337,15 @@ export function UserProfileEditForm({
                 {birthButtonLabel}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+            <PopoverContent
+              className="w-auto overflow-hidden p-0"
+              align="start"
+            >
               <Calendar
                 mode="single"
-                selected={parsedBirth && isValid(parsedBirth) ? parsedBirth : undefined}
+                selected={
+                  parsedBirth && isValid(parsedBirth) ? parsedBirth : undefined
+                }
                 defaultMonth={
                   parsedBirth && isValid(parsedBirth) ? parsedBirth : new Date()
                 }
@@ -365,6 +365,11 @@ export function UserProfileEditForm({
               />
             </PopoverContent>
           </Popover>
+          {errors.dateOfBirth?.message ? (
+            <p className="mt-2 text-sm text-destructive">
+              {errors.dateOfBirth.message}
+            </p>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-2">
             <Button
               type="button"
@@ -372,7 +377,10 @@ export function UserProfileEditForm({
               size="sm"
               className="text-muted-foreground"
               onClick={() => {
-                form.setValue("dateOfBirth", "", { shouldDirty: true });
+                form.setValue("dateOfBirth", "", {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
               }}
             >
               Очистить дату
@@ -386,23 +394,66 @@ export function UserProfileEditForm({
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="profile-university">Вуз</FieldLabel>
-            <Input id="profile-university" {...form.register("university")} />
+            <Input
+              id="profile-university"
+              aria-invalid={Boolean(errors.university)}
+              {...form.register("university")}
+            />
+            {errors.university?.message ? (
+              <p className="text-sm text-destructive">
+                {errors.university.message}
+              </p>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel htmlFor="profile-course">Курс</FieldLabel>
-            <Input id="profile-course" {...form.register("course")} />
+            <Input
+              id="profile-course"
+              aria-invalid={Boolean(errors.course)}
+              {...form.register("course")}
+            />
+            {errors.course?.message ? (
+              <p className="text-sm text-destructive">
+                {errors.course.message}
+              </p>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel htmlFor="profile-faculty">Факультет</FieldLabel>
-            <Input id="profile-faculty" {...form.register("faculty")} />
+            <Input
+              id="profile-faculty"
+              aria-invalid={Boolean(errors.faculty)}
+              {...form.register("faculty")}
+            />
+            {errors.faculty?.message ? (
+              <p className="text-sm text-destructive">
+                {errors.faculty.message}
+              </p>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel htmlFor="profile-country">Страна</FieldLabel>
-            <Input id="profile-country" {...form.register("country")} />
+            <Input
+              id="profile-country"
+              aria-invalid={Boolean(errors.country)}
+              {...form.register("country")}
+            />
+            {errors.country?.message ? (
+              <p className="text-sm text-destructive">
+                {errors.country.message}
+              </p>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel htmlFor="profile-city">Город</FieldLabel>
-            <Input id="profile-city" {...form.register("city")} />
+            <Input
+              id="profile-city"
+              aria-invalid={Boolean(errors.city)}
+              {...form.register("city")}
+            />
+            {errors.city?.message ? (
+              <p className="text-sm text-destructive">{errors.city.message}</p>
+            ) : null}
           </Field>
         </FieldGroup>
       </FieldSet>

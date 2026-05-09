@@ -1,18 +1,16 @@
+import { Link } from "react-router";
+
 import { computeAge, formatRegistrationDate } from "../lib/format-profile";
 
-import {
-  displayPublicName,
-  userInitials,
-  type User,
-} from "@/features/auth";
+import { displayPublicName, userInitials, type User } from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
 
-
 type UserProfileViewProps = {
   user: User;
-  onEdit?: () => void;
+  /** Ссылка на страницу редактирования профиля (только для владельца) */
+  editProfileHref?: string;
 };
 
 function OptionalRow({
@@ -34,7 +32,10 @@ function OptionalRow({
   );
 }
 
-export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
+export function UserProfileView({
+  user,
+  editProfileHref,
+}: UserProfileViewProps) {
   const age = computeAge(user.dateOfBirth ?? null);
   const registrationLabel = formatRegistrationDate(user.createdAt);
   const publicTitle = displayPublicName(user);
@@ -57,9 +58,9 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
             <h1 className="text-2xl font-semibold">{publicTitle}</h1>
           </div>
         </div>
-        {onEdit ? (
-          <Button type="button" variant="outline" onClick={onEdit}>
-            Редактировать профиль
+        {editProfileHref ? (
+          <Button type="button" variant="outline" asChild>
+            <Link to={editProfileHref}>Редактировать профиль</Link>
           </Button>
         ) : null}
       </div>
@@ -89,7 +90,9 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
 
       {user.contacts?.length ? (
         <section className="grid gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Контакты</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Контакты
+          </h2>
           <ul className="list-inside list-disc space-y-1 text-sm">
             {user.contacts.map((line, i) => (
               <li key={`${line}-${i}`} className="break-all">

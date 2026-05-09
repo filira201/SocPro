@@ -23,6 +23,23 @@ export function breadcrumbSegmentsFromPath(
     return [{ label: "Посты", to: ROUTES.POSTS }, { label: "Публикация" }];
   }
 
+  const userEditMatch = matchPath(
+    { path: ROUTES.USER_PROFILE_EDIT, end: true },
+    pathname
+  );
+
+  if (userEditMatch?.params.userId) {
+    const uid = userEditMatch.params.userId;
+
+    return [
+      {
+        label: "Профиль",
+        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+      },
+      { label: "Редактирование" },
+    ];
+  }
+
   const userMatch = matchPath(
     { path: ROUTES.USER_DETAILS, end: true },
     pathname

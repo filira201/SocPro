@@ -1,38 +1,46 @@
-import { Link, useParams } from "react-router";
+import { useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 
-import { UserProfileView } from "./ui/user-profile-view";
+import { UserProfileEditForm } from "./ui/user-profile-edit-form";
 
 import { selectCurrentUser, useGetUserByIdQuery } from "@/features/auth";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
-function UserPage() {
+function UserProfileEditPage() {
   const { userId } = useParams();
-
+  const navigate = useNavigate();
   const currentUser = useAppSelector(selectCurrentUser);
 
   const { data: user, isLoading } = useGetUserByIdQuery(userId ?? "", {
     skip: !userId,
   });
 
-  const isOwner = Boolean(
-    userId && currentUser?.id && currentUser.id === userId
-  );
+  useEffect(() => {
+    if (!userId || !currentUser) {
+      return;
+    }
 
-  const editHref =
-    user && isOwner
-      ? ROUTES.USER_PROFILE_EDIT.replace(":userId", user.id)
-      : undefined;
+    if (currentUser.id !== userId) {
+      navigate(ROUTES.USER_DETAILS.replace(":userId", userId), {
+        replace: true,
+      });
+    }
+  }, [userId, currentUser, navigate]);
+
+  const profileHref = userId
+    ? ROUTES.USER_DETAILS.replace(":userId", userId)
+    : ROUTES.POSTS;
 
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
       <div className="grid gap-4">
         <Link
-          to={ROUTES.POSTS}
+          to={profileHref}
           className="text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
-          Назад к ленте
+          Назад к профилю
         </Link>
 
         {isLoading ? (
@@ -41,8 +49,12 @@ function UserPage() {
           </div>
         ) : null}
 
-        {user ? (
-          <UserProfileView user={user} editProfileHref={editHref} />
+        {user && currentUser?.id === userId ? (
+          <UserProfileEditForm
+            user={user}
+            onCancel={() => navigate(profileHref)}
+            onSaved={() => navigate(profileHref)}
+          />
         ) : null}
 
         {!isLoading && !user ? (
@@ -55,4 +67,4 @@ function UserPage() {
   );
 }
 
-export const Component = UserPage;
+export const Component = UserProfileEditPage;

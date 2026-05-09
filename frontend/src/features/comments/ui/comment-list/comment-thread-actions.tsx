@@ -66,9 +66,7 @@ export function CommentThreadActions({
         }}
         aria-expanded={replyComposerOpen}
         aria-label={
-          replyComposerOpen
-            ? "Закрыть форму ответа"
-            : "Открыть форму ответа"
+          replyComposerOpen ? "Закрыть форму ответа" : "Открыть форму ответа"
         }
       >
         <MessageCircle />
@@ -84,9 +82,7 @@ export function CommentThreadActions({
             onToggleShowReplies();
           }}
           aria-expanded={repliesExpanded}
-          aria-label={
-            repliesExpanded ? "Скрыть ответы" : "Показать ответы"
-          }
+          aria-label={repliesExpanded ? "Скрыть ответы" : "Показать ответы"}
         >
           {repliesExpanded ? (
             <ChevronUp className="size-3.5" />
