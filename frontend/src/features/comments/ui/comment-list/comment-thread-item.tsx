@@ -28,13 +28,13 @@ import { CommentThreadEditor } from "./comment-thread-editor";
 import { PAGE_LIMIT, ROOT_INITIAL_LIMIT } from "./constants";
 import { LoadMoreTrigger } from "./load-more-trigger";
 
+import { displayPublicName, userInitials } from "@/features/auth";
 import {
   formatPostDate,
   toAbsoluteUploadUrl,
 } from "@/features/posts/lib/format";
-import { displayPublicName, userInitials } from "@/features/auth";
-import { ROUTES } from "@/shared/model/routes";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
+import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 
 type ThreadItemProps = {
@@ -275,6 +275,8 @@ export function CommentThreadItem({
               likedByUserDisplay={likedByUserDisplay}
               likeCountDisplay={likeCountDisplay}
               replyCount={comment.replyCount}
+              repliesExpanded={showReplies}
+              replyComposerOpen={isReplying}
               isOwner={comment.isOwner}
               isDeleting={isDeleting}
               onToggleLike={() => void handleLike()}

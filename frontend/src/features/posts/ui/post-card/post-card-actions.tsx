@@ -2,17 +2,18 @@ import { Heart, MessageCircle } from "lucide-react";
 
 import type { Post } from "../../model/types";
 
-import { Button } from "@/shared/ui/kit/button";
 import { Toggle } from "@/shared/ui/kit/toggle";
 
 type PostCardActionsProps = {
   post: Post;
+  commentsExpanded: boolean;
   onToggleLike: () => void;
   onToggleComments: () => void;
 };
 
 export function PostCardActions({
   post,
+  commentsExpanded,
   onToggleLike,
   onToggleComments,
 }: PostCardActionsProps) {
@@ -29,15 +30,20 @@ export function PostCardActions({
         <Heart className={post.likedByUser ? "fill-current" : ""} />
         {post.likeCount}
       </Toggle>
-      <Button
+      <Toggle
         type="button"
-        variant="ghost"
+        pressed={commentsExpanded}
+        variant="outline"
         size="sm"
-        onClick={onToggleComments}
+        onPressedChange={onToggleComments}
+        aria-expanded={commentsExpanded}
+        aria-label={
+          commentsExpanded ? "Скрыть комментарии" : "Показать комментарии"
+        }
       >
         <MessageCircle />
         {post.commentCount}
-      </Button>
+      </Toggle>
     </footer>
   );
 }

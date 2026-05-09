@@ -23,6 +23,7 @@ export function computeAge(dateOfBirthIso: string | null): number | null {
     }
 
     const today = startOfDay(new Date());
+
     return differenceInYears(today, birth);
   } catch {
     return null;

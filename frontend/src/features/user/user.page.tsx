@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
+import { UserProfileEditForm } from "./ui/user-profile-edit-form";
+import { UserProfileView } from "./ui/user-profile-view";
+
 import { selectCurrentUser, useGetUserByIdQuery } from "@/features/auth";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
-import { UserProfileEditForm } from "./ui/user-profile-edit-form";
-import { UserProfileView } from "./ui/user-profile-view";
 
 function UserPage() {
   const { userId } = useParams();

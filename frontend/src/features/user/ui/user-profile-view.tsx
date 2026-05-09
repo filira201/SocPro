@@ -1,3 +1,5 @@
+import { computeAge, formatRegistrationDate } from "../lib/format-profile";
+
 import {
   displayPublicName,
   userInitials,
@@ -7,7 +9,6 @@ import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
 
-import { computeAge, formatRegistrationDate } from "../lib/format-profile";
 
 type UserProfileViewProps = {
   user: User;
@@ -120,14 +121,18 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
 function pluralYears(n: number) {
   const mod10 = n % 10;
   const mod100 = n % 100;
+
   if (mod100 >= 11 && mod100 <= 14) {
     return "лет";
   }
+
   if (mod10 === 1) {
     return "год";
   }
+
   if (mod10 >= 2 && mod10 <= 4) {
     return "года";
   }
+
   return "лет";
 }

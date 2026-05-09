@@ -115,6 +115,7 @@ export function PostCard({
 
       <PostCardActions
         post={post}
+        commentsExpanded={showComments}
         onToggleLike={handleLike}
         onToggleComments={() => setShowComments((value) => !value)}
       />
