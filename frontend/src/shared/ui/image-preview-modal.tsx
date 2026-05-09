@@ -88,13 +88,9 @@ export function ImagePreviewModal({
 
       const n = list.length;
       const prev =
-        event.key === "ArrowLeft" ||
-        event.key === "a" ||
-        event.key === "A";
+        event.key === "ArrowLeft" || event.key === "a" || event.key === "A";
       const next =
-        event.key === "ArrowRight" ||
-        event.key === "d" ||
-        event.key === "D";
+        event.key === "ArrowRight" || event.key === "d" || event.key === "D";
 
       if (prev) {
         event.preventDefault();
