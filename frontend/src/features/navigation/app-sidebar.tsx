@@ -6,7 +6,13 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
-import { Link, NavLink, useNavigate } from "react-router";
+import {
+  Link,
+  matchPath,
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router";
 
 import { logout, selectCurrentUser, useCurrentQuery } from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
@@ -57,7 +63,11 @@ const navItems = [
   },
 ] as const;
 
+const navSidebarMenuButtonClassName =
+  "data-active:shadow-sm data-active:ring-2 data-active:ring-primary/35 dark:data-active:ring-sidebar-ring/50 data-active:[&_svg]:stroke-[2.5] data-active:[&_svg]:text-sidebar-primary data-active:[&_svg]:fill-current";
+
 export function AppSidebar() {
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
@@ -101,10 +111,20 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1.5">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    className={navSidebarMenuButtonClassName}
+                    isActive={Boolean(
+                      matchPath(
+                        { path: item.to, end: item.end },
+                        location.pathname
+                      )
+                    )}
+                  >
                     <NavLink to={item.to} end={item.end}>
                       <item.icon />
                       <span>{item.title}</span>
