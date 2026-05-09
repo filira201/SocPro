@@ -58,6 +58,8 @@ model Follows {
   followerId  String @db.ObjectId
   following   User   @relation("following", fields: [followingId], references: [id])
   followingId String @db.ObjectId
+
+  @@unique([followerId, followingId])
 }
 
 model Post {

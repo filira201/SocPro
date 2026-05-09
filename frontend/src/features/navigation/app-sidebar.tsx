@@ -6,6 +6,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
+import { useMemo } from "react";
 import {
   Link,
   matchPath,
@@ -48,27 +49,6 @@ import {
   useSidebar,
 } from "@/shared/ui/kit/sidebar";
 
-const navItems = [
-  {
-    title: "Посты",
-    to: ROUTES.POSTS,
-    icon: LayoutList,
-    end: true,
-  },
-  {
-    title: "Подписчики",
-    to: ROUTES.FOLLOWERS,
-    icon: Users,
-    end: true,
-  },
-  {
-    title: "Подписки",
-    to: ROUTES.FOLLOWING,
-    icon: UsersRound,
-    end: true,
-  },
-] as const;
-
 const navSidebarMenuButtonClassName =
   "data-active:shadow-sm data-active:ring-2 data-active:ring-primary/35 dark:data-active:ring-sidebar-ring/50 data-active:[&_svg]:stroke-[2.5] data-active:[&_svg]:text-sidebar-primary data-active:[&_svg]:fill-current";
 
@@ -80,6 +60,35 @@ export function AppSidebar() {
   const currentUser = useAppSelector(selectCurrentUser);
 
   useCurrentQuery();
+
+  const navItems = useMemo(() => {
+    const posts = {
+      title: "Посты",
+      to: ROUTES.POSTS,
+      icon: LayoutList,
+      end: true as const,
+    };
+
+    if (!currentUser) {
+      return [posts];
+    }
+
+    return [
+      posts,
+      {
+        title: "Подписчики",
+        to: ROUTES.FOLLOWERS.replace(":userId", currentUser.id),
+        icon: Users,
+        end: true as const,
+      },
+      {
+        title: "Подписки",
+        to: ROUTES.FOLLOWING.replace(":userId", currentUser.id),
+        icon: UsersRound,
+        end: true as const,
+      },
+    ];
+  }, [currentUser]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -120,7 +129,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-1.5">
               {navItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
+                <SidebarMenuItem key={`${item.title}-${item.to}`}>
                   <SidebarMenuButton
                     asChild
                     tooltip={item.title}

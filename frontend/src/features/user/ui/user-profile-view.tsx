@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
 import { computeAge, formatRegistrationDate } from "../lib/format-profile";
@@ -10,6 +10,7 @@ import {
   type User,
 } from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
+import { ROUTES } from "@/shared/model/routes";
 import { ImagePreviewModal } from "@/shared/ui/image-preview-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
@@ -18,6 +19,8 @@ type UserProfileViewProps = {
   user: User;
   /** Ссылка на страницу редактирования профиля (только для владельца) */
   editProfileHref?: string;
+  /** Кнопка подписки для чужого профиля */
+  followAction?: ReactNode;
 };
 
 function OptionalRow({
@@ -42,6 +45,7 @@ function OptionalRow({
 export function UserProfileView({
   user,
   editProfileHref,
+  followAction,
 }: UserProfileViewProps) {
   const [isAvatarPreviewOpen, setIsAvatarPreviewOpen] = useState(false);
   const age = computeAge(user.dateOfBirth ?? null);
@@ -86,13 +90,30 @@ export function UserProfileView({
               Зарегистрирован {registrationLabel}
             </p>
             <h1 className="text-2xl font-semibold">{publicTitle}</h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm">
+              <Link
+                to={ROUTES.FOLLOWERS.replace(":userId", user.id)}
+                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Подписчики: {user.followersCount ?? 0}
+              </Link>
+              <Link
+                to={ROUTES.FOLLOWING.replace(":userId", user.id)}
+                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Подписок: {user.followingCount ?? 0}
+              </Link>
+            </div>
           </div>
         </div>
-        {editProfileHref ? (
-          <Button type="button" variant="outline" asChild>
-            <Link to={editProfileHref}>Редактировать профиль</Link>
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {editProfileHref ? (
+            <Button type="button" variant="outline" asChild>
+              <Link to={editProfileHref}>Редактировать профиль</Link>
+            </Button>
+          ) : null}
+          {!editProfileHref && followAction ? followAction : null}
+        </div>
       </div>
 
       <dl className="grid gap-3 text-sm">

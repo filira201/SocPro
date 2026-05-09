@@ -19,7 +19,7 @@ alwaysApply: true
 - `Like` — `(userId, postId)` с `@@unique([userId, postId])`.
 - `Comment` — `userId`, `postId`, `content`, `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.
 - `CommentAttachment` — файл комментария: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`, `commentId`.
-- `Follows` — `followerId`, `followingId`.
+- `Follows` — `followerId`, `followingId`, уникальная пара `@@unique([followerId, followingId])`.
 
 ## Связи
 

@@ -13,7 +13,7 @@ export function getApiErrorMessage(
   fallback = "Что-то пошло не так"
 ): string {
   if (!err) {
-    return fallback;
+    return "";
   }
 
   if ("status" in err) {

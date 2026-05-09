@@ -49,7 +49,7 @@ const profileUpload = multer({
     if (file.fieldname === "resume") {
       if (!resumeMimeAllowlist.has(file.mimetype)) {
         return cb(
-          new Error("Допустимы только PDF или документы Word (.doc, .docx)")
+          new Error("Допустимы только PDF или документы Word (.doc, .docx)"),
         );
       }
     }
@@ -62,6 +62,16 @@ router.post("/register", UserController.register);
 router.post("/login", UserController.login);
 router.get("/current", authenticateToken, UserController.current);
 router.get("/users", authenticateToken, UserController.searchUsers);
+router.get(
+  "/users/:id/followers",
+  authenticateToken,
+  FollowController.listFollowers,
+);
+router.get(
+  "/users/:id/following",
+  authenticateToken,
+  FollowController.listFollowing,
+);
 router.get("/users/:id", authenticateToken, UserController.getUserById);
 router.put(
   "/users/:id",

@@ -49,12 +49,38 @@ export function breadcrumbSegmentsFromPath(
     return [{ label: "Профиль" }];
   }
 
-  if (pathname === ROUTES.FOLLOWERS) {
-    return [{ label: "Подписчики" }];
+  const followersMatch = matchPath(
+    { path: ROUTES.FOLLOWERS, end: true },
+    pathname
+  );
+
+  if (followersMatch?.params.userId) {
+    const uid = followersMatch.params.userId;
+
+    return [
+      {
+        label: "Профиль",
+        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+      },
+      { label: "Подписчики" },
+    ];
   }
 
-  if (pathname === ROUTES.FOLLOWING) {
-    return [{ label: "Подписки" }];
+  const followingMatch = matchPath(
+    { path: ROUTES.FOLLOWING, end: true },
+    pathname
+  );
+
+  if (followingMatch?.params.userId) {
+    const uid = followingMatch.params.userId;
+
+    return [
+      {
+        label: "Профиль",
+        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+      },
+      { label: "Подписки" },
+    ];
   }
 
   if (pathname === ROUTES.NOTIFICATIONS) {

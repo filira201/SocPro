@@ -159,9 +159,13 @@ const UserController = {
       const user = await prisma.user.findUnique({
         where: { id },
         include: {
-          followers: true,
-          following: true,
           skills: true,
+          _count: {
+            select: {
+              followers: true,
+              following: true,
+            },
+          },
         },
       });
 
@@ -173,8 +177,12 @@ const UserController = {
         where: { AND: [{ followerId: userId }, { followingId: id }] },
       });
 
+      const { _count, ...userWithoutCount } = user;
+
       res.json({
-        ...sanitizeUser(user),
+        ...sanitizeUser(userWithoutCount),
+        followersCount: _count.followers,
+        followingCount: _count.following,
         isFollowing: Boolean(isFollowing),
       });
     } catch (error) {
@@ -240,7 +248,9 @@ const UserController = {
           const d = new Date(dateOfBirth);
 
           if (Number.isNaN(d.getTime())) {
-            return res.status(400).json({ error: "Некорректная дата рождения" });
+            return res
+              .status(400)
+              .json({ error: "Некорректная дата рождения" });
           }
 
           const endToday = new Date();
@@ -330,7 +340,7 @@ const UserController = {
         unlinkUploadByPublicUrl(existing.resumeUrl);
         data.resumeUrl = `/uploads/${resumeFile.filename}`;
         data.resumeOriginalName = decodeUploadOriginalName(
-          resumeFile.originalname
+          resumeFile.originalname,
         );
         data.resumeMimeType = resumeFile.mimetype;
         data.resumeSize = resumeFile.size;
@@ -371,16 +381,26 @@ const UserController = {
             },
           },
           skills: true,
+          _count: {
+            select: {
+              followers: true,
+              following: true,
+            },
+          },
         },
       });
 
       if (!user) {
-        return res
-          .status(400)
-          .json({ error: "Не удалось найти пользователя" });
+        return res.status(400).json({ error: "Не удалось найти пользователя" });
       }
 
-      res.json(sanitizeUser(user));
+      const { _count, ...userWithoutCount } = user;
+
+      res.json({
+        ...sanitizeUser(userWithoutCount),
+        followersCount: _count.followers,
+        followingCount: _count.following,
+      });
     } catch (error) {
       console.error("Error in get current", error);
       res.status(500).json({ error: "Internal server error" });

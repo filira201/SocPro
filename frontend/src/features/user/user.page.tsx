@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { UserProfileView } from "./ui/user-profile-view";
 
 import { selectCurrentUser, useGetUserByIdQuery } from "@/features/auth";
+import { FollowToggleButton } from "@/features/follow";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Spinner } from "@/shared/ui/kit/spinner";
@@ -42,7 +43,18 @@ function UserPage() {
         ) : null}
 
         {user ? (
-          <UserProfileView user={user} editProfileHref={editHref} />
+          <UserProfileView
+            user={user}
+            editProfileHref={editHref}
+            followAction={
+              !isOwner ? (
+                <FollowToggleButton
+                  targetUserId={user.id}
+                  isFollowing={Boolean(user.isFollowing)}
+                />
+              ) : undefined
+            }
+          />
         ) : null}
 
         {!isLoading && !user ? (
