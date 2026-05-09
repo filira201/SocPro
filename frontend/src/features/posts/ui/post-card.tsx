@@ -13,9 +13,9 @@ import { AttachmentList } from "./attachment-list";
 import { PostCardActions } from "./post-card/post-card-actions";
 import { PostCardEditor } from "./post-card/post-card-editor";
 import { PostCardHeader } from "./post-card/post-card-header";
-import { useEditPostFiles } from "./post-card/use-edit-post-files";
 
 import { CommentList } from "@/features/comments";
+import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { ROUTES } from "@/shared/model/routes";
 
 type PostCardProps = {
@@ -37,7 +37,7 @@ export function PostCard({
     []
   );
   const { addFiles, clearFiles, newFiles, removeFile, revokeAll } =
-    useEditPostFiles();
+    useSelectedFilesPreview();
   const [likePost] = useLikePostMutation();
   const [unlikePost] = useUnlikePostMutation();
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();

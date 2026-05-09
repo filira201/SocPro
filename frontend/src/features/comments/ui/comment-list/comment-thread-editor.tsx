@@ -1,17 +1,17 @@
 import { FileText, Paperclip, X } from "lucide-react";
 import { useRef } from "react";
 
-import { toAbsoluteUploadUrl } from "../../lib/format";
 import type { Attachment } from "../../model/types";
 
+import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import type { SelectedFile } from "@/shared/lib/use-selected-files-preview";
 import { Button } from "@/shared/ui/kit/button";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
-type PostCardEditorProps = {
+type CommentThreadEditorProps = {
   content: string;
   onContentChange: (value: string) => void;
-  attachments: Attachment[];
+  visibleAttachments: Attachment[];
   newFiles: SelectedFile[];
   onRemoveAttachment: (attachmentId: string) => void;
   onRemoveNewFile: (index: number) => void;
@@ -21,10 +21,10 @@ type PostCardEditorProps = {
   isUpdating: boolean;
 };
 
-export function PostCardEditor({
+export function CommentThreadEditor({
   content,
   onContentChange,
-  attachments,
+  visibleAttachments,
   newFiles,
   onRemoveAttachment,
   onRemoveNewFile,
@@ -32,19 +32,21 @@ export function PostCardEditor({
   onCancel,
   onSave,
   isUpdating,
-}: PostCardEditorProps) {
+}: CommentThreadEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="grid gap-2">
+    <div className="mt-2 grid gap-2">
       <Textarea
         value={content}
         onChange={(event) => onContentChange(event.target.value)}
-        className="min-h-28 resize-y text-base"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        className="min-h-20 resize-y text-sm"
       />
-      {attachments.length ? (
+      {visibleAttachments.length ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          {attachments.map((attachment) => {
+          {visibleAttachments.map((attachment) => {
             const url = toAbsoluteUploadUrl(attachment.url);
 
             if (attachment.kind === "image") {
@@ -63,6 +65,7 @@ export function PostCardEditor({
                     variant="ghost"
                     size="icon-xs"
                     className="absolute right-1 top-1 bg-background/80"
+                    aria-label="Удалить вложение"
                     onClick={() => onRemoveAttachment(attachment.id)}
                   >
                     <X />
@@ -87,6 +90,7 @@ export function PostCardEditor({
                   variant="ghost"
                   size="icon-xs"
                   className="absolute right-1 top-1 bg-background/80"
+                  aria-label="Удалить вложение"
                   onClick={() => onRemoveAttachment(attachment.id)}
                 >
                   <X />
@@ -120,6 +124,7 @@ export function PostCardEditor({
                 variant="ghost"
                 size="icon-xs"
                 className="absolute right-1 top-1 bg-background/80"
+                aria-label="Убрать файл"
                 onClick={() => onRemoveNewFile(index)}
               >
                 <X />
@@ -155,10 +160,10 @@ export function PostCardEditor({
         />
       </div>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
           Отмена
         </Button>
-        <Button type="button" onClick={onSave} disabled={isUpdating}>
+        <Button type="button" size="sm" disabled={isUpdating} onClick={onSave}>
           Сохранить
         </Button>
       </div>

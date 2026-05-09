@@ -5,7 +5,7 @@ export type SelectedFile = {
   previewUrl: string | null;
 };
 
-export function useEditPostFiles() {
+export function useSelectedFilesPreview() {
   const [newFiles, setNewFiles] = useState<SelectedFile[]>([]);
   const newFilesRef = useRef<SelectedFile[]>([]);
 
