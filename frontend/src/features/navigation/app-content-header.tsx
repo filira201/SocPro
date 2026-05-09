@@ -28,7 +28,7 @@ export function AppContentHeader() {
         <SidebarTrigger className="-ml-1" />
         <Separator
           orientation="vertical"
-          className="mr-2 data-[orientation=vertical]:h-4"
+          className="mr-2 h-4 w-px shrink-0"
         />
         <Breadcrumb>
           <BreadcrumbList>
