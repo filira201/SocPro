@@ -36,6 +36,27 @@ const storage = multer.diskStorage({
 
 const uploads = multer({ storage });
 
+const resumeMimeAllowlist = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+const profileUpload = multer({
+  storage,
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    if (file.fieldname === "resume") {
+      if (!resumeMimeAllowlist.has(file.mimetype)) {
+        return cb(
+          new Error("Допустимы только PDF или документы Word (.doc, .docx)")
+        );
+      }
+    }
+    cb(null, true);
+  },
+});
+
 //Роуты для пользователя
 router.post("/register", UserController.register);
 router.post("/login", UserController.login);
@@ -45,7 +66,21 @@ router.get("/users/:id", authenticateToken, UserController.getUserById);
 router.put(
   "/users/:id",
   authenticateToken,
-  uploads.single("avatar"),
+  (req, res, next) => {
+    profileUpload.fields([
+      { name: "avatar", maxCount: 1 },
+      { name: "resume", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        const message =
+          err.message === "File too large"
+            ? "Файл слишком большой"
+            : err.message || "Ошибка загрузки файла";
+        return res.status(400).json({ error: message });
+      }
+      next();
+    });
+  },
   UserController.updateUser,
 );
 

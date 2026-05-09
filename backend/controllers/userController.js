@@ -10,9 +10,38 @@ const {
   validateRegister,
   validateLogin,
   sanitizeUser,
+  decodeUploadOriginalName,
 } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+function unlinkUploadByPublicUrl(urlPath) {
+  if (
+    !urlPath ||
+    typeof urlPath !== "string" ||
+    !urlPath.startsWith("/uploads/")
+  ) {
+    return;
+  }
+
+  const base = path.basename(urlPath);
+
+  if (!base || base === "." || base === "..") {
+    return;
+  }
+
+  const full = path.join(__dirname, "../uploads", base);
+  fs.unlink(full, () => {});
+}
+
+function optionalTrimmedString(body, key) {
+  if (body[key] === undefined) {
+    return undefined;
+  }
+
+  const s = String(body[key]).trim();
+  return s === "" ? null : s;
+}
 
 const parseCsvIds = (value) => {
   if (!value) {
@@ -142,67 +171,153 @@ const UserController = {
 
   updateUser: async (req, res) => {
     const { id } = req.params;
-    const { email, username, dateOfBirth, bio, location } = req.body;
-
-    let filePath;
-
-    if (req.file && req.file.path) {
-      filePath = req.file.path;
-    }
+    const { username, dateOfBirth } = req.body;
 
     if (id !== req.user.userId) {
       return res.status(403).json({ error: "Нет доступа" });
     }
 
-    let skillIds;
-    if (req.body.skillIds !== undefined) {
-      const raw = req.body.skillIds;
-      const arr = Array.isArray(raw) ? raw : parseCsvIds(raw);
-      skillIds = arr.filter((sid) => OBJECT_ID_REGEX.test(sid));
+    const avatarFile = req.files?.avatar?.[0];
+    const resumeFile = req.files?.resume?.[0];
+    const removeResume =
+      req.body.removeResume === "true" || req.body.removeResume === true;
+
+    if (!username || !USERNAME_REGEX.test(String(username))) {
+      return res.status(400).json({
+        error: "Имя пользователя обязательно: 3–32 символа, буквы/цифры/_-",
+      });
     }
 
     try {
-      if (email) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
-          return res.status(400).json({ error: "Некорректная почта" });
-        }
+      const existing = await prisma.user.findUnique({ where: { id } });
 
-        const exisingUser = await prisma.user.findFirst({
-          where: { email },
-        });
+      if (!existing) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
 
-        if (exisingUser && exisingUser.id !== id) {
-          return res.status(400).json({ error: "Почта уже используется" });
+      const usernameStr = String(username).trim();
+      const existingByUsername = await prisma.user.findFirst({
+        where: { username: usernameStr },
+      });
+
+      if (existingByUsername && existingByUsername.id !== id) {
+        return res.status(400).json({ error: "Имя пользователя уже занято" });
+      }
+
+      let skillIds;
+      if (req.body.skillIds !== undefined) {
+        const raw = req.body.skillIds;
+        const arr = Array.isArray(raw) ? raw : parseCsvIds(raw);
+        skillIds = arr.filter((sid) => OBJECT_ID_REGEX.test(sid));
+      }
+
+      let contactsUpdate;
+      if (req.body.contacts !== undefined) {
+        try {
+          const parsed = JSON.parse(req.body.contacts);
+
+          if (!Array.isArray(parsed)) {
+            throw new Error("invalid");
+          }
+
+          contactsUpdate = parsed.map((x) => String(x).trim()).filter(Boolean);
+        } catch {
+          return res.status(400).json({ error: "Некорректные контакты" });
         }
       }
 
-      if (username) {
-        if (!USERNAME_REGEX.test(String(username))) {
-          return res
-            .status(400)
-            .json({ error: "Имя пользователя: 3-32 символа, буквы/цифры/_-" });
-        }
+      let dateOfBirthUpdate;
+      if (dateOfBirth !== undefined) {
+        if (dateOfBirth === "" || dateOfBirth === null) {
+          dateOfBirthUpdate = null;
+        } else {
+          const d = new Date(dateOfBirth);
 
-        const existingByUsername = await prisma.user.findFirst({
-          where: { username },
-        });
+          if (Number.isNaN(d.getTime())) {
+            return res.status(400).json({ error: "Некорректная дата рождения" });
+          }
 
-        if (existingByUsername && existingByUsername.id !== id) {
-          return res.status(400).json({ error: "Имя пользователя уже занято" });
+          const endToday = new Date();
+          endToday.setHours(23, 59, 59, 999);
+
+          if (d > endToday) {
+            return res.status(400).json({
+              error: "Дата рождения не может быть в будущем",
+            });
+          }
+
+          dateOfBirthUpdate = d;
         }
+      }
+
+      const data = {
+        username: usernameStr,
+      };
+
+      if (req.body.bio !== undefined) {
+        data.bio = optionalTrimmedString(req.body, "bio");
+      }
+
+      if (req.body.location !== undefined) {
+        data.location = optionalTrimmedString(req.body, "location");
+      }
+
+      if (req.body.university !== undefined) {
+        data.university = optionalTrimmedString(req.body, "university");
+      }
+
+      if (req.body.course !== undefined) {
+        data.course = optionalTrimmedString(req.body, "course");
+      }
+
+      if (req.body.faculty !== undefined) {
+        data.faculty = optionalTrimmedString(req.body, "faculty");
+      }
+
+      if (req.body.country !== undefined) {
+        data.country = optionalTrimmedString(req.body, "country");
+      }
+
+      if (req.body.city !== undefined) {
+        data.city = optionalTrimmedString(req.body, "city");
+      }
+
+      if (dateOfBirthUpdate !== undefined) {
+        data.dateOfBirth = dateOfBirthUpdate;
+      }
+
+      if (contactsUpdate !== undefined) {
+        data.contacts = { set: contactsUpdate };
+      }
+
+      if (skillIds !== undefined) {
+        data.skillIds = { set: skillIds };
+      }
+
+      if (avatarFile) {
+        unlinkUploadByPublicUrl(existing.avatarUrl);
+        data.avatarUrl = `/uploads/${avatarFile.filename}`;
+      }
+
+      if (resumeFile) {
+        unlinkUploadByPublicUrl(existing.resumeUrl);
+        data.resumeUrl = `/uploads/${resumeFile.filename}`;
+        data.resumeOriginalName = decodeUploadOriginalName(
+          resumeFile.originalname
+        );
+        data.resumeMimeType = resumeFile.mimetype;
+        data.resumeSize = resumeFile.size;
+      } else if (removeResume) {
+        unlinkUploadByPublicUrl(existing.resumeUrl);
+        data.resumeUrl = null;
+        data.resumeOriginalName = null;
+        data.resumeMimeType = null;
+        data.resumeSize = null;
       }
 
       const user = await prisma.user.update({
         where: { id },
-        data: {
-          email: email || undefined,
-          username: username || undefined,
-          avatarUrl: filePath ? `/${filePath}` : undefined,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-          bio: bio || undefined,
-          location: location || undefined,
-          ...(skillIds !== undefined ? { skillIds: { set: skillIds } } : {}),
-        },
+        data,
         include: { skills: true },
       });
 

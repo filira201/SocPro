@@ -25,6 +25,16 @@ model User {
   updatedAt   DateTime  @updatedAt
   bio         String?
   location    String?
+  contacts    String[]  @default([])
+  university  String?
+  course      String?
+  faculty     String?
+  country     String?
+  city        String?
+  resumeUrl   String?
+  resumeOriginalName String?
+  resumeMimeType     String?
+  resumeSize  Int?
 
   posts     Post[]
   likes     Like[]
