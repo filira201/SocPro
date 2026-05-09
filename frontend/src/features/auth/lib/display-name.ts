@@ -6,6 +6,19 @@ export type PublicNameUser = {
   lastName?: string | null;
 };
 
+export type FullNameUser = PublicNameUser & {
+  patronymic?: string | null;
+};
+
+/** ФИО в порядке: фамилия, имя, отчество; пустые части пропускаются. */
+export function formatFullName(user: FullNameUser): string {
+  const ln = user.lastName?.trim() ?? "";
+  const fn = user.firstName?.trim() ?? "";
+  const pt = user.patronymic?.trim() ?? "";
+
+  return [ln, fn, pt].filter(Boolean).join(" ");
+}
+
 export function displayPublicName(user: PublicNameUser): string {
   const fn = user.firstName?.trim() ?? "";
   const ln = user.lastName?.trim() ?? "";

@@ -30,7 +30,7 @@ function UserPage() {
       <div className="grid gap-4">
         <Link
           to={ROUTES.POSTS}
-          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          className="w-fit justify-self-start text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
           Назад к ленте
         </Link>

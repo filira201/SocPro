@@ -2,7 +2,12 @@ import { Link } from "react-router";
 
 import { computeAge, formatRegistrationDate } from "../lib/format-profile";
 
-import { displayPublicName, userInitials, type User } from "@/features/auth";
+import {
+  displayPublicName,
+  formatFullName,
+  userInitials,
+  type User,
+} from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
@@ -66,8 +71,15 @@ export function UserProfileView({
       </div>
 
       <dl className="grid gap-3 text-sm">
-        <OptionalRow label="Отчество" value={user.patronymic} />
-        <OptionalRow label="О себе" value={user.bio} />
+        <OptionalRow label="ФИО" value={formatFullName(user)} />
+        {age !== null ? (
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+            <dt className="shrink-0 text-muted-foreground">Возраст</dt>
+            <dd className="min-w-0 font-medium">
+              {age} {pluralYears(age)}
+            </dd>
+          </div>
+        ) : null}
         {user.dateOfBirth ? (
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
             <dt className="shrink-0 text-muted-foreground">Дата рождения</dt>
@@ -77,7 +89,6 @@ export function UserProfileView({
                 month: "long",
                 year: "numeric",
               }).format(new Date(user.dateOfBirth))}
-              {age !== null ? ` (${age} ${pluralYears(age)})` : null}
             </dd>
           </div>
         ) : null}
@@ -108,13 +119,19 @@ export function UserProfileView({
           <h2 className="text-sm font-medium text-muted-foreground">Резюме</h2>
           <a
             href={toAbsoluteUploadUrl(user.resumeUrl)}
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="w-fit justify-self-start text-sm font-medium text-sky-600 underline-offset-4 hover:underline dark:text-sky-400"
             target="_blank"
             rel="noreferrer"
           >
-            Скачать{" "}
-            {user.resumeOriginalName ? `(${user.resumeOriginalName})` : "файл"}
+            {user.resumeOriginalName ?? "Файл"}
           </a>
+        </section>
+      ) : null}
+
+      {user.bio?.trim() ? (
+        <section className="grid gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground">О себе</h2>
+          <p className="whitespace-pre-wrap text-sm">{user.bio.trim()}</p>
         </section>
       ) : null}
     </article>

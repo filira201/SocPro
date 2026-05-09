@@ -2,6 +2,7 @@ export type { User } from "./lib/types";
 
 export {
   displayPublicName,
+  formatFullName,
   userInitials,
   CYRILLIC_FIO_PART_REGEX,
 } from "./lib/display-name";

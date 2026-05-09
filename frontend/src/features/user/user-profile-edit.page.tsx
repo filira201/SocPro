@@ -38,7 +38,7 @@ function UserProfileEditPage() {
       <div className="grid gap-4">
         <Link
           to={profileHref}
-          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          className="w-fit justify-self-start text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
           Назад к профилю
         </Link>

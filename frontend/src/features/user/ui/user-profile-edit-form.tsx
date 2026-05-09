@@ -19,8 +19,10 @@ import { useUpdateUserMutation } from "@/features/auth";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
 import { Calendar } from "@/shared/ui/kit/calendar";
+import { Checkbox } from "@/shared/ui/kit/checkbox";
 import {
   Field,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -53,8 +55,17 @@ export function UserProfileEditForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [contactsApiError, setContactsApiError] = useState<string | null>(null);
 
-  const form = useForm<ProfileEditFormValues>({
+  const {
+    clearErrors,
+    control,
+    handleSubmit,
+    register,
+    setError,
+    setValue,
+    formState: { errors },
+  } = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
+    mode: "onSubmit",
     defaultValues: {
       firstName: user.firstName,
       lastName: user.lastName ?? "",
@@ -71,12 +82,11 @@ export function UserProfileEditForm({
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: form.control,
+    control,
     name: "contacts",
   });
 
-  const dateBirthStr =
-    useWatch({ control: form.control, name: "dateOfBirth" }) ?? "";
+  const dateBirthStr = useWatch({ control, name: "dateOfBirth" }) ?? "";
 
   const parsedBirth = dateBirthStr
     ? parse(dateBirthStr, "yyyy-MM-dd", new Date())
@@ -87,10 +97,10 @@ export function UserProfileEditForm({
       ? format(parsedBirth, "d MMMM yyyy", { locale: ru })
       : "Выберите дату";
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     setContactsApiError(null);
-    form.clearErrors();
+    clearErrors();
 
     try {
       await updateUser({
@@ -132,17 +142,16 @@ export function UserProfileEditForm({
         return;
       }
 
-      if (!mapProfileApiErrorToFormFields(message, form.setError)) {
+      if (!mapProfileApiErrorToFormFields(message, setError)) {
         setFormError(message);
       }
     }
   });
 
-  const errors = form.formState.errors;
-
   return (
     <form
       onSubmit={onSubmit}
+      noValidate
       className="grid gap-6 rounded-xl border bg-card p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -164,10 +173,12 @@ export function UserProfileEditForm({
       ) : null}
 
       <FieldSet>
-        <FieldLegend>Учётная запись</FieldLegend>
+        <FieldLegend>Профиль</FieldLegend>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="profile-email">Почта</FieldLabel>
+            <FieldLabel htmlFor="profile-email">
+              Почта <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
               id="profile-email"
               type="email"
@@ -177,7 +188,7 @@ export function UserProfileEditForm({
               className="bg-muted"
             />
           </Field>
-          <Field>
+          <Field data-invalid={!!errors.firstName}>
             <FieldLabel htmlFor="profile-firstName">
               Имя <span className="text-destructive">*</span>
             </FieldLabel>
@@ -185,49 +196,39 @@ export function UserProfileEditForm({
               id="profile-firstName"
               autoComplete="given-name"
               aria-invalid={Boolean(errors.firstName)}
-              {...form.register("firstName")}
+              {...register("firstName")}
             />
             {errors.firstName?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.firstName.message}
-              </p>
+              <FieldError>{errors.firstName.message}</FieldError>
             ) : null}
           </Field>
-          <Field>
+          <Field data-invalid={!!errors.lastName}>
             <FieldLabel htmlFor="profile-lastName">Фамилия</FieldLabel>
             <Input
               id="profile-lastName"
               autoComplete="family-name"
               aria-invalid={Boolean(errors.lastName)}
-              {...form.register("lastName")}
+              {...register("lastName")}
             />
             {errors.lastName?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.lastName.message}
-              </p>
+              <FieldError>{errors.lastName.message}</FieldError>
             ) : null}
           </Field>
-          <Field>
+          <Field data-invalid={!!errors.patronymic}>
             <FieldLabel htmlFor="profile-patronymic">Отчество</FieldLabel>
             <Input
               id="profile-patronymic"
               autoComplete="additional-name"
               aria-invalid={Boolean(errors.patronymic)}
-              {...form.register("patronymic")}
+              {...register("patronymic")}
             />
             {errors.patronymic?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.patronymic.message}
-              </p>
+              <FieldError>{errors.patronymic.message}</FieldError>
             ) : null}
           </Field>
         </FieldGroup>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>Аватар</FieldLegend>
-        <Field>
-          <FieldLabel htmlFor="profile-avatar">Новое изображение</FieldLabel>
+        <Field className="mt-4">
+          <FieldLabel htmlFor="profile-avatar">Аватар</FieldLabel>
           <Input
             id="profile-avatar"
             type="file"
@@ -242,86 +243,21 @@ export function UserProfileEditForm({
             Если не выбран файл, текущий аватар сохранится.
           </p>
         </Field>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>О себе</FieldLegend>
-        <Field>
+        <Field data-invalid={!!errors.bio} className="mt-4">
           <FieldLabel htmlFor="profile-bio">О себе</FieldLabel>
           <Textarea
             id="profile-bio"
             rows={4}
             className="min-h-24 resize-y"
             aria-invalid={Boolean(errors.bio)}
-            {...form.register("bio")}
+            {...register("bio")}
           />
           {errors.bio?.message ? (
-            <p className="text-sm text-destructive">{errors.bio.message}</p>
+            <FieldError>{errors.bio.message}</FieldError>
           ) : null}
         </Field>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>Контакты</FieldLegend>
-        {contactsApiError ? (
-          <p className="mb-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {contactsApiError}
-          </p>
-        ) : null}
-        {errors.contacts?.message ? (
-          <p className="mb-2 text-sm text-destructive">
-            {errors.contacts.message}
-          </p>
-        ) : null}
-        <FieldGroup className="gap-3">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div className="min-w-0 flex-1">
-                <Input
-                  placeholder="Телефон, почта, ссылка…"
-                  aria-label={`Контакт ${index + 1}`}
-                  aria-invalid={Boolean(
-                    errors.contacts?.[index]?.value?.message
-                  )}
-                  {...form.register(`contacts.${index}.value`)}
-                />
-                {errors.contacts?.[index]?.value?.message ? (
-                  <p className="mt-1 text-sm text-destructive">
-                    {errors.contacts[index]?.value?.message}
-                  </p>
-                ) : null}
-              </div>
-              {fields.length > 1 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 self-start"
-                  onClick={() => remove(index)}
-                  aria-label="Удалить контакт"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              ) : null}
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            onClick={() => append({ value: "" })}
-          >
-            <Plus className="mr-1 size-4" />
-            Добавить контакт
-          </Button>
-        </FieldGroup>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>Дата рождения</FieldLegend>
-        <Field>
-          <FieldLabel>День рождения</FieldLabel>
+        <Field data-invalid={!!errors.dateOfBirth} className="mt-4">
+          <FieldLabel>Дата рождения</FieldLabel>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -355,29 +291,28 @@ export function UserProfileEditForm({
                   isAfter(startOfDay(date), startOfDay(new Date()))
                 }
                 onSelect={(d) => {
-                  form.setValue(
-                    "dateOfBirth",
-                    d ? format(d, "yyyy-MM-dd") : "",
-                    { shouldValidate: true, shouldDirty: true }
-                  );
+                  setValue("dateOfBirth", d ? format(d, "yyyy-MM-dd") : "", {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
                   setCalendarOpen(false);
                 }}
               />
             </PopoverContent>
           </Popover>
           {errors.dateOfBirth?.message ? (
-            <p className="mt-2 text-sm text-destructive">
+            <FieldError className="mt-2">
               {errors.dateOfBirth.message}
-            </p>
+            </FieldError>
           ) : null}
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="text-muted-foreground"
               onClick={() => {
-                form.setValue("dateOfBirth", "", {
+                setValue("dateOfBirth", "", {
                   shouldDirty: true,
                   shouldValidate: true,
                 });
@@ -387,75 +322,6 @@ export function UserProfileEditForm({
             </Button>
           </div>
         </Field>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>Учёба и место жительства</FieldLegend>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="profile-university">Вуз</FieldLabel>
-            <Input
-              id="profile-university"
-              aria-invalid={Boolean(errors.university)}
-              {...form.register("university")}
-            />
-            {errors.university?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.university.message}
-              </p>
-            ) : null}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="profile-course">Курс</FieldLabel>
-            <Input
-              id="profile-course"
-              aria-invalid={Boolean(errors.course)}
-              {...form.register("course")}
-            />
-            {errors.course?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.course.message}
-              </p>
-            ) : null}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="profile-faculty">Факультет</FieldLabel>
-            <Input
-              id="profile-faculty"
-              aria-invalid={Boolean(errors.faculty)}
-              {...form.register("faculty")}
-            />
-            {errors.faculty?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.faculty.message}
-              </p>
-            ) : null}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="profile-country">Страна</FieldLabel>
-            <Input
-              id="profile-country"
-              aria-invalid={Boolean(errors.country)}
-              {...form.register("country")}
-            />
-            {errors.country?.message ? (
-              <p className="text-sm text-destructive">
-                {errors.country.message}
-              </p>
-            ) : null}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="profile-city">Город</FieldLabel>
-            <Input
-              id="profile-city"
-              aria-invalid={Boolean(errors.city)}
-              {...form.register("city")}
-            />
-            {errors.city?.message ? (
-              <p className="text-sm text-destructive">{errors.city.message}</p>
-            ) : null}
-          </Field>
-        </FieldGroup>
       </FieldSet>
 
       <FieldSet>
@@ -487,21 +353,152 @@ export function UserProfileEditForm({
             />
           </Field>
           {user.resumeUrl ? (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            <Field orientation="horizontal">
+              <Checkbox
+                id="profile-remove-resume"
                 checked={removeResume}
-                onChange={(e) => {
-                  setRemoveResume(e.target.checked);
+                onCheckedChange={(checked) => {
+                  const next = checked === true;
 
-                  if (e.target.checked) {
+                  setRemoveResume(next);
+
+                  if (next) {
                     setResumeFile(null);
                   }
                 }}
               />
-              Удалить резюме
-            </label>
+              <FieldLabel
+                htmlFor="profile-remove-resume"
+                className="cursor-pointer font-normal"
+              >
+                Удалить резюме
+              </FieldLabel>
+            </Field>
           ) : null}
+        </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Образование</FieldLegend>
+        <FieldGroup>
+          <Field data-invalid={!!errors.university}>
+            <FieldLabel htmlFor="profile-university">Вуз</FieldLabel>
+            <Input
+              id="profile-university"
+              aria-invalid={Boolean(errors.university)}
+              {...register("university")}
+            />
+            {errors.university?.message ? (
+              <FieldError>{errors.university.message}</FieldError>
+            ) : null}
+          </Field>
+          <Field data-invalid={!!errors.faculty}>
+            <FieldLabel htmlFor="profile-faculty">Факультет</FieldLabel>
+            <Input
+              id="profile-faculty"
+              aria-invalid={Boolean(errors.faculty)}
+              {...register("faculty")}
+            />
+            {errors.faculty?.message ? (
+              <FieldError>{errors.faculty.message}</FieldError>
+            ) : null}
+          </Field>
+          <Field data-invalid={!!errors.course}>
+            <FieldLabel htmlFor="profile-course">Курс</FieldLabel>
+            <Input
+              id="profile-course"
+              aria-invalid={Boolean(errors.course)}
+              {...register("course")}
+            />
+            {errors.course?.message ? (
+              <FieldError>{errors.course.message}</FieldError>
+            ) : null}
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Место жительства</FieldLegend>
+        <FieldGroup>
+          <Field data-invalid={!!errors.country}>
+            <FieldLabel htmlFor="profile-country">Страна</FieldLabel>
+            <Input
+              id="profile-country"
+              aria-invalid={Boolean(errors.country)}
+              {...register("country")}
+            />
+            {errors.country?.message ? (
+              <FieldError>{errors.country.message}</FieldError>
+            ) : null}
+          </Field>
+          <Field data-invalid={!!errors.city}>
+            <FieldLabel htmlFor="profile-city">Город</FieldLabel>
+            <Input
+              id="profile-city"
+              aria-invalid={Boolean(errors.city)}
+              {...register("city")}
+            />
+            {errors.city?.message ? (
+              <FieldError>{errors.city.message}</FieldError>
+            ) : null}
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Контакты</FieldLegend>
+        {contactsApiError ? (
+          <p className="mb-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {contactsApiError}
+          </p>
+        ) : null}
+        {errors.contacts?.message ? (
+          <p className="mb-2 text-sm text-destructive">
+            {errors.contacts.message}
+          </p>
+        ) : null}
+        <FieldGroup className="gap-3">
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  placeholder="Телефон, почта, ссылка…"
+                  aria-label={`Контакт ${index + 1}`}
+                  aria-invalid={Boolean(
+                    errors.contacts?.[index]?.value?.message
+                  )}
+                  {...register(`contacts.${index}.value`)}
+                />
+                {errors.contacts?.[index]?.value?.message ? (
+                  <FieldError className="mt-1">
+                    {errors.contacts[index]?.value?.message}
+                  </FieldError>
+                ) : null}
+              </div>
+              {fields.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 self-start"
+                  onClick={() => remove(index)}
+                  aria-label="Удалить контакт"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={() => append({ value: "" })}
+          >
+            <Plus className="mr-1 size-4" />
+            Добавить контакт
+          </Button>
         </FieldGroup>
       </FieldSet>
     </form>
