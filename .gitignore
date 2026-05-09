@@ -24,5 +24,4 @@ build-ssr
 *.ntvs*
 *.njsproj
 *.sln
-.cursor
 *.sw?

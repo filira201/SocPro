@@ -1,0 +1,125 @@
+---
+description: Стандарты UX для форм — shadcn Field, react-hook-form, zod, loaders, ошибки
+globs: frontend/src/features/**/*.page.tsx
+alwaysApply: false
+---
+
+# Forms & UX rules
+
+Все новые формы фронтенда — на shadcn `Field` + `react-hook-form` + `zodResolver`. Схемы лежат в `features/<name>/model/schemas.ts`.
+
+Auth-формы (`login.page.tsx`, `register.page.tsx`) НЕ должны использовать `Form`, `FormField`, `FormItem`, `FormControl`, `FormLabel`, `FormMessage` из `@/shared/ui/kit/form`. Для них использовать `Field`, `FieldGroup`, `FieldLabel`, `FieldError` из `@/shared/ui/kit/field`.
+
+## Базовый шаблон
+
+```tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/shared/ui/kit/button";
+import { Input } from "@/shared/ui/kit/input";
+import { Spinner } from "@/shared/ui/kit/spinner";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/shared/ui/kit/field";
+import { getApiErrorMessage } from "@/shared/lib/api-error";
+
+const form = useForm({ resolver: zodResolver(loginSchema), defaultValues: { ... } });
+const [submit, { isLoading, error }] = useLoginMutation();
+const globalError = getApiErrorMessage(error);
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = form;
+
+return (
+  <form
+    onSubmit={handleSubmit(onSubmit)}
+    className="flex flex-col gap-5"
+    aria-busy={isLoading}
+    noValidate
+  >
+    <FieldGroup>
+      <Field data-invalid={!!errors.email}>
+        <FieldLabel htmlFor="email">Почта</FieldLabel>
+        <Input
+          id="email"
+          {...register("email")}
+          type="email"
+          placeholder="you@example.com"
+          disabled={isLoading}
+          aria-invalid={!!errors.email}
+          className="h-11 text-base"
+        />
+        {errors.email?.message ? <FieldError>{errors.email.message}</FieldError> : null}
+      </Field>
+
+      <Button
+        type="submit"
+        size="lg"
+        className="w-full h-11 text-base font-medium"
+        disabled={isLoading}
+      >
+        {isLoading ? <Spinner data-icon="inline-end" /> : "Войти"}
+      </Button>
+
+      {globalError && error && <FieldError className="text-center">{globalError}</FieldError>}
+    </FieldGroup>
+  </form>
+);
+```
+
+## Размеры и отступы
+
+- `<Input className="h-11 text-base" />`.
+- `<Button size="lg" className="w-full h-11 text-base font-medium" />`.
+- Контейнер формы: `className="flex flex-col gap-5"`.
+- Заголовок карточки: `text-2xl`.
+
+## Адаптивность
+
+- Формы и карточки должны быть mobile-first и корректно работать на ширине от 320px.
+- Обёртки страниц: `min-h-dvh`, `px-3 py-6 sm:px-4 sm:py-8`, центрирование через `flex flex-1 items-center justify-center`.
+- Карточки: `w-full max-w-md` и responsive padding (`p-1 sm:p-4` или аналогичный), без fixed width.
+- Заголовки форм делать responsive (`text-xl sm:text-2xl`), чтобы не ломать layout на узких экранах.
+- Ошибки backend и validation messages должны переноситься внутри формы и не создавать горизонтальный overflow.
+- Inputs/buttons должны сохранять удобную touch-height (`h-11`) на mobile.
+
+## Стиль написания классов в auth
+
+- Для auth-форм не выносить одноразовые utility-классы в константы вроде `inputClass`/`buttonClass`.
+- Для `Input`/`Button` в auth писать `className` прямо в JSX рядом с компонентом, чтобы структура формы читалась целиком в одном месте.
+
+## Состояния загрузки
+
+- При `isLoading`:
+  - `disabled={isLoading}` на ВСЕХ полях и кнопке.
+  - Для иконки загрузки в кнопках использовать `<Spinner />` из UI-kit.
+  - Расположение `Spinner` задавать через `data-icon`:
+    - если иконка стоит перед текстом: `<Spinner data-icon="inline-start" />`
+    - если иконка стоит после текста: `<Spinner data-icon="inline-end" />`
+  - На `<form>` — `aria-busy={isLoading}`.
+
+## Ошибки
+
+- Для ошибок в auth-формах использовать `FieldError`, а не `FieldDescription`.
+- **Глобальный backend-error**: показывать через `getApiErrorMessage(error)` под кнопкой submit как `<FieldError className="text-center">{message}</FieldError>`.
+- **Поле-конкретная ошибка от backend** (например, занят `username` или `email`): использовать `form.setError(field, { type: "server", message })` для inline-вывода под полем.
+- Клиентская валидация — только через zod-схему, никаких ручных `if`-ов в `onSubmit`.
+
+## Тексты
+
+- Все лейблы и описания — на русском (`Почта`, `Имя пользователя`, `Пароль`, `Войти`, `Зарегистрироваться` и т.п.).
+- `placeholder` для email — `you@example.com` (исключение из правила «всё на русском»).
+- Сообщения об успехе после действия — через navigation `state` (`navigate(ROUTES.LOGIN, { state: { justRegistered: true } })`) и баннер на целевой странице.
+
+## Запреты
+
+- Не использовать `alert`/`confirm` для сообщений об ошибках/успехе.
+- Не дублировать схему zod в компоненте — только импорт из `model/schemas.ts`.
+- Не вызывать мутацию RTK Query в обход `react-hook-form` `handleSubmit`.
+- Не ставить кнопку submit с `disabled={!form.formState.isValid}` — пользователю должно быть видно сообщение об ошибке после клика.
+- Не использовать `@/shared/ui/kit/form` в auth-формах; использовать `@/shared/ui/kit/field`.

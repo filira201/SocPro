@@ -1,0 +1,63 @@
+---
+description: Общий контекст проекта SocPro — назначение, требования, стек, ключевые принципы
+alwaysApply: true
+---
+
+# СоцПро — соцсеть для студентов
+
+MVP-социальная сеть для студентов и не только. Монорепо: `backend/` (REST API) и `frontend/` (SPA). Всё взаимодействие фронтенда с сервером — только через JSON и JWT.
+
+## Функциональные требования
+
+1. Регистрация: `email`, `username`, `password`.
+2. Авторизация: `email` + `password`, ответ — JWT.
+3. Просмотр и редактирование личного профиля.
+4. Публикация постов в общей ленте.
+5. Просмотр, комментирование и оценка (лайки) чужих постов.
+6. Создание проектов с описанием, целями и требуемыми навыками.
+7. Поиск пользователей по навыкам и компетенциям.
+8. Подача заявок на участие в проектах.
+9. Создатель проекта управляет заявками и составом участников.
+
+## Технологический стек
+
+- **Backend**: Node.js + Express 4, Prisma 6 + MongoDB, `bcryptjs`, `jsonwebtoken`, `multer` (загрузка файлов), `cors`, `morgan`.
+- **Frontend**: React 19 + Vite 8, Redux Toolkit + RTK Query, react-router 7 (data-API), Tailwind v4, shadcn (`radix-ui`), `react-hook-form` + `zod`, `lucide-react`.
+- **Архитектура frontend**: ED Small (https://ed.evocomm.space/guide/ed-small/) — слои `app`, `features/<name>`, `shared`.
+
+## Ключевые продуктовые правила
+
+- Идентификатор для входа — `email`. `username` — публичное имя, видно всем.
+- `email` пользователя НЕ показывается другим пользователям (приватное поле).
+- В приложении нельзя выполнять действия без входа: всё, кроме `/login`, `/register`, защищено.
+- Все ответы об ошибках имеют единый формат: `{ "error": "Сообщение на русском" }`.
+- `password` (даже хэш) НИКОГДА не возвращается в ответах API — sanitize рекурсивный.
+- Тексты UI — русские. `placeholder` для email — `you@example.com`.
+
+## Связь backend и frontend
+
+```
+frontend (RTK Query)  --HTTP+JWT-->  backend (/api)
+   ^                                       |
+   |  401 → dispatch(logout)               |
+   +---------------------------------------+
+```
+
+- Базовый URL фронта: `import.meta.env.VITE_API_BASE_URL` (по умолчанию `http://localhost:3000`).
+- Префикс API: `/api/...`.
+- Авторизация: header `Authorization: Bearer <token>`.
+
+## Где что искать
+
+- Контроллеры backend: [backend/controllers/](backend/controllers/).
+- Роуты backend: [backend/routes/index.js](backend/routes/index.js).
+- Prisma-схема: [backend/prisma/schema.prisma](backend/prisma/schema.prisma).
+- Базовое API frontend: [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts).
+- Фичи frontend: [frontend/src/features/](frontend/src/features/).
+- Маршруты: [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts).
+- Защита роутов: [frontend/src/app/protected-loader.ts](frontend/src/app/protected-loader.ts), [frontend/src/app/protected-route.tsx](frontend/src/app/protected-route.tsx).
+
+## Источники документации и MCP
+
+- Для актуальной документации библиотек/фреймворков/SDK и API-синтаксиса использовать `context7` MCP (в этом проекте сервер `user-context7`), когда это релевантно задаче.
+- Для поиска по компонентам, примерам и командам установки shadcn использовать `shadcn` MCP (в этом проекте сервер `user-shadcn`) вместо предположений по памяти.

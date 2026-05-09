@@ -1,0 +1,71 @@
+---
+description: Доменная модель SocPro — сущности, связи, enum'ы и правила Prisma + MongoDB
+alwaysApply: true
+---
+
+# Доменная модель
+
+Источник правды — [backend/prisma/schema.prisma](backend/prisma/schema.prisma). Если меняешь схему — пройдись по этому файлу и убедись, что описание совпадает.
+
+## Сущности
+
+- `User` — `email @unique`, `username @unique` (валидация: Unicode-буквы/цифры и символы `_`, `-`, 3–32 символа), `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `location`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `country`, `city`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`.
+- `Skill` — `name @unique`, m2m с `User` и `Project`.
+- `Project` — `title`, `description`, `goals`, `status: ProjectStatus`, `ownerId`, `requiredSkillIds[]`, `members`, `applications`.
+- `ProjectMember` — `(projectId, userId)` `@@unique`, `role: MemberRole`.
+- `ProjectApplication` — `(projectId, applicantId)` `@@unique`, `message?`, `status: ApplicationStatus`, `decidedAt?`.
+- `Post` — `content`, `authorId`, `likes`, `comments`, `attachments`, `createdAt`, `updatedAt`. Если `updatedAt !== createdAt`, UI показывает `Изменено` и дату изменения.
+- `PostAttachment` — файл поста: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind` (`image` | `document`), `postId`.
+- `Like` — `(userId, postId)` с `@@unique([userId, postId])`.
+- `Comment` — `userId`, `postId`, `content`, `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.
+- `CommentAttachment` — файл комментария: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`, `commentId`.
+- `Follows` — `followerId`, `followingId`.
+
+## Связи
+
+```mermaid
+flowchart LR
+  User -- "owns" --> Project
+  User -- "applies" --> ProjectApplication
+  ProjectApplication -- "for" --> Project
+  Project -- "has members" --> ProjectMember
+  ProjectMember -- "is" --> User
+  User -- "M2M" --> Skill
+  Project -- "requires M2M" --> Skill
+  User -- "writes" --> Post
+  Post -- "has" --> Comment
+  Post -- "has" --> Like
+  Post -- "has files" --> PostAttachment
+  Comment -- "has files" --> CommentAttachment
+  User -- "follows" --> User
+```
+
+## Enum'ы
+
+- `ProjectStatus { OPEN | IN_PROGRESS | CLOSED }`
+- `ApplicationStatus { PENDING | ACCEPTED | REJECTED }`
+- `MemberRole { OWNER | MEMBER }`
+
+## Правила Prisma + MongoDB
+
+- ID: `String @id @default(auto()) @map("_id") @db.ObjectId`. На бэке валидируй формат `OBJECT_ID_REGEX = /^[a-f\d]{24}$/i` перед запросом.
+- Many-to-many без явной join-таблицы: парные `String[]` поля + `@relation(fields, references)`. Пример из схемы:
+
+```prisma
+model User {
+  skillIds String[] @db.ObjectId
+  skills   Skill[]  @relation(fields: [skillIds], references: [id])
+}
+model Skill {
+  userIds String[] @db.ObjectId
+  users   User[]   @relation(fields: [userIds], references: [id])
+}
+```
+
+- Обновление m2m — через `set`:
+  ```js
+  prisma.user.update({ where: { id }, data: { skillIds: { set: ids } } })
+  ```
+- Уникальные пары — через `@@unique([a, b])` (см. `ProjectMember`, `ProjectApplication`).
+- Mongo не требует миграций — после изменения схемы достаточно `prisma generate`. При удалении полей старые документы Prisma игнорирует.
+- Деструктивные операции (удаление проекта/поста) — в `prisma.$transaction([...])` с `deleteMany` для связанных сущностей.

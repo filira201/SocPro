@@ -1,0 +1,135 @@
+---
+description: Правила frontend (React + RTK Query + ED Small) — слои, фичи, RTK Query, защита роутов
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend rules
+
+Стек: React 19 + Vite 8 + Redux Toolkit + RTK Query + react-router 7 (data-API) + Tailwind v4 + shadcn (`@/shared/ui/kit`) + react-hook-form + zod.
+
+Архитектура — ED Small (https://ed.evocomm.space/guide/ed-small/): три слоя `app`, `features/<name>`, `shared`.
+
+## MCP для документации
+
+- Если по задаче нужна актуальная документация библиотек, API или миграций, использовать `context7` MCP (`user-context7`) как основной источник.
+- Если по задаче нужны shadcn компоненты (варианты, размеры, примеры, add-команды), использовать `shadcn` MCP (`user-shadcn`).
+
+## Слои и boundaries
+
+- `shared` — общая инфраструктура (api, ui-kit, lib, config, model). НЕ импортирует из `app` и `features`.
+- `features/<name>` — продуктовые фичи. НЕ импортирует из `app`. Между фичами — только через их `index.ts`.
+- `app` — bootstrap, store, router, providers, защищённые лейауты.
+
+Импорт фичи извне — только через `index.ts` или `*.page.tsx`. Это enforces в [frontend/eslint.config.js](frontend/eslint.config.js) (плагин boundaries).
+
+## Структура фичи
+
+```
+features/<name>/
+  api/<name>.api.ts     // RTK Query injectEndpoints на базовый api
+  model/                // userSlice, schemas (zod), selectors
+  lib/types.ts          // публичные типы фичи
+  ui/                   // (опц.) специфичные компоненты фичи
+  <name>.page.tsx       // export const Component = ... (для lazy)
+  index.ts              // public API (типы, хуки, селекторы, экшены)
+```
+
+- Для `features/auth` UI-компоненты (layout, header, формы) хранить в `features/auth/ui/`.
+- В текущей итерации переименование `compose -> ui` сделано только для `features/auth`; остальные фичи переименовываются отдельно в следующих итерациях.
+- Комментарии выделены в отдельную фичу `features/comments` (api/model/ui/index.ts).
+- Для comments использовать директорию `ui/` (не `compose/`).
+
+## RTK Query
+
+- Базовый `api` объявлен ОДИН раз в [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts) (`reducerPath: "splitApi"`, `tagTypes: ["User", "Post", "Project", "Skill", ...]`).
+- Эндпоинты добавлять через `api.injectEndpoints({ endpoints: (builder) => ({...}) })` в `features/<name>/api/<name>.api.ts`.
+- Никаких новых `createApi`, никакого прямого `fetch`/`axios`.
+- После мутации, меняющей данные, использовать `invalidatesTags`.
+- Для optimistic updates использовать `onQueryStarted` + `api.util.updateQueryData`. На ошибке делать `patchResult.undo()` или invalidation соответствующих tags.
+- Для infinite scroll использовать cursor pagination с `{ items, nextCursor }`. RTK Query endpoint может использовать `serializeQueryArgs` + `merge`, если нужно хранить накопленную ленту в одном cache entry.
+- Пример пейлоадов и шаблон:
+
+```ts
+import { api } from "@/shared/api/api";
+
+export const projectsApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    listProjects: builder.query<ProjectsList, ProjectsQuery>({
+      query: (params) => ({ url: "/projects", params }),
+      providesTags: ["Project"],
+    }),
+    createProject: builder.mutation<Project, CreateProjectPayload>({
+      query: (body) => ({ url: "/projects", method: "POST", body }),
+      invalidatesTags: ["Project"],
+    }),
+  }),
+});
+
+export const { useListProjectsQuery, useCreateProjectMutation } = projectsApi;
+```
+
+## Авторизация
+
+- Токен в `state.user.token` + зеркало в `localStorage` под ключом `TOKEN_KEY` (см. [frontend/src/features/auth/model/user.slice.ts](frontend/src/features/auth/model/user.slice.ts)).
+- `prepareHeaders` подставляет `Authorization: Bearer <token>`.
+- На `401` от сервера — `baseQueryWithReauth` диспатчит `logout()` (см. [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts)).
+
+## Защита роутов
+
+- Loader-проверка: [frontend/src/app/protected-loader.ts](frontend/src/app/protected-loader.ts) — sync, читает токен из `localStorage` и `redirect(ROUTES.LOGIN)` при отсутствии.
+- Реактивная защита: [frontend/src/app/protected-route.tsx](frontend/src/app/protected-route.tsx) — `<Navigate to={LOGIN}>` если `selectIsAuthenticated` ложный.
+- Все приложные пути идут под [frontend/src/app/protected-layout.tsx](frontend/src/app/protected-layout.tsx) (header + `useCurrentQuery()` + `<ProtectedRoute />`).
+- Login/Register-страницы делают редирект на `ROUTES.POSTS` если уже авторизован.
+
+## Роуты
+
+- Все пути — в [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts) (`PUBLIC_ROUTES` + `APP_ROUTES`).
+- Параметры — типизировать через `declare module "react-router" { interface Register { parameters: PathParams } }`.
+- Пейджи через `lazy: () => import("@/features/.../*.page")`. Pages должны экспортировать `export const Component = ...`.
+
+## Интерактив внутри кликабельных карточек (лента, посты)
+
+- Не использовать паттерн «вся карточка поста кликабельна для перехода на детали».
+- Для перехода к detail использовать отдельный control (icon button/link) с явным `aria-label`.
+- Вложенные поля (`textarea`, `button`, ссылки, формы) по-прежнему должны останавливать bubbling там, где это нужно.
+
+## Стили
+
+- Tailwind v4 + shadcn ui. Композиция классов через `cn` из [frontend/src/shared/lib/css.ts](frontend/src/shared/lib/css.ts).
+- shadcn-сгенерированные файлы в `[frontend/src/shared/ui/kit/](frontend/src/shared/ui/kit/)` править НЕ нужно — кастомизация через `className` на месте использования.
+- Иконки — `lucide-react`.
+- Для posts/comments использовать shadcn-компоненты вместо самописных аналогов:
+  - аватарки: `Avatar`
+  - лайки c pressed-state: `Toggle`
+  - просмотр изображений: переиспользуемый `ImagePreviewModal` из `shared/ui` + `Carousel` (без `Dialog`)
+- Для loading-состояний кнопок использовать `<Spinner />` и `data-icon`:
+  - `data-icon="inline-start"` — иконка до текста
+  - `data-icon="inline-end"` — иконка после текста
+
+## Responsive и browser support
+
+- Frontend должен быть mobile-first и адаптивным для маленьких mobile screens, tablets и desktop.
+- Поддерживать последние стабильные версии основных браузеров: Chrome, Safari, Firefox, Edge.
+- Использовать Tailwind breakpoints (`sm`, `md`, `lg`, `xl`) и существующие CSS variables/tokens (`bg-background`, `text-foreground`, `border-border`, etc.).
+- Избегать фиксированных ширин для layout-оболочек. Предпочитать `w-full`, `max-w-*`, `min-w-0`, `shrink-0`, `truncate`, responsive gaps/paddings.
+- Для полноэкранных layout на frontend не использовать `h-screen`/`min-h-screen`, если это влияет на mobile browser chrome. Предпочитать `h-dvh`/`min-h-dvh`.
+- Не допускать горизонтальный overflow на ширинах 320-375px. Header-контент должен сжиматься/усекаться, а второстепенный текст можно скрывать на `sm` и ниже.
+
+## Ошибки от backend
+
+- Извлекать через `getApiErrorMessage` из [frontend/src/shared/lib/api-error.ts](frontend/src/shared/lib/api-error.ts) — корректно понимает формат `{ error }` и сетевые ошибки.
+
+## Импорты и циклы
+
+- Только alias `@/...` (см. `tsconfig.app.json` paths).
+- Чтобы избежать циклов между `shared/api` и `features/auth` — `shared/api/api.ts` импортирует `logout`, `TOKEN_KEY` напрямую из `@/features/auth/model/user.slice`, а не через barrel `@/features/auth`.
+- Внутри одной фичи — относительные импорты допустимы.
+- `import type { RootState }` — type-only, чтобы не плодить runtime-циклы.
+
+## Запреты
+
+- Никакого `console.log` (только `console.warn`/`error`). Никаких `alert/confirm`.
+- Не использовать `fetch`/`axios` напрямую — только RTK Query.
+- Не дублировать `createApi` — только `injectEndpoints`.
+- Не помещать UI-компонент или хук в `shared` без полной независимости от фич.

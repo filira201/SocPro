@@ -1,0 +1,124 @@
+---
+description: Правила backend (Express + Prisma + MongoDB) — структура, sanitize, валидация, ошибки
+globs: backend/**/*.js
+alwaysApply: false
+---
+
+# Backend rules
+
+Стек: Express 4 + Prisma 6 + MongoDB + JWT (`jsonwebtoken`) + `bcryptjs`. Никаких сторонних валидаторов (zod/joi) — пишем простые ручные хелперы.
+
+## Структура
+
+```
+backend/
+  bin/www                    # запуск сервера
+  app.js                     # express setup + /api роутер + статика /uploads
+  routes/index.js            # ВСЕ роуты единым файлом
+  middleware/auth.js         # authenticateToken
+  controllers/
+    _utils.js                # sanitizeUser, validateRegister, validateLogin
+    index.js                 # реэкспорт всех контроллеров
+    userController.js
+    postController.js
+    projectController.js
+    applicationController.js
+    memberController.js
+    ...
+  prisma/
+    schema.prisma
+    prismaClient.js
+```
+
+## Паттерн контроллера
+
+```js
+const { prisma } = require("../prisma/prismaClient");
+const { sanitizeUser } = require("./_utils");
+
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+const FooController = {
+  getById: async (req, res) => {
+    const { id } = req.params;
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректный id" });
+    }
+    try {
+      const foo = await prisma.foo.findUnique({ where: { id } });
+      if (!foo) return res.status(404).json({ error: "Не найдено" });
+      res.json(sanitizeUser(foo));
+    } catch (error) {
+      console.error("Error in FooController.getById", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+};
+
+module.exports = FooController;
+```
+
+## Sanitize — обязательно
+
+Любой ответ, в котором может встретиться объект `User` (включая вложенные `author`, `members.user`, `applicant`, `followers.follower`, `following.following`, `comments.user`), оборачивай в `sanitizeUser(...)` из [backend/controllers/_utils.js](backend/controllers/_utils.js). Это удалит `password` рекурсивно.
+
+```js
+res.json(sanitizeUser(items));
+res.json({ ...sanitizeUser(project), isOwner });
+```
+
+Никогда не возвращай `password` напрямую — даже хэш.
+
+## Валидация
+
+- Auth: `validateRegister` / `validateLogin` из `_utils.js`. Возвращают `null` или строку-ошибку.
+- Прочее: ручные проверки. Стандартный набор:
+  ```js
+  if (!OBJECT_ID_REGEX.test(id)) return res.status(400).json({ error: "Некорректный id" });
+  if (!body.field) return res.status(400).json({ error: "Поле обязательно" });
+  ```
+- Email regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`. Username: `/^[\p{L}\p{N}_-]{3,32}$/u` (Unicode letters и цифры, также `_` и `-`). Пароль: `length >= 6`.
+
+## Авторизация
+
+- Все роуты, кроме `POST /register` и `POST /login`, идут через `authenticateToken` middleware ([backend/middleware/auth.js](backend/middleware/auth.js)).
+- Юзер доступен как `req.user.userId`.
+- Проверка владельца ресурса: `if (resource.ownerId !== req.user.userId) return res.status(403).json({ error: "Нет доступа" });`.
+- Для постов/комментариев owner check: `post.authorId === req.user.userId`, `comment.userId === req.user.userId`. Редактировать/удалять можно только свои сущности.
+
+## Посты, комментарии, файлы
+
+- Upload для постов и комментариев — `multer` с `uploads.array("files")`; поле формы `files`.
+- Физическое имя файла на диске генерировать безопасно (`timestamp-random` + расширение из декодированного `originalname`), **не** включать пользовательский `originalname` в имя файла — избегаем проблем с Unicode и FS.
+- Поле `originalName` в БД/API хранить человекочитаемым именем; при приёме из multer при необходимости декодировать (`latin1` → `utf8`), см. `decodeUploadOriginalName` в [backend/controllers/_utils.js](backend/controllers/_utils.js).
+- Для вложений хранить `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`. `kind = "image"` если `mimeType.startsWith("image/")`, иначе `"document"`.
+- Публичный URL файла: `/uploads/<filename>`, статика раздаётся в [backend/app.js](backend/app.js).
+- Лента постов и список комментариев должны поддерживать cursor pagination: `?cursor=<id>&limit=<n>`, ответ `{ items, nextCursor }`.
+- Ответ поста для frontend должен включать `author`, `attachments`, `likeCount`, `commentCount`, `likedByUser`, `isOwner`, `isEdited`.
+- Ответ комментария должен включать `user`, `attachments`, `isOwner`, `isEdited`.
+- При удалении поста транзакционно удалять связанные comments, likes, post attachments и comment attachments.
+
+## Ошибки
+
+- Единый формат: `{ "error": "Сообщение на русском" }`.
+- Статусы:
+  - `400` — валидация / бизнес-конфликт.
+  - `401` — нет/невалидный токен.
+  - `403` — нет доступа.
+  - `404` — не найдено.
+  - `500` — внутренняя ошибка (логировать `console.error` с контекстом).
+
+## Как добавить новый ресурс
+
+1. Создать `controllers/<name>Controller.js` по паттерну выше.
+2. Добавить реэкспорт в [backend/controllers/index.js](backend/controllers/index.js).
+3. Добавить роуты в [backend/routes/index.js](backend/routes/index.js) под `authenticateToken` (если приватные).
+4. Если ответы содержат user-данные — обернуть в `sanitizeUser`.
+5. Если меняется схема — обновить [backend/prisma/schema.prisma](backend/prisma/schema.prisma) и запустить `./node_modules/.bin/prisma generate` (для Mongo миграции не нужны).
+
+## Запреты
+
+- Не использовать `npx prisma` (тянет несовместимую новую версию) — запускать локальный бинарь `./node_modules/.bin/prisma`.
+- Не лить `password` в ответах (см. sanitize).
+- Не использовать `var`, синхронные FS-операции в hot path.
+- Не вводить новые middleware валидации (zod, joi и т.п.) без явного запроса.
