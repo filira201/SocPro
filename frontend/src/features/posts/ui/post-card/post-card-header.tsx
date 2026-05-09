@@ -1,8 +1,10 @@
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router";
 
 import { formatPostDate, toAbsoluteUploadUrl } from "../../lib/format";
 import type { Post } from "../../model/types";
 
+import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
 
@@ -25,20 +27,27 @@ export function PostCardHeader({
 }: PostCardHeaderProps) {
   const displayDate = post.isEdited ? post.updatedAt : post.createdAt;
   const authorFallback = post.author.username.slice(0, 2).toUpperCase();
+  const profilePath = ROUTES.USER_DETAILS.replace(":userId", post.authorId);
 
   return (
     <header className="flex items-start gap-3">
-      <Avatar size="lg">
-        <AvatarImage
-          src={
-            post.author.avatarUrl
-              ? toAbsoluteUploadUrl(post.author.avatarUrl)
-              : ""
-          }
-          alt={post.author.username}
-        />
-        <AvatarFallback>{authorFallback}</AvatarFallback>
-      </Avatar>
+      <Link
+        to={profilePath}
+        className="shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Профиль @${post.author.username}`}
+      >
+        <Avatar size="lg">
+          <AvatarImage
+            src={
+              post.author.avatarUrl
+                ? toAbsoluteUploadUrl(post.author.avatarUrl)
+                : ""
+            }
+            alt={post.author.username}
+          />
+          <AvatarFallback>{authorFallback}</AvatarFallback>
+        </Avatar>
+      </Link>
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

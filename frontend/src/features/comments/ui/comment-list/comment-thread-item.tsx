@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 
 import {
   useDeleteCommentMutation,
@@ -31,6 +32,7 @@ import {
   formatPostDate,
   toAbsoluteUploadUrl,
 } from "@/features/posts/lib/format";
+import { ROUTES } from "@/shared/model/routes";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 
@@ -208,19 +210,25 @@ export function CommentThreadItem({
     <div className="grid gap-3">
       <article className="rounded-lg border p-3">
         <div className="flex items-start gap-3">
-          <Avatar size="default">
-            <AvatarImage
-              src={
-                comment.user.avatarUrl
-                  ? toAbsoluteUploadUrl(comment.user.avatarUrl)
-                  : ""
-              }
-              alt={comment.user.username}
-            />
-            <AvatarFallback>
-              {comment.user.username.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <Link
+            to={ROUTES.USER_DETAILS.replace(":userId", comment.userId)}
+            className="shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Профиль @${comment.user.username}`}
+          >
+            <Avatar size="default">
+              <AvatarImage
+                src={
+                  comment.user.avatarUrl
+                    ? toAbsoluteUploadUrl(comment.user.avatarUrl)
+                    : ""
+                }
+                alt={comment.user.username}
+              />
+              <AvatarFallback>
+                {comment.user.username.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
