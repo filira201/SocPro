@@ -6,11 +6,11 @@ const fs = require("fs");
 const jwt = require("jsonwebtoken");
 
 const {
-  USERNAME_REGEX,
   validateRegister,
   validateLogin,
   sanitizeUser,
   decodeUploadOriginalName,
+  validateFioPart,
 } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -54,35 +54,47 @@ const parseCsvIds = (value) => {
     .filter((s) => OBJECT_ID_REGEX.test(s));
 };
 
+function normalizeOptionalName(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const s = String(value).trim();
+
+  return s === "" ? null : s;
+}
+
 const UserController = {
   register: async (req, res) => {
-    const { email, username, password } = req.body;
+    const { email, password, firstName, lastName, patronymic } = req.body;
 
-    const validationError = validateRegister({ email, username, password });
+    const fn = String(firstName ?? "").trim();
+    const ln = normalizeOptionalName(lastName);
+    const pt = normalizeOptionalName(patronymic);
+
+    const validationError = validateRegister({
+      email,
+      password,
+      firstName: fn,
+      lastName: ln,
+      patronymic: pt,
+    });
     if (validationError) {
       return res.status(400).json({ error: validationError });
     }
 
     try {
-      const existingUser = await prisma.user.findFirst({
-        where: { OR: [{ email }, { username }] },
-      });
+      const existingUser = await prisma.user.findUnique({ where: { email } });
 
       if (existingUser) {
-        if (existingUser.email === email) {
-          return res
-            .status(400)
-            .json({ error: "Пользователь с такой почтой уже существует" });
-        }
-
         return res
           .status(400)
-          .json({ error: "Имя пользователя уже занято" });
+          .json({ error: "Пользователь с такой почтой уже существует" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const png = jdenticon.toPng(`${username}${Date.now()}`, 200);
+      const png = jdenticon.toPng(`${fn}${ln ?? ""}${Date.now()}`, 200);
       const avatarName = `avatar_${Date.now()}.png`;
       const avatarPath = path.join(__dirname, "/../uploads", avatarName);
       fs.writeFileSync(avatarPath, png);
@@ -90,7 +102,9 @@ const UserController = {
       const user = await prisma.user.create({
         data: {
           email,
-          username,
+          firstName: fn,
+          lastName: ln,
+          patronymic: pt,
           password: hashedPassword,
           avatarUrl: `/uploads/${avatarName}`,
         },
@@ -171,7 +185,7 @@ const UserController = {
 
   updateUser: async (req, res) => {
     const { id } = req.params;
-    const { username, dateOfBirth } = req.body;
+    const { dateOfBirth } = req.body;
 
     if (id !== req.user.userId) {
       return res.status(403).json({ error: "Нет доступа" });
@@ -182,10 +196,11 @@ const UserController = {
     const removeResume =
       req.body.removeResume === "true" || req.body.removeResume === true;
 
-    if (!username || !USERNAME_REGEX.test(String(username))) {
-      return res.status(400).json({
-        error: "Имя пользователя обязательно: 3–32 символа, буквы/цифры/_-",
-      });
+    const fn = String(req.body.firstName ?? "").trim();
+    const errFn = validateFioPart(fn, { optional: false, label: "Имя" });
+
+    if (errFn) {
+      return res.status(400).json({ error: errFn });
     }
 
     try {
@@ -193,15 +208,6 @@ const UserController = {
 
       if (!existing) {
         return res.status(404).json({ error: "Пользователь не найден" });
-      }
-
-      const usernameStr = String(username).trim();
-      const existingByUsername = await prisma.user.findFirst({
-        where: { username: usernameStr },
-      });
-
-      if (existingByUsername && existingByUsername.id !== id) {
-        return res.status(400).json({ error: "Имя пользователя уже занято" });
       }
 
       let skillIds;
@@ -251,15 +257,36 @@ const UserController = {
       }
 
       const data = {
-        username: usernameStr,
+        firstName: fn,
       };
+
+      if (req.body.lastName !== undefined) {
+        const ln = optionalTrimmedString(req.body, "lastName");
+        const errLn = validateFioPart(ln, { optional: true, label: "Фамилия" });
+
+        if (errLn) {
+          return res.status(400).json({ error: errLn });
+        }
+
+        data.lastName = ln;
+      }
+
+      if (req.body.patronymic !== undefined) {
+        const pt = optionalTrimmedString(req.body, "patronymic");
+        const errPt = validateFioPart(pt, {
+          optional: true,
+          label: "Отчество",
+        });
+
+        if (errPt) {
+          return res.status(400).json({ error: errPt });
+        }
+
+        data.patronymic = pt;
+      }
 
       if (req.body.bio !== undefined) {
         data.bio = optionalTrimmedString(req.body, "bio");
-      }
-
-      if (req.body.location !== undefined) {
-        data.location = optionalTrimmedString(req.body, "location");
       }
 
       if (req.body.university !== undefined) {
@@ -389,8 +416,13 @@ const UserController = {
       const where = { AND: [] };
 
       if (q) {
+        const needle = String(q);
         where.AND.push({
-          username: { contains: String(q), mode: "insensitive" },
+          OR: [
+            { firstName: { contains: needle, mode: "insensitive" } },
+            { lastName: { contains: needle, mode: "insensitive" } },
+            { patronymic: { contains: needle, mode: "insensitive" } },
+          ],
         });
       }
 

@@ -21,7 +21,7 @@ export type Comment = {
   postId: string;
   parentId: string | null;
   replyToUserId: string | null;
-  replyToUsername: string | null;
+  replyToDisplayName: string | null;
   attachments: Attachment[];
   createdAt: string;
   updatedAt: string;

@@ -17,14 +17,15 @@ datasource db {
 model User {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   email       String    @unique
-  username    String    @unique
+  firstName   String
+  lastName    String?
+  patronymic  String?
   password    String
   avatarUrl   String?
   dateOfBirth DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bio         String?
-  location    String?
   contacts    String[]  @default([])
   university  String?
   course      String?

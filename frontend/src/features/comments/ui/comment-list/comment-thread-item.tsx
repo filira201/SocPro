@@ -32,6 +32,7 @@ import {
   formatPostDate,
   toAbsoluteUploadUrl,
 } from "@/features/posts/lib/format";
+import { displayPublicName, userInitials } from "@/features/auth";
 import { ROUTES } from "@/shared/model/routes";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
@@ -93,9 +94,11 @@ export function CommentThreadItem({
   const replyCursorToLoad =
     nextReplyCursor === undefined ? firstReplies?.nextCursor : nextReplyCursor;
   const displayDate = comment.isEdited ? comment.updatedAt : comment.createdAt;
+  const authorPublicName = displayPublicName(comment.user);
+  const authorAvatarInitials = userInitials(comment.user);
   const mentionContent = stripMentionPrefix(
     comment.content,
-    comment.replyToUsername
+    comment.replyToDisplayName
   );
 
   const redundantLikeOverlay =
@@ -213,7 +216,7 @@ export function CommentThreadItem({
           <Link
             to={ROUTES.USER_DETAILS.replace(":userId", comment.userId)}
             className="shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Профиль @${comment.user.username}`}
+            aria-label={`Профиль ${authorPublicName}`}
           >
             <Avatar size="default">
               <AvatarImage
@@ -222,17 +225,15 @@ export function CommentThreadItem({
                     ? toAbsoluteUploadUrl(comment.user.avatarUrl)
                     : ""
                 }
-                alt={comment.user.username}
+                alt={authorPublicName}
               />
-              <AvatarFallback>
-                {comment.user.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
+              <AvatarFallback>{authorAvatarInitials}</AvatarFallback>
             </Avatar>
           </Link>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              <span className="font-medium">@{comment.user.username}</span>
+              <span className="font-medium">{authorPublicName}</span>
               <span className="text-muted-foreground">
                 {comment.isEdited ? "Изменено " : ""}
                 {formatPostDate(displayDate)}
@@ -266,7 +267,7 @@ export function CommentThreadItem({
               <CommentThreadBody
                 mentionContent={mentionContent}
                 replyToUserId={comment.replyToUserId}
-                replyToUsername={comment.replyToUsername}
+                replyToDisplayName={comment.replyToDisplayName}
                 attachments={comment.attachments}
               />
             )}
@@ -327,7 +328,7 @@ export function CommentThreadItem({
                 postId={postId}
                 parentId={comment.id}
                 replyToUserId={comment.user.id}
-                replyToUsername={comment.user.username}
+                replyToDisplayName={authorPublicName}
                 onCreated={handleReplyCreated}
                 onCancelReply={() => setIsReplying(false)}
               />
@@ -340,7 +341,7 @@ export function CommentThreadItem({
             postId={postId}
             parentId={comment.id}
             replyToUserId={comment.user.id}
-            replyToUsername={comment.user.username}
+            replyToDisplayName={authorPublicName}
             onCreated={handleReplyCreated}
             onCancelReply={() => setIsReplying(false)}
           />

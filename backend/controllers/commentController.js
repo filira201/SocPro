@@ -1,5 +1,9 @@
 const { prisma } = require("../prisma/prismaClient");
-const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
+const {
+  decodeUploadOriginalName,
+  sanitizeUser,
+  displayPublicName,
+} = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_LIMIT = 10;
@@ -65,7 +69,9 @@ function mapComment(comment, userId) {
     replyCount: comment._count?.replies ?? 0,
     likedByUser: (comment.likes?.length ?? 0) > 0,
     replyToUserId: comment.parent?.userId ?? null,
-    replyToUsername: comment.parent?.user?.username ?? null,
+    replyToDisplayName: comment.parent?.user
+      ? displayPublicName(comment.parent.user) || null
+      : null,
     isReply: Boolean(comment.parentId),
     isOwner: comment.userId === userId,
     isEdited,
@@ -87,7 +93,8 @@ async function getCommentForResponse(id, userId) {
           userId: true,
           user: {
             select: {
-              username: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -271,7 +278,8 @@ const CommentController = {
               userId: true,
               user: {
                 select: {
-                  username: true,
+                  firstName: true,
+                  lastName: true,
                 },
               },
             },

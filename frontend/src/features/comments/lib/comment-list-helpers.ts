@@ -20,12 +20,15 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function stripMentionPrefix(content: string, username: string | null) {
-  if (!username) {
+export function stripMentionPrefix(
+  content: string,
+  replyDisplayName: string | null
+) {
+  if (!replyDisplayName) {
     return content;
   }
 
-  const escaped = escapeRegExp(username);
+  const escaped = escapeRegExp(replyDisplayName);
   const withComma = new RegExp(`^@${escaped},\\s*`);
   const withSpaceOnly = new RegExp(`^@${escaped}\\s+`);
 

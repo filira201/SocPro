@@ -14,7 +14,13 @@ import {
   useNavigate,
 } from "react-router";
 
-import { logout, selectCurrentUser, useCurrentQuery } from "@/features/auth";
+import {
+  displayPublicName,
+  logout,
+  selectCurrentUser,
+  userInitials,
+  useCurrentQuery,
+} from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { useAppDispatch, useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
@@ -88,7 +94,8 @@ export function AppSidebar() {
     ? toAbsoluteUploadUrl(currentUser.avatarUrl)
     : "";
 
-  const initials = currentUser?.username.slice(0, 2).toUpperCase() ?? "?";
+  const publicName = currentUser ? displayPublicName(currentUser) : "";
+  const initials = currentUser ? userInitials(currentUser) : "?";
 
   return (
     <Sidebar collapsible="icon">
@@ -148,15 +155,13 @@ export function AppSidebar() {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarImage src={avatarSrc} alt={currentUser.username} />
+                      <AvatarImage src={avatarSrc} alt={publicName} />
                       <AvatarFallback className="rounded-lg text-xs">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-medium">
-                        @{currentUser.username}
-                      </span>
+                      <span className="truncate font-medium">{publicName}</span>
                     </div>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
@@ -171,15 +176,13 @@ export function AppSidebar() {
                       <Avatar className="size-8 rounded-lg">
                         <AvatarImage
                           src={avatarSrc}
-                          alt={currentUser.username}
+                          alt={publicName}
                         />
                         <AvatarFallback className="rounded-lg text-xs">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="truncate font-medium">
-                        @{currentUser.username}
-                      </span>
+                      <span className="truncate font-medium">{publicName}</span>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

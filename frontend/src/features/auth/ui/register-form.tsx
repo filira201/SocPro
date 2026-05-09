@@ -26,7 +26,9 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       email: "",
-      username: "",
+      firstName: "",
+      lastName: "",
+      patronymic: "",
       password: "",
       confirmPassword: "",
     },
@@ -44,7 +46,9 @@ export function RegisterForm() {
     try {
       await registerUser({
         email: values.email,
-        username: values.username,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim() || undefined,
+        patronymic: values.patronymic.trim() || undefined,
         password: values.password,
       }).unwrap();
 
@@ -58,8 +62,12 @@ export function RegisterForm() {
       );
       const lower = message.toLowerCase();
 
-      if (lower.includes("имя пользователя") || lower.includes("username")) {
-        form.setError("username", { type: "server", message });
+      if (message.includes("Имя:")) {
+        form.setError("firstName", { type: "server", message });
+      } else if (message.includes("Фамилия:")) {
+        form.setError("lastName", { type: "server", message });
+      } else if (message.includes("Отчество:")) {
+        form.setError("patronymic", { type: "server", message });
       } else if (lower.includes("почт") || lower.includes("email")) {
         form.setError("email", { type: "server", message });
       } else {
@@ -73,7 +81,9 @@ export function RegisterForm() {
       <form onSubmit={handleSubmit(onSubmit)} aria-busy={isLoading} noValidate>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
-            <FieldLabel htmlFor="email">Почта</FieldLabel>
+            <FieldLabel htmlFor="email">
+              Почта <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
               id="email"
               type="email"
@@ -89,25 +99,61 @@ export function RegisterForm() {
             ) : null}
           </Field>
 
-          <Field data-invalid={!!errors.username}>
-            <FieldLabel htmlFor="username">Имя пользователя</FieldLabel>
+          <Field data-invalid={!!errors.firstName}>
+            <FieldLabel htmlFor="firstName">
+              Имя <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
-              id="username"
-              autoComplete="username"
-              placeholder="имя_пользователя"
+              id="firstName"
+              autoComplete="given-name"
+              placeholder="Иван"
               className="h-11 text-base"
               disabled={isLoading}
-              aria-invalid={!!errors.username}
-              {...register("username")}
+              aria-invalid={!!errors.firstName}
+              {...register("firstName")}
             />
-            {errors.username?.message ? (
-              <FieldError>{errors.username.message}</FieldError>
+            {errors.firstName?.message ? (
+              <FieldError>{errors.firstName.message}</FieldError>
+            ) : null}
+          </Field>
+
+          <Field data-invalid={!!errors.lastName}>
+            <FieldLabel htmlFor="lastName">Фамилия</FieldLabel>
+            <Input
+              id="lastName"
+              autoComplete="family-name"
+              placeholder="Иванов"
+              className="h-11 text-base"
+              disabled={isLoading}
+              aria-invalid={!!errors.lastName}
+              {...register("lastName")}
+            />
+            {errors.lastName?.message ? (
+              <FieldError>{errors.lastName.message}</FieldError>
+            ) : null}
+          </Field>
+
+          <Field data-invalid={!!errors.patronymic}>
+            <FieldLabel htmlFor="patronymic">Отчество</FieldLabel>
+            <Input
+              id="patronymic"
+              autoComplete="additional-name"
+              placeholder="Иванович"
+              className="h-11 text-base"
+              disabled={isLoading}
+              aria-invalid={!!errors.patronymic}
+              {...register("patronymic")}
+            />
+            {errors.patronymic?.message ? (
+              <FieldError>{errors.patronymic.message}</FieldError>
             ) : null}
           </Field>
 
           <Field className="grid gap-4 sm:grid-cols-2">
             <Field data-invalid={!!errors.password}>
-              <FieldLabel htmlFor="password">Пароль</FieldLabel>
+              <FieldLabel htmlFor="password">
+                Пароль <span className="text-destructive">*</span>
+              </FieldLabel>
               <Input
                 id="password"
                 type="password"
@@ -125,7 +171,7 @@ export function RegisterForm() {
 
             <Field data-invalid={!!errors.confirmPassword}>
               <FieldLabel htmlFor="confirm-password">
-                Повторите пароль
+                Повторите пароль <span className="text-destructive">*</span>
               </FieldLabel>
               <Input
                 id="confirm-password"

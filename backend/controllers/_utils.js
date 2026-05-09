@@ -1,5 +1,7 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const USERNAME_REGEX = /^[\p{L}\p{N}_-]{3,32}$/u;
+
+/** Только буквы кириллицы, без пробелов и прочих символов */
+const CYRILLIC_NAME_REGEX = /^[\p{Script=Cyrillic}]+$/u;
 
 /** Multer often delivers UTF-8 names as latin1; normalize for UI / DB originalName. */
 function decodeUploadOriginalName(name) {
@@ -14,17 +16,64 @@ function decodeUploadOriginalName(name) {
   }
 }
 
-function validateRegister({ email, username, password }) {
+/**
+ * @param {string|undefined|null} value
+ * @param {{ optional: boolean; label: string }} opts
+ * @returns {string|null} ошибка или null
+ */
+function validateFioPart(value, { optional, label }) {
+  if (value === undefined || value === null) {
+    return optional ? null : `${label}: поле обязательно`;
+  }
+
+  const s = String(value).trim();
+
+  if (!s) {
+    return optional ? null : `${label}: поле обязательно`;
+  }
+
+  if (!CYRILLIC_NAME_REGEX.test(s)) {
+    return `${label}: только кириллица, без пробелов и других символов`;
+  }
+
+  return null;
+}
+
+function displayPublicName(user) {
+  if (!user || typeof user !== "object") {
+    return "";
+  }
+
+  const fn = user.firstName ? String(user.firstName).trim() : "";
+  const ln = user.lastName ? String(user.lastName).trim() : "";
+
+  const joined = [fn, ln].filter(Boolean).join(" ").trim();
+
+  return joined || fn || "";
+}
+
+function validateRegister({ email, password, firstName, lastName, patronymic }) {
   if (!email || !EMAIL_REGEX.test(String(email))) {
     return "Некорректная почта";
   }
 
-  if (!username || !USERNAME_REGEX.test(String(username))) {
-    return "Имя пользователя: 3-32 символа, буквы/цифры/_-";
-  }
-
   if (!password || String(password).length < 6) {
     return "Пароль минимум 6 символов";
+  }
+
+  const e1 = validateFioPart(firstName, { optional: false, label: "Имя" });
+  if (e1) {
+    return e1;
+  }
+
+  const e2 = validateFioPart(lastName, { optional: true, label: "Фамилия" });
+  if (e2) {
+    return e2;
+  }
+
+  const e3 = validateFioPart(patronymic, { optional: true, label: "Отчество" });
+  if (e3) {
+    return e3;
   }
 
   return null;
@@ -74,9 +123,11 @@ function sanitizeUser(value) {
 
 module.exports = {
   EMAIL_REGEX,
-  USERNAME_REGEX,
+  CYRILLIC_NAME_REGEX,
   decodeUploadOriginalName,
   validateRegister,
   validateLogin,
+  validateFioPart,
+  displayPublicName,
   sanitizeUser,
 };

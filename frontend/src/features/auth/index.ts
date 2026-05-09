@@ -1,8 +1,16 @@
 export type { User } from "./lib/types";
 
 export {
+  displayPublicName,
+  userInitials,
+  CYRILLIC_FIO_PART_REGEX,
+} from "./lib/display-name";
+
+export {
   loginSchema,
   registerSchema,
+  fioPartRequiredSchema,
+  fioPartOptionalSchema,
   type LoginFormValues,
   type RegisterFormValues,
 } from "./model/schemas";

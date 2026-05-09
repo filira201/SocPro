@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { formatPostDate, toAbsoluteUploadUrl } from "../../lib/format";
 import type { Post } from "../../model/types";
 
+import { displayPublicName, userInitials } from "@/features/auth";
 import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
@@ -26,7 +27,8 @@ export function PostCardHeader({
   isDeleting,
 }: PostCardHeaderProps) {
   const displayDate = post.isEdited ? post.updatedAt : post.createdAt;
-  const authorFallback = post.author.username.slice(0, 2).toUpperCase();
+  const authorName = displayPublicName(post.author);
+  const authorFallback = userInitials(post.author);
   const profilePath = ROUTES.USER_DETAILS.replace(":userId", post.authorId);
 
   return (
@@ -34,7 +36,7 @@ export function PostCardHeader({
       <Link
         to={profilePath}
         className="shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`Профиль @${post.author.username}`}
+        aria-label={`Профиль ${authorName}`}
       >
         <Avatar size="lg">
           <AvatarImage
@@ -43,7 +45,7 @@ export function PostCardHeader({
                 ? toAbsoluteUploadUrl(post.author.avatarUrl)
                 : ""
             }
-            alt={post.author.username}
+            alt={authorName}
           />
           <AvatarFallback>{authorFallback}</AvatarFallback>
         </Avatar>
@@ -51,7 +53,7 @@ export function PostCardHeader({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-medium">@{post.author.username}</span>
+          <span className="font-medium">{authorName}</span>
           <span className="text-sm text-muted-foreground">
             {post.isEdited ? "Изменено " : ""}
             {formatPostDate(displayDate)}

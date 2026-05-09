@@ -1,4 +1,8 @@
-import type { User } from "@/features/auth";
+import {
+  displayPublicName,
+  userInitials,
+  type User,
+} from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
@@ -32,6 +36,8 @@ function OptionalRow({
 export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
   const age = computeAge(user.dateOfBirth ?? null);
   const registrationLabel = formatRegistrationDate(user.createdAt);
+  const publicTitle = displayPublicName(user);
+  const initials = userInitials(user);
 
   const avatarSrc = user.avatarUrl ? toAbsoluteUploadUrl(user.avatarUrl) : "";
 
@@ -40,16 +46,14 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <Avatar size="lg">
-            <AvatarImage src={avatarSrc} alt={user.username} />
-            <AvatarFallback>
-              {user.username.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
+            <AvatarImage src={avatarSrc} alt={publicTitle} />
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="grid gap-1">
             <p className="text-sm text-muted-foreground">
               Зарегистрирован {registrationLabel}
             </p>
-            <h1 className="text-2xl font-semibold">@{user.username}</h1>
+            <h1 className="text-2xl font-semibold">{publicTitle}</h1>
           </div>
         </div>
         {onEdit ? (
@@ -60,6 +64,7 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
       </div>
 
       <dl className="grid gap-3 text-sm">
+        <OptionalRow label="Отчество" value={user.patronymic} />
         <OptionalRow label="О себе" value={user.bio} />
         {user.dateOfBirth ? (
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
@@ -79,7 +84,6 @@ export function UserProfileView({ user, onEdit }: UserProfileViewProps) {
         <OptionalRow label="Факультет" value={user.faculty} />
         <OptionalRow label="Страна" value={user.country} />
         <OptionalRow label="Город" value={user.city} />
-        <OptionalRow label="Локация" value={user.location} />
       </dl>
 
       {user.contacts?.length ? (

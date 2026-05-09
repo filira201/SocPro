@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CYRILLIC_FIO_PART_REGEX } from "../lib/display-name";
+
 export const loginSchema = z.object({
   email: z.string().min(1, "Введите почту").email("Некорректная почта"),
   password: z.string().min(6, "Минимум 6 символов"),
@@ -7,14 +9,27 @@ export const loginSchema = z.object({
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
+export const fioPartRequiredSchema = z
+  .string()
+  .min(1, "Введите имя")
+  .regex(
+    CYRILLIC_FIO_PART_REGEX,
+    "Только кириллица, без пробелов и других символов"
+  );
+
+export const fioPartOptionalSchema = z
+  .string()
+  .refine(
+    (s) => s.trim() === "" || CYRILLIC_FIO_PART_REGEX.test(s.trim()),
+    "Только кириллица, без пробелов и других символов"
+  );
+
 export const registerSchema = z
   .object({
     email: z.string().min(1, "Введите почту").email("Некорректная почта"),
-    username: z
-      .string()
-      .min(3, "Минимум 3 символа")
-      .max(32, "Максимум 32 символа")
-      .regex(/^[\p{L}\p{N}_-]+$/u, "Только буквы, цифры, _ и -"),
+    firstName: fioPartRequiredSchema,
+    lastName: fioPartOptionalSchema,
+    patronymic: fioPartOptionalSchema,
     password: z.string().min(6, "Минимум 6 символов"),
     confirmPassword: z.string().min(6, "Минимум 6 символов"),
   })

@@ -10,7 +10,9 @@ type LoginPayload = {
 
 type RegisterPayload = {
   email: string;
-  username: string;
+  firstName: string;
+  lastName?: string | null;
+  patronymic?: string | null;
   password: string;
 };
 

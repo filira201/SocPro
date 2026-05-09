@@ -107,7 +107,7 @@ return (
 
 - Для ошибок в auth-формах использовать `FieldError`, а не `FieldDescription`.
 - **Глобальный backend-error**: показывать через `getApiErrorMessage(error)` под кнопкой submit как `<FieldError className="text-center">{message}</FieldError>`.
-- **Поле-конкретная ошибка от backend** (например, занят `username` или `email`): использовать `form.setError(field, { type: "server", message })` для inline-вывода под полем.
+- **Поле-конкретная ошибка от backend** (например, занят `email` или ошибка валидации `firstName`): использовать `form.setError(field, { type: "server", message })` для inline-вывода под полем.
 - Клиентская валидация — только через zod-схему, никаких ручных `if`-ов в `onSubmit`.
 
 ## Тексты

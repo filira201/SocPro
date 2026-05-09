@@ -1,7 +1,8 @@
 export type ProfileFormSubmitPayload = {
-  username: string;
+  firstName: string;
+  lastName: string;
+  patronymic: string;
   bio: string;
-  location: string;
   university: string;
   course: string;
   faculty: string;
@@ -20,9 +21,10 @@ export function buildProfileFormData(
 ): FormData {
   const fd = new FormData();
 
-  fd.append("username", payload.username.trim());
+  fd.append("firstName", payload.firstName.trim());
+  fd.append("lastName", payload.lastName.trim());
+  fd.append("patronymic", payload.patronymic.trim());
   fd.append("bio", payload.bio);
-  fd.append("location", payload.location);
   fd.append("university", payload.university);
   fd.append("course", payload.course);
   fd.append("faculty", payload.faculty);

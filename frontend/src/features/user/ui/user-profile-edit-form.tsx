@@ -15,7 +15,11 @@ import { z } from "zod";
 import { buildProfileFormData } from "../lib/build-profile-form-data";
 import { parseBirthDateToInput } from "../lib/format-profile";
 
-import type { User } from "@/features/auth";
+import {
+  fioPartOptionalSchema,
+  fioPartRequiredSchema,
+  type User,
+} from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
@@ -36,13 +40,10 @@ import {
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 const profileSchema = z.object({
-  username: z
-    .string()
-    .min(3, "Минимум 3 символа")
-    .max(32, "Максимум 32 символа")
-    .regex(/^[\p{L}\p{N}_-]+$/u, "Только буквы, цифры, _ и -"),
+  firstName: fioPartRequiredSchema,
+  lastName: fioPartOptionalSchema,
+  patronymic: fioPartOptionalSchema,
   bio: z.string(),
-  location: z.string(),
   university: z.string(),
   course: z.string(),
   faculty: z.string(),
@@ -52,9 +53,10 @@ const profileSchema = z.object({
 });
 
 type ProfileFormValues = {
-  username: string;
+  firstName: string;
+  lastName: string;
+  patronymic: string;
   bio: string;
-  location: string;
   university: string;
   course: string;
   faculty: string;
@@ -91,9 +93,10 @@ export function UserProfileEditForm({
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName ?? "",
+      patronymic: user.patronymic ?? "",
       bio: user.bio ?? "",
-      location: user.location ?? "",
       university: user.university ?? "",
       course: user.course ?? "",
       faculty: user.faculty ?? "",
@@ -122,9 +125,10 @@ export function UserProfileEditForm({
       await updateUser({
         id: user.id,
         userData: buildProfileFormData({
-          username: values.username,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          patronymic: values.patronymic,
           bio: values.bio,
-          location: values.location,
           university: values.university,
           course: values.course,
           faculty: values.faculty,
@@ -192,18 +196,46 @@ export function UserProfileEditForm({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="profile-username">
-              Имя пользователя <span className="text-destructive">*</span>
+            <FieldLabel htmlFor="profile-firstName">
+              Имя <span className="text-destructive">*</span>
             </FieldLabel>
             <Input
-              id="profile-username"
-              autoComplete="username"
-              aria-invalid={Boolean(form.formState.errors.username)}
-              {...form.register("username")}
+              id="profile-firstName"
+              autoComplete="given-name"
+              aria-invalid={Boolean(form.formState.errors.firstName)}
+              {...form.register("firstName")}
             />
-            {form.formState.errors.username ? (
+            {form.formState.errors.firstName ? (
               <p className="text-sm text-destructive">
-                {form.formState.errors.username.message}
+                {form.formState.errors.firstName.message}
+              </p>
+            ) : null}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="profile-lastName">Фамилия</FieldLabel>
+            <Input
+              id="profile-lastName"
+              autoComplete="family-name"
+              aria-invalid={Boolean(form.formState.errors.lastName)}
+              {...form.register("lastName")}
+            />
+            {form.formState.errors.lastName ? (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.lastName.message}
+              </p>
+            ) : null}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="profile-patronymic">Отчество</FieldLabel>
+            <Input
+              id="profile-patronymic"
+              autoComplete="additional-name"
+              aria-invalid={Boolean(form.formState.errors.patronymic)}
+              {...form.register("patronymic")}
+            />
+            {form.formState.errors.patronymic ? (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.patronymic.message}
               </p>
             ) : null}
           </Field>
@@ -371,10 +403,6 @@ export function UserProfileEditForm({
           <Field>
             <FieldLabel htmlFor="profile-city">Город</FieldLabel>
             <Input id="profile-city" {...form.register("city")} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="profile-location">Локация (доп.)</FieldLabel>
-            <Input id="profile-location" {...form.register("location")} />
           </Field>
         </FieldGroup>
       </FieldSet>

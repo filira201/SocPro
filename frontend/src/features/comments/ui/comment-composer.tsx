@@ -22,7 +22,7 @@ type CommentComposerProps = {
   postId: string;
   parentId?: string | null;
   replyToUserId?: string | null;
-  replyToUsername?: string | null;
+  replyToDisplayName?: string | null;
   onCreated?: (comment: Comment) => void;
   onCancelReply?: () => void;
 };
@@ -36,7 +36,7 @@ export function CommentComposer({
   postId,
   parentId,
   replyToUserId,
-  replyToUsername,
+  replyToDisplayName,
   onCreated,
   onCancelReply,
 }: CommentComposerProps) {
@@ -47,7 +47,7 @@ export function CommentComposer({
   const [createComment, { isLoading }] = useCreateCommentMutation();
 
   const replyPrefixPlain =
-    replyToUsername && parentId ? `@${replyToUsername}, ` : "";
+    replyToDisplayName && parentId ? `@${replyToDisplayName}, ` : "";
 
   const schema = useMemo(() => {
     const maxBody = Math.max(0, MAX_COMMENT_LENGTH - replyPrefixPlain.length);
@@ -149,13 +149,13 @@ export function CommentComposer({
       className="grid gap-2"
       noValidate
     >
-      {replyToUsername && replyToUserId && parentId ? (
+      {replyToDisplayName && replyToUserId && parentId ? (
         <div className="flex flex-wrap items-baseline gap-1 text-sm">
           <Link
             to={ROUTES.USER_DETAILS.replace(":userId", replyToUserId)}
             className="font-medium text-sky-600 hover:underline dark:text-sky-400"
           >
-            @{replyToUsername}
+            {replyToDisplayName}
           </Link>
           <span className="text-muted-foreground">, </span>
         </div>

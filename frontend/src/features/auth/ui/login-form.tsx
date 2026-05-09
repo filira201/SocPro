@@ -86,7 +86,9 @@ export function LoginForm({
       <form onSubmit={handleSubmit(onSubmit)} aria-busy={isLoading} noValidate>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
-            <FieldLabel htmlFor="email">Почта</FieldLabel>
+            <FieldLabel htmlFor="email">
+              Почта <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
               id="email"
               type="email"
@@ -103,7 +105,9 @@ export function LoginForm({
           </Field>
 
           <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="password">Пароль</FieldLabel>
+            <FieldLabel htmlFor="password">
+              Пароль <span className="text-destructive">*</span>
+            </FieldLabel>
             <Input
               id="password"
               type="password"

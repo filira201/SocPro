@@ -8,27 +8,27 @@ import { ROUTES } from "@/shared/model/routes";
 type CommentThreadBodyProps = {
   mentionContent: string;
   replyToUserId: string | null | undefined;
-  replyToUsername: string | null | undefined;
+  replyToDisplayName: string | null | undefined;
   attachments: Attachment[];
 };
 
 export function CommentThreadBody({
   mentionContent,
   replyToUserId,
-  replyToUsername,
+  replyToDisplayName,
   attachments,
 }: CommentThreadBodyProps) {
   return (
     <>
-      {mentionContent || (replyToUserId && replyToUsername) ? (
+      {mentionContent || (replyToUserId && replyToDisplayName) ? (
         <p className="mt-2 whitespace-pre-wrap text-sm">
-          {replyToUserId && replyToUsername ? (
+          {replyToUserId && replyToDisplayName ? (
             <>
               <Link
                 to={ROUTES.USER_DETAILS.replace(":userId", replyToUserId)}
                 className="font-medium text-sky-600 hover:underline dark:text-sky-400"
               >
-                @{replyToUsername}
+                {replyToDisplayName}
               </Link>
               <span>, </span>
             </>
