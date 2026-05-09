@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 
 import { computeAge, formatRegistrationDate } from "../lib/format-profile";
@@ -9,6 +10,7 @@ import {
   type User,
 } from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
+import { ImagePreviewModal } from "@/shared/ui/image-preview-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
 import { Button } from "@/shared/ui/kit/button";
 
@@ -41,6 +43,7 @@ export function UserProfileView({
   user,
   editProfileHref,
 }: UserProfileViewProps) {
+  const [isAvatarPreviewOpen, setIsAvatarPreviewOpen] = useState(false);
   const age = computeAge(user.dateOfBirth ?? null);
   const registrationLabel = formatRegistrationDate(user.createdAt);
   const publicTitle = displayPublicName(user);
@@ -52,10 +55,32 @@ export function UserProfileView({
     <article className="grid gap-6 rounded-xl border bg-card p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Avatar size="lg">
-            <AvatarImage src={avatarSrc} alt={publicTitle} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
+          {user.avatarUrl ? (
+            <>
+              <button
+                type="button"
+                className="shrink-0 rounded-full p-0 outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() => setIsAvatarPreviewOpen(true)}
+                aria-label="Открыть фото профиля"
+              >
+                <Avatar size="lg">
+                  <AvatarImage src={avatarSrc} alt={publicTitle} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+              </button>
+              <ImagePreviewModal
+                open={isAvatarPreviewOpen}
+                onOpenChange={setIsAvatarPreviewOpen}
+                title="Просмотр фото профиля пользователя"
+                sources={[{ src: avatarSrc, alt: publicTitle }]}
+              />
+            </>
+          ) : (
+            <Avatar size="lg">
+              <AvatarImage src={avatarSrc} alt={publicTitle} />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+          )}
           <div className="grid gap-1">
             <p className="text-sm text-muted-foreground">
               Зарегистрирован {registrationLabel}
