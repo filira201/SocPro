@@ -40,27 +40,35 @@ export function FuseSkillConfirmDialog({
         {fuseChoice ? (
           <>
             <DialogHeader>
-              <DialogTitle>Уточните навык</DialogTitle>
-              <DialogDescription>
-                Сервер предполагает, что вы могли иметь в виду «
-                {fuseChoice.suggestion.name}». Вы ввели «{fuseChoice.userInput}
-                ». Выберите вариант для сохранения в профиле.
+              <DialogTitle className="text-lg">Уточните навык</DialogTitle>
+              <DialogDescription className="text-base">
+                Сервер предполагает, что вы могли иметь в виду{" "}
+                <span className="underline text-primary">
+                  «{fuseChoice.suggestion.name}»
+                </span>
+                . Вы ввели{" "}
+                <span className="underline text-primary">
+                  «{fuseChoice.userInput}»
+                </span>
+                . Выберите вариант для сохранения в профиле
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex-col gap-2 sm:flex-col">
               <Button
+                size="lg"
                 type="button"
                 variant="default"
-                className="w-full"
+                className="w-full text-base"
                 disabled={disabled || busy}
                 onClick={onAccept}
               >
                 «{fuseChoice.suggestion.name}» (как предложено)
               </Button>
               <Button
+                size="lg"
                 type="button"
-                variant="secondary"
-                className="w-full"
+                variant="outline"
+                className="w-full text-base"
                 disabled={disabled || busy}
                 onClick={() => void onOwn()}
               >
