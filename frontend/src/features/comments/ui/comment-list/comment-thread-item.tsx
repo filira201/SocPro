@@ -170,8 +170,8 @@ export function CommentThreadItem({
       setEditSaveError(
         getApiErrorMessage(
           err as Parameters<typeof getApiErrorMessage>[0],
-          "Не удалось сохранить комментарий",
-        ),
+          "Не удалось сохранить комментарий"
+        )
       );
     }
   };
@@ -399,7 +399,11 @@ export function CommentThreadItem({
                     disabled={isDeleting}
                     onClick={() => setDeleteDialogOpen(false)}
                   >
-                    <X data-icon="inline-start" className="size-4" aria-hidden />
+                    <X
+                      data-icon="inline-start"
+                      className="size-4"
+                      aria-hidden
+                    />
                     Нет
                   </Button>
                 </DialogFooter>

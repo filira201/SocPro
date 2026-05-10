@@ -1,5 +1,6 @@
 import {
   Bell,
+  FolderKanban,
   LayoutList,
   LogOut,
   User,
@@ -67,10 +68,18 @@ export function AppSidebar() {
     end: true as const,
   };
 
+  const projects = {
+    title: "Проекты",
+    to: ROUTES.PROJECTS,
+    icon: FolderKanban,
+    end: true as const,
+  };
+
   const navItems = !currentUser
     ? [posts]
     : [
         posts,
+        projects,
         {
           title: "Подписчики",
           to: ROUTES.FOLLOWERS.replace(":userId", currentUser.id),

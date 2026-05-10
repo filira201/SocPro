@@ -65,6 +65,23 @@ export function breadcrumbSegmentsFromPath(
     return [{ label: "Посты" }];
   }
 
+  if (pathname === ROUTES.PROJECTS) {
+    return [{ label: "Проекты" }];
+  }
+
+  if (pathname === ROUTES.PROJECT_CREATE) {
+    return [{ label: "Проекты", to: ROUTES.PROJECTS }, { label: "Создание" }];
+  }
+
+  const projectDetailMatch = matchPath(
+    { path: ROUTES.PROJECT_DETAILS, end: true },
+    pathname
+  );
+
+  if (projectDetailMatch?.params.id) {
+    return [{ label: "Проекты", to: ROUTES.PROJECTS }, { label: "Проект" }];
+  }
+
   const postMatch = matchPath(
     { path: ROUTES.POST_DETAILS, end: true },
     pathname

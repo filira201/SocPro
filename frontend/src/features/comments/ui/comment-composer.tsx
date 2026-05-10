@@ -108,8 +108,8 @@ export function CommentComposer({
       setError(
         getApiErrorMessage(
           err as Parameters<typeof getApiErrorMessage>[0],
-          "Не удалось отправить комментарий",
-        ),
+          "Не удалось отправить комментарий"
+        )
       );
     }
   };

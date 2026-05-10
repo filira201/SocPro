@@ -25,6 +25,18 @@ export const router = createBrowserRouter([
             lazy: () => import("@/features/posts/posts.page"),
           },
           {
+            path: ROUTES.PROJECTS,
+            lazy: () => import("@/features/projects/projects.page"),
+          },
+          {
+            path: ROUTES.PROJECT_CREATE,
+            lazy: () => import("@/features/projects/project-create.page"),
+          },
+          {
+            path: ROUTES.PROJECT_DETAILS,
+            lazy: () => import("@/features/projects/project-detail.page"),
+          },
+          {
             path: ROUTES.POST_DETAILS,
             lazy: () => import("@/features/post/post.page"),
           },

@@ -87,8 +87,8 @@ export function PostComposer() {
       setFormError(
         getApiErrorMessage(
           err as Parameters<typeof getApiErrorMessage>[0],
-          "Не удалось опубликовать пост",
-        ),
+          "Не удалось опубликовать пост"
+        )
       );
     }
   };

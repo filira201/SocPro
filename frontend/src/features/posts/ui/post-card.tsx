@@ -91,8 +91,8 @@ export function PostCard({
       setEditSaveError(
         getApiErrorMessage(
           err as Parameters<typeof getApiErrorMessage>[0],
-          "Не удалось сохранить пост",
-        ),
+          "Не удалось сохранить пост"
+        )
       );
     }
   };

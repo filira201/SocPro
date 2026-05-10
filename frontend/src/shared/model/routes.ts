@@ -14,6 +14,9 @@ export const APP_ROUTES = {
   FOLLOWERS: "/followers/:userId",
   FOLLOWING: "/following/:userId",
   NOTIFICATIONS: "/notifications",
+  PROJECTS: "/projects",
+  PROJECT_CREATE: "/projects/create",
+  PROJECT_DETAILS: "/projects/:id",
 } as const;
 
 export const ROUTES = {
@@ -36,6 +39,9 @@ type PathParams = {
   };
   [ROUTES.FOLLOWING]: {
     userId: string;
+  };
+  [ROUTES.PROJECT_DETAILS]: {
+    id: string;
   };
 };
 
