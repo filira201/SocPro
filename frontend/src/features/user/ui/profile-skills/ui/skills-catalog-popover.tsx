@@ -1,3 +1,5 @@
+import { Search } from "lucide-react";
+
 import { LOADING_MESSAGE, MIN_SEARCH_CHARS } from "../model/constants";
 
 import type { Skill } from "@/features/auth";
@@ -57,6 +59,7 @@ export function SkillsCatalogPopover({
           className="h-11 w-full justify-start sm:w-auto"
           disabled={disabled || catalogBlocked}
         >
+          <Search data-icon="inline-start" className="size-4" aria-hidden />
           Добавить из каталога
         </Button>
       </PopoverTrigger>

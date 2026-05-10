@@ -47,7 +47,7 @@ export function ProfileSkillsField({
         disabled={disabled}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
+      <div className="flex flex-col gap-3">
         <SkillsCatalogPopover
           open={catalog.open}
           onOpenChange={catalog.setOpen}

@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+
 import { Button } from "@/shared/ui/kit/button";
 import { Input } from "@/shared/ui/kit/input";
 import { Spinner } from "@/shared/ui/kit/spinner";
@@ -29,9 +31,9 @@ export function CustomSkillRow({
     catalogBlocked;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:max-w-md sm:flex-row sm:items-center">
+    <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <Input
-        className="h-11"
+        className="h-11 min-w-0 w-full sm:flex-1"
         placeholder="Свой навык, например Rust"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -47,7 +49,7 @@ export function CustomSkillRow({
       <Button
         type="button"
         variant="secondary"
-        className="h-11 shrink-0"
+        className="h-11 w-full shrink-0 sm:w-auto"
         disabled={submitBlocked}
         onClick={() => void onSubmit()}
       >
@@ -57,7 +59,10 @@ export function CustomSkillRow({
             Добавление…
           </>
         ) : (
-          "Добавить навык"
+          <>
+            <Plus data-icon="inline-start" className="size-4" aria-hidden />
+            Добавить навык
+          </>
         )}
       </Button>
     </div>
