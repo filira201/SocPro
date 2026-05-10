@@ -1,8 +1,10 @@
 import { Link } from "react-router";
 
 import { displayPublicName } from "@/features/auth";
+import { projectStatusLabel } from "@/features/projects/lib/format-project-status";
 import type { ProjectListItem } from "@/features/projects/model/types";
 import { ROUTES } from "@/shared/model/routes";
+import { Badge } from "@/shared/ui/kit/badge";
 import {
   Card,
   CardDescription,
@@ -30,14 +32,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Card className="transition-colors hover:bg-muted/40">
       <CardHeader className="gap-2">
-        <CardTitle className="text-lg leading-snug">
-          <Link
-            to={href}
-            className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            {project.title}
-          </Link>
-        </CardTitle>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CardTitle className="text-lg leading-snug">
+            <Link
+              to={href}
+              className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {project.title}
+            </Link>
+          </CardTitle>
+          <Badge variant="secondary" className="shrink-0 font-normal">
+            {projectStatusLabel(project.status)}
+          </Badge>
+        </div>
         <CardDescription className="line-clamp-3 text-sm">
           {excerpt(project.description, 220)}
         </CardDescription>

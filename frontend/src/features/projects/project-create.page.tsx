@@ -1,8 +1,12 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+
+import { ProjectCreateForm } from "./ui/project-create-form";
 
 import { ROUTES } from "@/shared/model/routes";
 
 function ProjectCreatePage() {
+  const navigate = useNavigate();
+
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
       <Link
@@ -14,9 +18,8 @@ function ProjectCreatePage() {
       <h1 className="mt-4 text-xl font-semibold sm:text-2xl">
         Создание проекта
       </h1>
-      <p className="mt-4 rounded-xl border bg-card p-4 text-muted-foreground">
-        Страница в разработке.
-      </p>
+
+      <ProjectCreateForm onCancel={() => navigate(ROUTES.PROJECTS)} />
     </section>
   );
 }

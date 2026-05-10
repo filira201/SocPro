@@ -1,4 +1,9 @@
-import type { ProjectsListResponse } from "../model/types";
+import type {
+  CreateProjectBody,
+  ProjectCreatedPayload,
+  ProjectDetail,
+  ProjectsListResponse,
+} from "../model/types";
 
 import { api } from "@/shared/api/api";
 
@@ -31,7 +36,28 @@ export const projectsApi = api.injectEndpoints({
             ]
           : [{ type: "Project" as const, id: "LIST" }],
     }),
+
+    createProject: builder.mutation<ProjectCreatedPayload, CreateProjectBody>({
+      query: (body) => ({
+        url: "/projects",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (result) => [
+        { type: "Project" as const, id: "LIST" },
+        ...(result ? [{ type: "Project" as const, id: result.id }] : []),
+      ],
+    }),
+
+    getProjectById: builder.query<ProjectDetail, string>({
+      query: (id) => `/projects/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Project" as const, id }],
+    }),
   }),
 });
 
-export const { useGetProjectsListQuery } = projectsApi;
+export const {
+  useGetProjectsListQuery,
+  useCreateProjectMutation,
+  useGetProjectByIdQuery,
+} = projectsApi;
