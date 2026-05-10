@@ -6,6 +6,7 @@ const SkillController = {
   list: async (req, res) => {
     const { q } = req.query;
     const take = Math.min(parseInt(req.query.take, 10) || 50, 200);
+    const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
 
     try {
       let where = {};
@@ -30,6 +31,7 @@ const SkillController = {
         where,
         include: { aliases: { select: { id: true, key: true } } },
         orderBy: { name: "asc" },
+        skip,
         take,
       });
 
