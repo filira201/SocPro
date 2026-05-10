@@ -8,6 +8,13 @@ alwaysApply: false
 
 Стек: React 19 + Vite 8 + Redux Toolkit + RTK Query + react-router 7 (data-API) + Tailwind v4 + shadcn (`@/shared/ui/kit`) + react-hook-form + zod.
 
+## React Compiler
+
+- Сборка: Babel preset React Compiler в [frontend/vite.config.ts](frontend/vite.config.ts) (`reactCompilerPreset()` рядом с `@vitejs/plugin-react`).
+- В **прикладном коде** (`app`, `features`, `shared` вне `ui/kit`) **не добавлять** `useMemo` и `useCallback` — мемоизацию и стабильность ссылок где уместно обеспечивает компилятор.
+- **`shared/ui/kit/` не рефакторим** под это правило: shadcn/kit оставляем как есть (в т.ч. если там остались хуки от апстрима).
+- Про `React.memo` здесь отдельно не договариваемся — по необходимости отдельно.
+
 Архитектура — ED Small (https://ed.evocomm.space/guide/ed-small/): три слоя `app`, `features/<name>`, `shared`.
 
 ## MCP для документации
@@ -97,7 +104,7 @@ export const { useListProjectsQuery, useCreateProjectMutation } = projectsApi;
 ## Стили
 
 - Tailwind v4 + shadcn ui. Композиция классов через `cn` из [frontend/src/shared/lib/css.ts](frontend/src/shared/lib/css.ts).
-- shadcn-сгенерированные файлы в `[frontend/src/shared/ui/kit/](frontend/src/shared/ui/kit/)` править НЕ нужно — кастомизация через `className` на месте использования.
+- shadcn-сгенерированные файлы в `[frontend/src/shared/ui/kit/](frontend/src/shared/ui/kit/)` править НЕ нужно — кастомизация через `className` на месте использования. Стиль «без ручной мемоизации» из раздела React Compiler относится к коду **вне kit**; kit не переписываем ради удаления `useMemo`/`useCallback`.
 - Иконки — `lucide-react`.
 - Для posts/comments использовать shadcn-компоненты вместо самописных аналогов:
   - аватарки: `Avatar`

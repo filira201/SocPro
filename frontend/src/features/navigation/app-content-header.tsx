@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment } from "react";
 import { Link, useLocation } from "react-router";
 
 import {
@@ -28,10 +28,7 @@ export function AppContentHeader() {
   const location = useLocation();
   const currentUser = useAppSelector(selectCurrentUser);
 
-  const profileUserId = useMemo(
-    () => extractProfileUserIdFromPathname(location.pathname),
-    [location.pathname]
-  );
+  const profileUserId = extractProfileUserIdFromPathname(location.pathname);
 
   const { data: profileUserForCrumb } = useGetUserByIdQuery(
     profileUserId ?? "",
@@ -40,29 +37,18 @@ export function AppContentHeader() {
     }
   );
 
-  const profileCrumbLabel = useMemo(() => {
-    if (!profileUserId) {
-      return undefined;
-    }
+  const profileCrumbLabel =
+    !profileUserId
+      ? undefined
+      : profileUserId === currentUser?.id
+        ? "Ваш профиль"
+        : profileUserForCrumb
+          ? displayPublicName(profileUserForCrumb)
+          : undefined;
 
-    if (profileUserId === currentUser?.id) {
-      return "Ваш профиль";
-    }
-
-    if (profileUserForCrumb) {
-      return displayPublicName(profileUserForCrumb);
-    }
-
-    return undefined;
-  }, [profileUserId, currentUser?.id, profileUserForCrumb]);
-
-  const segments = useMemo(
-    () =>
-      breadcrumbSegmentsFromPath(location.pathname, {
-        profileCrumbLabel,
-      }),
-    [location.pathname, profileCrumbLabel]
-  );
+  const segments = breadcrumbSegmentsFromPath(location.pathname, {
+    profileCrumbLabel,
+  });
 
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">

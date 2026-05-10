@@ -22,7 +22,7 @@ MVP-социальная сеть для студентов и не только
 ## Технологический стек
 
 - **Backend**: Node.js + Express 4, Prisma 6 + MongoDB, `bcryptjs`, `jsonwebtoken`, `multer` (загрузка файлов), `cors`, `morgan`.
-- **Frontend**: React 19 + Vite 8, Redux Toolkit + RTK Query, react-router 7 (data-API), Tailwind v4, shadcn (`radix-ui`), `react-hook-form` + `zod`, `lucide-react`.
+- **Frontend**: React 19 + Vite 8, React Compiler (Babel preset в Vite), Redux Toolkit + RTK Query, react-router 7 (data-API), Tailwind v4, shadcn (`radix-ui`), `react-hook-form` + `zod`, `lucide-react`.
 - **Архитектура frontend**: ED Small (https://ed.evocomm.space/guide/ed-small/) — слои `app`, `features/<name>`, `shared`.
 
 ## Ключевые продуктовые правила

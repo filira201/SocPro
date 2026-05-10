@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
 import {
@@ -67,15 +67,12 @@ export function CommentThreadItem({
   const [nextReplyCursor, setNextReplyCursor] = useState<
     string | null | undefined
   >(undefined);
-  const repliesQuery: CommentsQuery = useMemo(
-    () => ({
-      postId,
-      parentId: comment.id,
-      sort,
-      limit: PAGE_LIMIT,
-    }),
-    [comment.id, postId, sort]
-  );
+  const repliesQuery: CommentsQuery = {
+    postId,
+    parentId: comment.id,
+    sort,
+    limit: PAGE_LIMIT,
+  };
   const { data: firstReplies, isFetching: isRepliesFetching } =
     useGetCommentsQuery(repliesQuery, {
       skip: !showReplies,

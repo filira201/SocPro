@@ -6,7 +6,6 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
-import { useMemo } from "react";
 import {
   Link,
   matchPath,
@@ -61,34 +60,30 @@ export function AppSidebar() {
 
   useCurrentQuery();
 
-  const navItems = useMemo(() => {
-    const posts = {
-      title: "Посты",
-      to: ROUTES.POSTS,
-      icon: LayoutList,
-      end: true as const,
-    };
+  const posts = {
+    title: "Посты",
+    to: ROUTES.POSTS,
+    icon: LayoutList,
+    end: true as const,
+  };
 
-    if (!currentUser) {
-      return [posts];
-    }
-
-    return [
-      posts,
-      {
-        title: "Подписчики",
-        to: ROUTES.FOLLOWERS.replace(":userId", currentUser.id),
-        icon: Users,
-        end: true as const,
-      },
-      {
-        title: "Подписки",
-        to: ROUTES.FOLLOWING.replace(":userId", currentUser.id),
-        icon: UsersRound,
-        end: true as const,
-      },
-    ];
-  }, [currentUser]);
+  const navItems = !currentUser
+    ? [posts]
+    : [
+        posts,
+        {
+          title: "Подписчики",
+          to: ROUTES.FOLLOWERS.replace(":userId", currentUser.id),
+          icon: Users,
+          end: true as const,
+        },
+        {
+          title: "Подписки",
+          to: ROUTES.FOLLOWING.replace(":userId", currentUser.id),
+          icon: UsersRound,
+          end: true as const,
+        },
+      ];
 
   const handleLogout = () => {
     dispatch(logout());

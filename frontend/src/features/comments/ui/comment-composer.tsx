@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Paperclip, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router";
 import { z } from "zod";
@@ -49,13 +49,10 @@ export function CommentComposer({
   const replyPrefixPlain =
     replyToDisplayName && parentId ? `@${replyToDisplayName}, ` : "";
 
-  const schema = useMemo(() => {
-    const maxBody = Math.max(0, MAX_COMMENT_LENGTH - replyPrefixPlain.length);
-
-    return z.object({
-      body: z.string().max(maxBody, "Максимум 2000 символов"),
-    });
-  }, [replyPrefixPlain]);
+  const maxBody = Math.max(0, MAX_COMMENT_LENGTH - replyPrefixPlain.length);
+  const schema = z.object({
+    body: z.string().max(maxBody, "Максимум 2000 символов"),
+  });
 
   const { handleSubmit, register, reset } = useForm<CommentBodyFormValues>({
     resolver: zodResolver(schema),

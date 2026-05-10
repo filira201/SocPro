@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type SelectedFile = {
   file: File;
@@ -23,7 +23,7 @@ export function useSelectedFilesPreview() {
     };
   }, []);
 
-  const addFiles = useCallback((files: FileList | File[]) => {
+  const addFiles = (files: FileList | File[]) => {
     const selected = Array.from(files).map((file) => ({
       file,
       previewUrl: file.type.startsWith("image/")
@@ -31,9 +31,9 @@ export function useSelectedFilesPreview() {
         : null,
     }));
     setNewFiles((current) => [...current, ...selected]);
-  }, []);
+  };
 
-  const removeFile = useCallback((index: number) => {
+  const removeFile = (index: number) => {
     setNewFiles((current) => {
       const target = current[index];
 
@@ -43,19 +43,19 @@ export function useSelectedFilesPreview() {
 
       return current.filter((_, itemIndex) => itemIndex !== index);
     });
-  }, []);
+  };
 
-  const revokeAll = useCallback((files: SelectedFile[]) => {
+  const revokeAll = (files: SelectedFile[]) => {
     files.forEach((item) => {
       if (item.previewUrl) {
         URL.revokeObjectURL(item.previewUrl);
       }
     });
-  }, []);
+  };
 
-  const clearFiles = useCallback(() => {
+  const clearFiles = () => {
     setNewFiles([]);
-  }, []);
+  };
 
   return {
     addFiles,
