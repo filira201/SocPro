@@ -14,6 +14,8 @@ import {
   type ProfileEditFormValues,
 } from "../model/profile-edit-schema";
 
+import { ProfileSkillsField } from "./profile-skills-field";
+
 import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
 import { cn } from "@/shared/lib/css";
@@ -76,6 +78,7 @@ export function UserProfileEditForm({
       faculty: user.faculty ?? "",
       dateOfBirth: parseBirthDateToInput(user.dateOfBirth),
       contacts: defaultContactsFieldArray(user.contacts),
+      skillIds: user.skills?.map((s) => s.id) ?? [],
     },
   });
 
@@ -113,6 +116,7 @@ export function UserProfileEditForm({
           faculty: values.faculty,
           contacts: values.contacts.map((row) => row.value),
           dateOfBirth: values.dateOfBirth,
+          skillIds: values.skillIds,
           avatarFile,
           resumeFile,
           removeResume,
@@ -148,6 +152,7 @@ export function UserProfileEditForm({
     <form
       onSubmit={onSubmit}
       noValidate
+      aria-busy={isLoading}
       className="grid gap-6 rounded-xl border bg-card p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -411,6 +416,15 @@ export function UserProfileEditForm({
             ) : null}
           </Field>
         </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Навыки</FieldLegend>
+        <ProfileSkillsField
+          control={control}
+          user={user}
+          disabled={isLoading}
+        />
       </FieldSet>
 
       <FieldSet>

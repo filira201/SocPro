@@ -7,8 +7,8 @@ export type ProfileFormSubmitPayload = {
   course: string;
   faculty: string;
   contacts: string[];
-  /** YYYY-MM-DD или пустая строка для сброса */
   dateOfBirth: string;
+  skillIds: string[];
   avatarFile?: File | null;
   resumeFile?: File | null;
   removeResume: boolean;
@@ -45,6 +45,8 @@ export function buildProfileFormData(
   if (payload.removeResume) {
     fd.append("removeResume", "true");
   }
+
+  fd.append("skillIds", payload.skillIds.join(","));
 
   return fd;
 }

@@ -1,3 +1,9 @@
+export type Skill = {
+  id: string;
+  name: string;
+  aliases?: Array<{ id: string; key: string }>;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -17,12 +23,10 @@ export type User = {
   resumeOriginalName?: string | null;
   resumeMimeType?: string | null;
   resumeSize?: number | null;
-  /** GET /users/:id и GET /current */
   followersCount?: number;
   followingCount?: number;
-  /** Только в ответе GET /users/:id */
   isFollowing?: boolean;
-  /** GET /current — связи подписок */
   followers?: Array<{ follower: User }>;
   following?: Array<{ following: User }>;
+  skills?: Skill[];
 };

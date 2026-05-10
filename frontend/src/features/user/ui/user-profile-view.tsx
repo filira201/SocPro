@@ -143,6 +143,26 @@ export function UserProfileView({
         <OptionalRow label="Курс" value={user.course} />
       </dl>
 
+      {user.skills?.length ? (
+        <section className="grid gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground">Навыки</h2>
+          <ul className="flex flex-wrap gap-2">
+            {[...user.skills]
+              .sort((a, b) =>
+                a.name.localeCompare(b.name, "ru", { sensitivity: "base" })
+              )
+              .map((skill) => (
+                <li
+                  key={skill.id}
+                  className="rounded-full border bg-muted/80 px-2.5 py-1 text-sm"
+                >
+                  {skill.name}
+                </li>
+              ))}
+          </ul>
+        </section>
+      ) : null}
+
       {user.contacts?.length ? (
         <section className="grid gap-2">
           <h2 className="text-sm font-medium text-muted-foreground">

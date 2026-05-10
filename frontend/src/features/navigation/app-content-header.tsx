@@ -37,14 +37,13 @@ export function AppContentHeader() {
     }
   );
 
-  const profileCrumbLabel =
-    !profileUserId
-      ? undefined
-      : profileUserId === currentUser?.id
-        ? "Ваш профиль"
-        : profileUserForCrumb
-          ? displayPublicName(profileUserForCrumb)
-          : undefined;
+  const profileCrumbLabel = !profileUserId
+    ? undefined
+    : profileUserId === currentUser?.id
+      ? "Ваш профиль"
+      : profileUserForCrumb
+        ? displayPublicName(profileUserForCrumb)
+        : undefined;
 
   const segments = breadcrumbSegmentsFromPath(location.pathname, {
     profileCrumbLabel,

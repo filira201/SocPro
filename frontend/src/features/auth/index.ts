@@ -1,4 +1,4 @@
-export type { User } from "./lib/types";
+export type { User, Skill } from "./lib/types";
 
 export {
   displayPublicName,

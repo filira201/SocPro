@@ -63,6 +63,7 @@ export const profileEditSchema = z.object({
       })
     )
     .max(25, "Не более 25 строк контактов"),
+  skillIds: z.array(z.string()).max(50, "Не более 50 навыков"),
 });
 
 export type ProfileEditFormValues = z.infer<typeof profileEditSchema>;
