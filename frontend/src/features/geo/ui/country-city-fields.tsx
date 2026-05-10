@@ -1,4 +1,4 @@
-import { ChevronDownIcon, Loader2Icon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Controller,
@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/kit/select";
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 type CountryCityFieldsProps = {
   control: Control<ProfileEditFormValues>;
@@ -141,7 +142,7 @@ export function CountryCityFields({
         />
         {countriesLoading ? (
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Loader2Icon className="size-3 animate-spin" />
+            <Spinner className="size-3" />
             Загрузка списка стран…
           </p>
         ) : null}
@@ -210,7 +211,7 @@ export function CountryCityFields({
                         </p>
                       ) : citiesFetching ? (
                         <p className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
-                          <Loader2Icon className="size-4 animate-spin" />
+                          <Spinner />
                           Поиск…
                         </p>
                       ) : cityItems.length === 0 ? (
