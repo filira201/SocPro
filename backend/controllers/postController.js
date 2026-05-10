@@ -1,4 +1,8 @@
 const { prisma } = require("../prisma/prismaClient");
+const {
+  optimizeUploadedImages,
+  unlinkMulterFiles,
+} = require("../lib/image-optimize");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -131,6 +135,15 @@ const PostController = {
 
     if (!String(content || "").trim() && files.length === 0) {
       return res.status(400).json({ error: "Все поля обязательны" });
+    }
+
+    try {
+      await optimizeUploadedImages(files);
+    } catch (e) {
+      await unlinkMulterFiles(files);
+      return res.status(400).json({
+        error: e.message || "Не удалось обработать вложения",
+      });
     }
 
     try {
@@ -284,6 +297,15 @@ const PostController = {
         remainingExistingAttachments === 0
       ) {
         return res.status(400).json({ error: "Все поля обязательны" });
+      }
+
+      try {
+        await optimizeUploadedImages(files);
+      } catch (e) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({
+          error: e.message || "Не удалось обработать вложения",
+        });
       }
 
       await prisma.post.update({

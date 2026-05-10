@@ -19,6 +19,7 @@ type PostCardEditorProps = {
   onCancel: () => void;
   onSave: () => void;
   isUpdating: boolean;
+  saveError?: string | null;
 };
 
 export function PostCardEditor({
@@ -32,6 +33,7 @@ export function PostCardEditor({
   onCancel,
   onSave,
   isUpdating,
+  saveError,
 }: PostCardEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -154,6 +156,14 @@ export function PostCardEditor({
           }}
         />
       </div>
+      {saveError ? (
+        <p
+          className="text-right text-sm font-normal text-destructive"
+          role="alert"
+        >
+          {saveError}
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Отмена

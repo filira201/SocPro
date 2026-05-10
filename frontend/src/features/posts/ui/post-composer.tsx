@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { useCreatePostMutation } from "../api/posts.api";
 import { postSchema, type PostFormValues } from "../model/schemas";
 
+import { getApiErrorMessage } from "@/shared/lib/api-error";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Field,
@@ -82,8 +83,13 @@ export function PostComposer() {
         }
       });
       setFiles([]);
-    } catch {
-      setFormError("Не удалось опубликовать пост");
+    } catch (err) {
+      setFormError(
+        getApiErrorMessage(
+          err as Parameters<typeof getApiErrorMessage>[0],
+          "Не удалось опубликовать пост",
+        ),
+      );
     }
   };
 

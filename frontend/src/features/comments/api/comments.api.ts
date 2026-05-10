@@ -116,37 +116,43 @@ export const commentsApi = api.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (_result, _error, { body }) => [
-        { type: "Post", id: `${String(body.get("postId") || "")}-comments` },
-        {
-          type: "Post",
-          id: `${String(body.get("postId") || "")}-comments-root-new`,
-        },
-        {
-          type: "Post",
-          id: `${String(body.get("postId") || "")}-comments-root-old`,
-        },
-        {
-          type: "Post",
-          id: `${String(body.get("postId") || "")}-comments-root-top`,
-        },
-        ...(String(body.get("parentId") || "")
-          ? [
-              {
-                type: "Post" as const,
-                id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-new`,
-              },
-              {
-                type: "Post" as const,
-                id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-old`,
-              },
-              {
-                type: "Post" as const,
-                id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-top`,
-              },
-            ]
-          : []),
-      ],
+      invalidatesTags: (_result, error, { body }) => {
+        if (error) {
+          return [];
+        }
+
+        return [
+          { type: "Post", id: `${String(body.get("postId") || "")}-comments` },
+          {
+            type: "Post",
+            id: `${String(body.get("postId") || "")}-comments-root-new`,
+          },
+          {
+            type: "Post",
+            id: `${String(body.get("postId") || "")}-comments-root-old`,
+          },
+          {
+            type: "Post",
+            id: `${String(body.get("postId") || "")}-comments-root-top`,
+          },
+          ...(String(body.get("parentId") || "")
+            ? [
+                {
+                  type: "Post" as const,
+                  id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-new`,
+                },
+                {
+                  type: "Post" as const,
+                  id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-old`,
+                },
+                {
+                  type: "Post" as const,
+                  id: `${String(body.get("postId") || "")}-comments-${String(body.get("parentId"))}-top`,
+                },
+              ]
+            : []),
+        ];
+      },
     }),
     deleteComment: builder.mutation<
       DeleteCommentResponse,

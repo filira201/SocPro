@@ -34,7 +34,36 @@ const storage = multer.diskStorage({
   },
 });
 
-const uploads = multer({ storage });
+function rejectSvgImageAttachments(req, file, cb) {
+  if (
+    file.mimetype === "image/svg+xml" ||
+    /\.svg$/i.test(String(file.originalname || ""))
+  ) {
+    return cb(
+      new Error(
+        "Формат SVG для изображений не поддерживается. Загрузите PNG или JPEG.",
+      ),
+    );
+  }
+  cb(null, true);
+}
+
+const uploads = multer({ storage, fileFilter: rejectSvgImageAttachments });
+
+function handleUploadError(uploadMiddleware) {
+  return (req, res, next) => {
+    uploadMiddleware(req, res, (err) => {
+      if (err) {
+        const message =
+          err.message === "File too large"
+            ? "Файл слишком большой"
+            : err.message || "Ошибка загрузки файла";
+        return res.status(400).json({ error: message });
+      }
+      next();
+    });
+  };
+}
 
 const resumeMimeAllowlist = new Set([
   "application/pdf",
@@ -50,6 +79,18 @@ const profileUpload = multer({
       if (!resumeMimeAllowlist.has(file.mimetype)) {
         return cb(
           new Error("Допустимы только PDF или документы Word (.doc, .docx)"),
+        );
+      }
+    }
+    if (file.fieldname === "avatar") {
+      if (
+        file.mimetype === "image/svg+xml" ||
+        /\.svg$/i.test(String(file.originalname || ""))
+      ) {
+        return cb(
+          new Error(
+            "Формат SVG для изображений не поддерживается. Загрузите PNG или JPEG.",
+          ),
         );
       }
     }
@@ -99,7 +140,7 @@ router.put(
 router.post(
   "/posts",
   authenticateToken,
-  uploads.array("files"),
+  handleUploadError(uploads.array("files")),
   PostController.createPost,
 );
 router.get("/posts", authenticateToken, PostController.getAllPosts);
@@ -112,7 +153,7 @@ router.get(
 router.patch(
   "/posts/:id",
   authenticateToken,
-  uploads.array("files"),
+  handleUploadError(uploads.array("files")),
   PostController.updatePost,
 );
 router.delete("/posts/:id", authenticateToken, PostController.deletePost);
@@ -121,13 +162,13 @@ router.delete("/posts/:id", authenticateToken, PostController.deletePost);
 router.post(
   "/comments",
   authenticateToken,
-  uploads.array("files"),
+  handleUploadError(uploads.array("files")),
   CommentController.createComment,
 );
 router.patch(
   "/comments/:id",
   authenticateToken,
-  uploads.array("files"),
+  handleUploadError(uploads.array("files")),
   CommentController.updateComment,
 );
 router.delete(

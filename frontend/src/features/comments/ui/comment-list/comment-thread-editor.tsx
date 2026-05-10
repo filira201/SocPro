@@ -19,6 +19,7 @@ type CommentThreadEditorProps = {
   onCancel: () => void;
   onSave: () => void;
   isUpdating: boolean;
+  saveError?: string | null;
 };
 
 export function CommentThreadEditor({
@@ -32,6 +33,7 @@ export function CommentThreadEditor({
   onCancel,
   onSave,
   isUpdating,
+  saveError,
 }: CommentThreadEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -159,6 +161,14 @@ export function CommentThreadEditor({
           }}
         />
       </div>
+      {saveError ? (
+        <p
+          className="text-right text-sm font-normal text-destructive"
+          role="alert"
+        >
+          {saveError}
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
           Отмена

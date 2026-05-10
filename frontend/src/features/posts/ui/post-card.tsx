@@ -16,6 +16,7 @@ import { PostCardEditor } from "./post-card/post-card-editor";
 import { PostCardHeader } from "./post-card/post-card-header";
 
 import { CommentList } from "@/features/comments";
+import { getApiErrorMessage } from "@/shared/lib/api-error";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
@@ -54,6 +55,7 @@ export function PostCard({
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
   const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editSaveError, setEditSaveError] = useState<string | null>(null);
 
   const openPost = () => {
     navigate(ROUTES.POST_DETAILS.replace(":postId", post.id));
@@ -70,17 +72,29 @@ export function PostCard({
   };
 
   const handleSave = async () => {
+    setEditSaveError(null);
+
     const body = new FormData();
     body.append("content", content);
     removedAttachmentIds.forEach((attachmentId) =>
       body.append("removeAttachmentIds", attachmentId)
     );
     newFiles.forEach(({ file }) => body.append("files", file));
-    await updatePost({ id: post.id, body }).unwrap();
-    revokeAll(newFiles);
-    setRemovedAttachmentIds([]);
-    clearFiles();
-    setIsEditing(false);
+
+    try {
+      await updatePost({ id: post.id, body }).unwrap();
+      revokeAll(newFiles);
+      setRemovedAttachmentIds([]);
+      clearFiles();
+      setIsEditing(false);
+    } catch (err) {
+      setEditSaveError(
+        getApiErrorMessage(
+          err as Parameters<typeof getApiErrorMessage>[0],
+          "Не удалось сохранить пост",
+        ),
+      );
+    }
   };
 
   const visibleAttachments = post.attachments.filter(
@@ -102,7 +116,10 @@ export function PostCard({
         post={post}
         showOpenPostButton={showOpenPostButton}
         onOpenPost={openPost}
-        onToggleEdit={() => setIsEditing((value) => !value)}
+        onToggleEdit={() => {
+          setEditSaveError(null);
+          setIsEditing((value) => !value);
+        }}
         onRequestDelete={() => setDeleteDialogOpen(true)}
         isDeleting={isDeleting}
       />
@@ -175,11 +192,13 @@ export function PostCard({
             revokeAll(newFiles);
             setContent(post.content);
             setRemovedAttachmentIds([]);
+            setEditSaveError(null);
             clearFiles();
             setIsEditing(false);
           }}
           onSave={() => void handleSave()}
           isUpdating={isUpdating}
+          saveError={editSaveError}
         />
       ) : post.content ? (
         <p className="whitespace-pre-wrap text-base">{post.content}</p>

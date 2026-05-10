@@ -108,7 +108,7 @@ export const postsApi = api.injectEndpoints({
             })
           );
         } catch {
-          dispatch(api.util.invalidateTags([{ type: "Post", id }]));
+          /* ошибка сохранения — текст ошибки на карточке, без лишнего refetch */
         }
       },
     }),

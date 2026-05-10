@@ -34,6 +34,7 @@ import {
   formatPostDate,
   toAbsoluteUploadUrl,
 } from "@/features/posts/lib/format";
+import { getApiErrorMessage } from "@/shared/lib/api-error";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
@@ -92,6 +93,7 @@ export function CommentThreadItem({
     useLazyGetCommentsQuery();
   const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
   const [likeComment] = useLikeCommentMutation();
   const [unlikeComment] = useUnlikeCommentMutation();
@@ -138,6 +140,8 @@ export function CommentThreadItem({
   };
 
   const handleUpdate = async (commentId: string) => {
+    setEditSaveError(null);
+
     const body = new FormData();
     body.append("postId", postId);
     body.append("content", editingContent);
@@ -150,16 +154,26 @@ export function CommentThreadItem({
       body.append("removeAttachmentIds", attachmentId)
     );
     newFiles.forEach(({ file }) => body.append("files", file));
-    const updated = await updateComment({ id: commentId, body }).unwrap();
 
-    revokeAll(newFiles);
-    setEditingId(null);
-    setEditingContent("");
-    setRemovedAttachmentIds([]);
-    clearFiles();
-    setExtraReplies((current) =>
-      current.map((item) => (item.id === updated.id ? updated : item))
-    );
+    try {
+      const updated = await updateComment({ id: commentId, body }).unwrap();
+
+      revokeAll(newFiles);
+      setEditingId(null);
+      setEditingContent("");
+      setRemovedAttachmentIds([]);
+      clearFiles();
+      setExtraReplies((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item))
+      );
+    } catch (err) {
+      setEditSaveError(
+        getApiErrorMessage(
+          err as Parameters<typeof getApiErrorMessage>[0],
+          "Не удалось сохранить комментарий",
+        ),
+      );
+    }
   };
 
   const visibleAttachments: Attachment[] = comment.attachments.filter(
@@ -276,10 +290,12 @@ export function CommentThreadItem({
                   setEditingId(null);
                   setEditingContent("");
                   setRemovedAttachmentIds([]);
+                  setEditSaveError(null);
                   clearFiles();
                 }}
                 onSave={() => void handleUpdate(comment.id)}
                 isUpdating={isUpdating}
+                saveError={editSaveError}
               />
             ) : (
               <CommentThreadBody
@@ -300,12 +316,27 @@ export function CommentThreadItem({
               onToggleLike={() => void handleLike()}
               onToggleReply={() => {
                 setShowReplies(true);
-                setIsReplying((value) => !value);
+                setIsReplying((wasOpen) => {
+                  const openingReply = !wasOpen;
+
+                  if (openingReply && editingId === comment.id) {
+                    revokeAll(newFiles);
+                    clearFiles();
+                    setEditSaveError(null);
+                    setEditingId(null);
+                    setEditingContent("");
+                    setRemovedAttachmentIds([]);
+                  }
+
+                  return !wasOpen;
+                });
               }}
               onToggleShowReplies={() => setShowReplies((value) => !value)}
               onStartEdit={() => {
                 revokeAll(newFiles);
                 clearFiles();
+                setEditSaveError(null);
+                setIsReplying(false);
                 setEditingId(comment.id);
                 setEditingContent(comment.content);
                 setRemovedAttachmentIds([]);

@@ -13,6 +13,7 @@ const {
   validateFioPart,
 } = require("./_utils");
 const { cleanSkillKey } = require("../lib/skill-normalize");
+const { optimizeImageFile, unlinkMulterFiles } = require("../lib/image-optimize");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -325,6 +326,14 @@ const UserController = {
       }
 
       if (avatarFile) {
+        try {
+          await optimizeImageFile(avatarFile);
+        } catch (e) {
+          await unlinkMulterFiles([avatarFile]);
+          return res.status(400).json({
+            error: e.message || "Не удалось обработать изображение",
+          });
+        }
         unlinkUploadByPublicUrl(existing.avatarUrl);
         data.avatarUrl = `/uploads/${avatarFile.filename}`;
       }

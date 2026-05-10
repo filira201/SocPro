@@ -12,6 +12,7 @@ import {
 } from "../model/schemas";
 import type { Comment } from "../model/types";
 
+import { getApiErrorMessage } from "@/shared/lib/api-error";
 import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import { FieldError } from "@/shared/ui/kit/field";
@@ -103,8 +104,13 @@ export function CommentComposer({
       if (parentId) {
         onCancelReply?.();
       }
-    } catch {
-      setError("Не удалось отправить комментарий");
+    } catch (err) {
+      setError(
+        getApiErrorMessage(
+          err as Parameters<typeof getApiErrorMessage>[0],
+          "Не удалось отправить комментарий",
+        ),
+      );
     }
   };
 
