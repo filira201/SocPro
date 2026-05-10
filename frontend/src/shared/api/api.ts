@@ -53,6 +53,7 @@ export const api = createApi({
     "Skill",
     "Application",
     "Member",
+    "Geo",
   ],
   endpoints: () => ({}),
 });

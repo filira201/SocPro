@@ -16,6 +16,7 @@ import {
 
 import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
+import { CountryCityFields } from "@/features/geo/ui/country-city-fields";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
 import { Calendar } from "@/shared/ui/kit/calendar";
@@ -420,28 +421,7 @@ export function UserProfileEditForm({
       <FieldSet>
         <FieldLegend>Место жительства</FieldLegend>
         <FieldGroup>
-          <Field data-invalid={!!errors.country}>
-            <FieldLabel htmlFor="profile-country">Страна</FieldLabel>
-            <Input
-              id="profile-country"
-              aria-invalid={Boolean(errors.country)}
-              {...register("country")}
-            />
-            {errors.country?.message ? (
-              <FieldError>{errors.country.message}</FieldError>
-            ) : null}
-          </Field>
-          <Field data-invalid={!!errors.city}>
-            <FieldLabel htmlFor="profile-city">Город</FieldLabel>
-            <Input
-              id="profile-city"
-              aria-invalid={Boolean(errors.city)}
-              {...register("city")}
-            />
-            {errors.city?.message ? (
-              <FieldError>{errors.city.message}</FieldError>
-            ) : null}
-          </Field>
+          <CountryCityFields control={control} setValue={setValue} errors={errors} />
         </FieldGroup>
       </FieldSet>
 

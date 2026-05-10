@@ -210,3 +210,27 @@ enum MemberRole {
   OWNER
   MEMBER
 }
+
+/// Справочник GeoNames: ISO 3166-1 alpha-2 + англ. название из countryInfo.txt
+model GeoCountry {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  code       String  @unique
+  name       String
+  geonameId  String? @unique
+  /// Русское название из alternateNamesV2 (isolanguage = ru)
+  nameRu     String?
+}
+
+/// Справочник GeoNames: города/населённые пункты (geonameId уникален глобально)
+model GeoCity {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  geonameId   String  @unique
+  countryCode String
+  name        String
+  asciiName   String?
+  /// Русское название из alternateNamesV2 (isolanguage = ru)
+  nameRu      String?
+
+  @@index([countryCode, name])
+  @@index([countryCode, nameRu])
+}
