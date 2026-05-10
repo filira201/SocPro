@@ -86,6 +86,11 @@ export function ProfileSkillsField({
       ) : null}
 
       <FuseSkillConfirmDialog
+        key={
+          fuseDialog.choice
+            ? `${fuseDialog.choice.suggestion.id}:${fuseDialog.choice.userInput}`
+            : "fuse-dialog"
+        }
         open={fuseDialog.choice !== null}
         fuseChoice={fuseDialog.choice}
         busy={fuseDialog.busy}

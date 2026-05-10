@@ -1,3 +1,6 @@
+import { Check, X } from "lucide-react";
+import { useState } from "react";
+
 import type { FuseChoiceState } from "../model/use-profile-skills-field";
 
 import { Button } from "@/shared/ui/kit/button";
@@ -21,6 +24,8 @@ type FuseSkillConfirmDialogProps = {
   onOwn: () => void | Promise<void>;
 };
 
+type Step = "pick" | "confirm";
+
 export function FuseSkillConfirmDialog({
   open,
   fuseChoice,
@@ -30,24 +35,46 @@ export function FuseSkillConfirmDialog({
   onAccept,
   onOwn,
 }: FuseSkillConfirmDialogProps) {
+  const [step, setStep] = useState<Step>("pick");
+  const [pendingAction, setPendingAction] = useState<"accept" | "own" | null>(
+    null
+  );
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setStep("pick");
+      setPendingAction(null);
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const handleConfirmYes = () => {
+    if (pendingAction === "accept") {
+      onAccept();
+    } else if (pendingAction === "own") {
+      void onOwn();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         aria-busy={busy}
         showCloseButton={!busy}
         className="max-w-md"
       >
-        {fuseChoice ? (
+        {fuseChoice && step === "pick" ? (
           <>
             <DialogHeader>
               <DialogTitle className="text-lg">Уточните навык</DialogTitle>
               <DialogDescription className="text-base">
                 Сервер предполагает, что вы могли иметь в виду{" "}
-                <span className="underline text-primary">
+                <span className="font-medium text-foreground">
                   «{fuseChoice.suggestion.name}»
                 </span>
                 . Вы ввели{" "}
-                <span className="underline text-primary">
+                <span className="font-medium text-foreground">
                   «{fuseChoice.userInput}»
                 </span>
                 . Выберите вариант для сохранения в профиле
@@ -60,7 +87,10 @@ export function FuseSkillConfirmDialog({
                 variant="default"
                 className="w-full text-base"
                 disabled={disabled || busy}
-                onClick={onAccept}
+                onClick={() => {
+                  setPendingAction("accept");
+                  setStep("confirm");
+                }}
               >
                 «{fuseChoice.suggestion.name}» (как предложено)
               </Button>
@@ -70,16 +100,79 @@ export function FuseSkillConfirmDialog({
                 variant="outline"
                 className="w-full text-base"
                 disabled={disabled || busy}
-                onClick={() => void onOwn()}
+                onClick={() => {
+                  setPendingAction("own");
+                  setStep("confirm");
+                }}
               >
-                {busy ? (
+                «{fuseChoice.userInput}» (как вводили)
+              </Button>
+            </DialogFooter>
+          </>
+        ) : null}
+
+        {fuseChoice && step === "confirm" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-lg">Вы уверены?</DialogTitle>
+              <DialogDescription className="text-base">
+                {pendingAction === "accept" ? (
+                  <>
+                    Будет сохранён навык{" "}
+                    <span className="font-medium text-foreground">
+                      «{fuseChoice.suggestion.name}»
+                    </span>{" "}
+                    из каталога.
+                  </>
+                ) : (
+                  <>
+                    Будет создан и добавлен ваш вариант{" "}
+                    <span className="font-medium text-foreground">
+                      «{fuseChoice.userInput}»
+                    </span>
+                    .
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button
+                size="lg"
+                type="button"
+                variant="default"
+                className="w-full text-base"
+                disabled={disabled || busy}
+                onClick={handleConfirmYes}
+              >
+                {busy && pendingAction === "own" ? (
                   <>
                     <Spinner data-icon="inline-start" className="size-4" />
                     Создание…
                   </>
                 ) : (
-                  `«${fuseChoice.userInput}» (как вводили)`
+                  <>
+                    <Check
+                      data-icon="inline-start"
+                      className="size-4"
+                      aria-hidden
+                    />
+                    Да
+                  </>
                 )}
+              </Button>
+              <Button
+                size="lg"
+                type="button"
+                variant="outline"
+                className="w-full text-base"
+                disabled={disabled || busy}
+                onClick={() => {
+                  setStep("pick");
+                  setPendingAction(null);
+                }}
+              >
+                <X data-icon="inline-start" className="size-4" aria-hidden />
+                Нет
               </Button>
             </DialogFooter>
           </>
