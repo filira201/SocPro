@@ -8,8 +8,12 @@ const sharp = require("sharp");
 
 const MAX_IMAGE_WIDTH = 1920;
 const MAX_IMAGE_HEIGHT = 1920;
-/** Защита от огромных входных файлов по числу пикселей (DoS). */
-const LIMIT_INPUT_PIXELS = 4096 * 4096;
+/**
+ * Защита от декомпрессионных «бомб» по числу пикселей на входе.
+ * Пикселей должно хватать для обычных фото с камеры/телефона (десятки МП);
+ * выход всё равно ограничен resize — см. MAX_IMAGE_*.
+ */
+const LIMIT_INPUT_PIXELS = 10_000 * 10_000;
 
 const JPEG_QUALITY = 82;
 const PNG_COMPRESSION_LEVEL = 9;
@@ -17,8 +21,7 @@ const WEBP_QUALITY = 80;
 
 function isSvg(mimetype, originalname) {
   return (
-    mimetype === "image/svg+xml" ||
-    /\.svg$/i.test(String(originalname || ""))
+    mimetype === "image/svg+xml" || /\.svg$/i.test(String(originalname || ""))
   );
 }
 
