@@ -1,8 +1,20 @@
 const { prisma } = require("../prisma/prismaClient");
+const {
+  canManageProjectAsAdminOrOwner,
+  canManageMembersAsOwnerOnly,
+  isTerminalProjectStatus,
+  normalizeProjectForApi,
+} = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-const PROJECT_STATUSES = new Set(["OPEN", "IN_PROGRESS", "CLOSED"]);
+const PROJECT_STATUSES = new Set([
+  "OPEN",
+  "IN_PROGRESS",
+  "PAUSED",
+  "DONE",
+  "CLOSED",
+]);
 
 const parseCsvIds = (value) => {
   if (!value) return [];
@@ -11,6 +23,22 @@ const parseCsvIds = (value) => {
     .map((s) => s.trim())
     .filter((s) => OBJECT_ID_REGEX.test(s));
 };
+
+function parseAcceptingApplicationsBody(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  return null;
+}
 
 const ProjectController = {
   createProject: async (req, res) => {
@@ -48,7 +76,7 @@ const ProjectController = {
         },
       });
 
-      res.status(201).json(sanitizeUser(project));
+      res.status(201).json(sanitizeUser(normalizeProjectForApi(project)));
     } catch (error) {
       console.error("Error in createProject", error);
       res.status(500).json({ error: "Internal server error" });
@@ -104,7 +132,12 @@ const ProjectController = {
         prisma.project.count({ where: finalWhere }),
       ]);
 
-      res.json({ items: sanitizeUser(items), total, take, skip });
+      res.json({
+        items: sanitizeUser(items.map((p) => normalizeProjectForApi(p))),
+        total,
+        take,
+        skip,
+      });
     } catch (error) {
       console.error("Error in getAllProjects", error);
       res.status(500).json({ error: "Internal server error" });
@@ -134,7 +167,10 @@ const ProjectController = {
       }
 
       const isOwner = project.ownerId === userId;
-      const isMember = project.members.some((m) => m.userId === userId);
+      const requesterMembership = project.members.find(
+        (m) => m.userId === userId,
+      );
+      const isMember = Boolean(requesterMembership);
 
       let myApplication = null;
       if (!isMember) {
@@ -144,7 +180,9 @@ const ProjectController = {
       }
 
       let applications = undefined;
-      if (isOwner) {
+      if (
+        canManageProjectAsAdminOrOwner(project, userId, requesterMembership)
+      ) {
         applications = await prisma.projectApplication.findMany({
           where: { projectId: id },
           include: { applicant: { include: { skills: true } } },
@@ -152,8 +190,10 @@ const ProjectController = {
         });
       }
 
+      const normalized = normalizeProjectForApi(project);
+
       res.json({
-        ...sanitizeUser(project),
+        ...sanitizeUser(normalized),
         isOwner,
         isMember,
         myApplication,
@@ -180,7 +220,12 @@ const ProjectController = {
       if (!project) {
         return res.status(404).json({ error: "Проект не найден" });
       }
-      if (project.ownerId !== userId) {
+
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: id, userId },
+      });
+
+      if (!canManageProjectAsAdminOrOwner(project, userId, membership)) {
         return res.status(403).json({ error: "Нет доступа" });
       }
 
@@ -196,7 +241,38 @@ const ProjectController = {
         if (!PROJECT_STATUSES.has(String(status))) {
           return res.status(400).json({ error: "Некорректный статус" });
         }
-        data.status = String(status);
+        const nextStatus = String(status);
+        if (nextStatus !== project.status) {
+          data.status = nextStatus;
+          data.statusUpdatedAt = new Date();
+        }
+      }
+
+      const nextStatus = status !== undefined ? String(status) : project.status;
+
+      if (isTerminalProjectStatus(nextStatus)) {
+        if (req.body.acceptingApplications !== undefined) {
+          return res.status(400).json({
+            error:
+              "Нельзя менять acceptingApplications при статусе «Выполнен» или «Закрыт»",
+          });
+        }
+        data.acceptingApplications = false;
+      } else {
+        const accParsed = parseAcceptingApplicationsBody(
+          req.body.acceptingApplications,
+        );
+        if (
+          accParsed === null &&
+          req.body.acceptingApplications !== undefined
+        ) {
+          return res
+            .status(400)
+            .json({ error: "acceptingApplications: укажите true или false" });
+        }
+        if (accParsed !== undefined) {
+          data.acceptingApplications = accParsed;
+        }
       }
 
       if (req.body.requiredSkillIds !== undefined) {
@@ -216,7 +292,7 @@ const ProjectController = {
         },
       });
 
-      res.json(sanitizeUser(updated));
+      res.json(sanitizeUser(normalizeProjectForApi(updated)));
     } catch (error) {
       console.error("Error in updateProject", error);
       res.status(500).json({ error: "Internal server error" });
@@ -236,7 +312,7 @@ const ProjectController = {
       if (!project) {
         return res.status(404).json({ error: "Проект не найден" });
       }
-      if (project.ownerId !== userId) {
+      if (!canManageMembersAsOwnerOnly(project, userId)) {
         return res.status(403).json({ error: "Нет доступа" });
       }
 

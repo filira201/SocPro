@@ -246,6 +246,11 @@ router.get(
   authenticateToken,
   MemberController.listMembers,
 );
+router.patch(
+  "/projects/:id/members/:userId",
+  authenticateToken,
+  MemberController.updateMemberRole,
+);
 router.delete(
   "/projects/:id/members/:userId",
   authenticateToken,

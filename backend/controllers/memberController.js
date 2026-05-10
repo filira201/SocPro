@@ -1,7 +1,9 @@
 const { prisma } = require("../prisma/prismaClient");
+const { canManageMembersAsOwnerOnly } = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const ASSIGNABLE_ROLES = new Set(["MEMBER", "ADMIN"]);
 
 const MemberController = {
   listMembers: async (req, res) => {
@@ -33,6 +35,71 @@ const MemberController = {
     }
   },
 
+  updateMemberRole: async (req, res) => {
+    const { id: projectId, userId: targetUserId } = req.params;
+    const requesterId = req.user.userId;
+    const { role } = req.body;
+
+    if (
+      !OBJECT_ID_REGEX.test(projectId) ||
+      !OBJECT_ID_REGEX.test(targetUserId)
+    ) {
+      return res.status(400).json({ error: "Некорректный id" });
+    }
+
+    if (!ASSIGNABLE_ROLES.has(String(role))) {
+      return res.status(400).json({
+        error: "Укажите role: MEMBER или ADMIN",
+      });
+    }
+
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+      });
+      if (!project) {
+        return res.status(404).json({ error: "Проект не найден" });
+      }
+
+      if (!canManageMembersAsOwnerOnly(project, requesterId)) {
+        return res.status(403).json({ error: "Нет доступа" });
+      }
+
+      if (targetUserId === project.ownerId) {
+        return res.status(400).json({
+          error: "Нельзя изменить роль владельца проекта",
+        });
+      }
+
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId: targetUserId },
+      });
+
+      if (!membership) {
+        return res.status(404).json({
+          error: "Пользователь не является участником проекта",
+        });
+      }
+
+      if (membership.role === "OWNER") {
+        return res.status(400).json({
+          error: "Нельзя изменить роль владельца",
+        });
+      }
+
+      const updated = await prisma.projectMember.update({
+        where: { id: membership.id },
+        data: { role: String(role) },
+        include: { user: { include: { skills: true } } },
+      });
+
+      res.json(sanitizeUser(updated));
+    } catch (error) {
+      console.error("Error in updateMemberRole", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
   removeMember: async (req, res) => {
     const { id: projectId, userId: targetUserId } = req.params;
     const requesterId = req.user.userId;
@@ -52,10 +119,8 @@ const MemberController = {
         return res.status(404).json({ error: "Проект не найден" });
       }
 
-      const isOwner = project.ownerId === requesterId;
       const isSelf = requesterId === targetUserId;
-
-      if (!isOwner && !isSelf) {
+      if (!isSelf && !canManageMembersAsOwnerOnly(project, requesterId)) {
         return res.status(403).json({ error: "Нет доступа" });
       }
 

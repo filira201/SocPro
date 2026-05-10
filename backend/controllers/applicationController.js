@@ -1,4 +1,8 @@
 const { prisma } = require("../prisma/prismaClient");
+const {
+  canManageProjectAsAdminOrOwner,
+  projectAcceptsApplications,
+} = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -27,8 +31,10 @@ const ApplicationController = {
           .json({ error: "Владелец не может подать заявку на свой проект" });
       }
 
-      if (project.status === "CLOSED") {
-        return res.status(400).json({ error: "Проект закрыт для заявок" });
+      if (!projectAcceptsApplications(project)) {
+        return res.status(400).json({
+          error: "Проект сейчас не принимает новые заявки",
+        });
       }
 
       const existingMember = await prisma.projectMember.findFirst({
@@ -82,7 +88,12 @@ const ApplicationController = {
       if (!project) {
         return res.status(404).json({ error: "Проект не найден" });
       }
-      if (project.ownerId !== userId) {
+
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId },
+      });
+
+      if (!canManageProjectAsAdminOrOwner(project, userId, membership)) {
         return res.status(403).json({ error: "Нет доступа" });
       }
 
@@ -130,7 +141,13 @@ const ApplicationController = {
         return res.status(404).json({ error: "Заявка не найдена" });
       }
 
-      if (application.project.ownerId !== userId) {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: application.projectId, userId },
+      });
+
+      if (
+        !canManageProjectAsAdminOrOwner(application.project, userId, membership)
+      ) {
         return res.status(403).json({ error: "Нет доступа" });
       }
 
@@ -139,7 +156,7 @@ const ApplicationController = {
       }
 
       if (status === "ACCEPTED") {
-        const [updated] = await prisma.$transaction([
+        const results = await prisma.$transaction([
           prisma.projectApplication.update({
             where: { id },
             data: { status: "ACCEPTED", decidedAt: new Date() },
@@ -159,7 +176,7 @@ const ApplicationController = {
             },
           }),
         ]);
-        return res.json(updated);
+        return res.json(results[0]);
       }
 
       const updated = await prisma.projectApplication.update({

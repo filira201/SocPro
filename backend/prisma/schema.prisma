@@ -164,6 +164,10 @@ model Project {
   description String
   goals       String
   status      ProjectStatus @default(OPEN)
+  /** Последнее изменение поля status (для UI «время в текущем статусе»). */
+  statusUpdatedAt DateTime @default(now())
+  /** Рубильник приёма новых заявок (не путать с ProjectStatus). */
+  acceptingApplications Boolean @default(true)
 
   owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
   ownerId String @db.ObjectId
@@ -207,6 +211,8 @@ model ProjectApplication {
 enum ProjectStatus {
   OPEN
   IN_PROGRESS
+  PAUSED
+  DONE
   CLOSED
 }
 
@@ -218,5 +224,6 @@ enum ApplicationStatus {
 
 enum MemberRole {
   OWNER
+  ADMIN
   MEMBER
 }
