@@ -1,3 +1,4 @@
+import { Check, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -17,6 +18,16 @@ import { PostCardHeader } from "./post-card/post-card-header";
 import { CommentList } from "@/features/comments";
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { ROUTES } from "@/shared/model/routes";
+import { Button } from "@/shared/ui/kit/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/kit/dialog";
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 type PostCardProps = {
   post: Post;
@@ -42,6 +53,7 @@ export function PostCard({
   const [unlikePost] = useUnlikePostMutation();
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
   const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const openPost = () => {
     navigate(ROUTES.POST_DETAILS.replace(":postId", post.id));
@@ -75,6 +87,15 @@ export function PostCard({
     (attachment) => !removedAttachmentIds.includes(attachment.id)
   );
 
+  const handleConfirmDeletePost = async () => {
+    try {
+      await deletePost(post.id).unwrap();
+      setDeleteDialogOpen(false);
+    } catch {
+      /* диалог остаётся открытым */
+    }
+  };
+
   return (
     <article className="grid gap-4 rounded-xl border bg-card p-3 shadow-sm sm:p-4">
       <PostCardHeader
@@ -82,9 +103,62 @@ export function PostCard({
         showOpenPostButton={showOpenPostButton}
         onOpenPost={openPost}
         onToggleEdit={() => setIsEditing((value) => !value)}
-        onDeletePost={() => void deletePost(post.id)}
+        onRequestDelete={() => setDeleteDialogOpen(true)}
         isDeleting={isDeleting}
       />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent
+          aria-busy={isDeleting}
+          showCloseButton={!isDeleting}
+          className="max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle className="text-lg">Вы уверены?</DialogTitle>
+            <DialogDescription className="text-base">
+              Пост будет удалён без возможности восстановления вместе с
+              комментариями и вложениями.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              size="lg"
+              type="button"
+              variant="default"
+              className="w-full text-base"
+              disabled={isDeleting}
+              onClick={() => void handleConfirmDeletePost()}
+            >
+              {isDeleting ? (
+                <>
+                  <Spinner data-icon="inline-start" className="size-4" />
+                  Удаление…
+                </>
+              ) : (
+                <>
+                  <Check
+                    data-icon="inline-start"
+                    className="size-4"
+                    aria-hidden
+                  />
+                  Да
+                </>
+              )}
+            </Button>
+            <Button
+              size="lg"
+              type="button"
+              variant="outline"
+              className="w-full text-base"
+              disabled={isDeleting}
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              <X data-icon="inline-start" className="size-4" aria-hidden />
+              Нет
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isEditing ? (
         <PostCardEditor

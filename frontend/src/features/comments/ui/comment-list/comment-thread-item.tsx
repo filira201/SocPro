@@ -1,3 +1,4 @@
+import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
@@ -36,6 +37,16 @@ import {
 import { useSelectedFilesPreview } from "@/shared/lib/use-selected-files-preview";
 import { ROUTES } from "@/shared/model/routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
+import { Button } from "@/shared/ui/kit/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/kit/dialog";
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 type ThreadItemProps = {
   postId: string;
@@ -80,6 +91,7 @@ export function CommentThreadItem({
   const [loadReplies, { isFetching: isLoadingMoreReplies }] =
     useLazyGetCommentsQuery();
   const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [updateComment, { isLoading: isUpdating }] = useUpdateCommentMutation();
   const [likeComment] = useLikeCommentMutation();
   const [unlikeComment] = useUnlikeCommentMutation();
@@ -114,6 +126,15 @@ export function CommentThreadItem({
   const handleDelete = async (commentId: string) => {
     const deleted = await deleteComment({ id: commentId, postId }).unwrap();
     onRemoved?.(deleted);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await handleDelete(comment.id);
+      setDeleteDialogOpen(false);
+    } catch {
+      /* диалог остаётся открытым */
+    }
   };
 
   const handleUpdate = async (commentId: string) => {
@@ -289,8 +310,70 @@ export function CommentThreadItem({
                 setEditingContent(comment.content);
                 setRemovedAttachmentIds([]);
               }}
-              onDelete={() => void handleDelete(comment.id)}
+              onRequestDelete={() => setDeleteDialogOpen(true)}
             />
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent
+                aria-busy={isDeleting}
+                showCloseButton={!isDeleting}
+                className="max-w-md"
+              >
+                <DialogHeader>
+                  <DialogTitle className="text-lg">Вы уверены?</DialogTitle>
+                  <DialogDescription className="text-base">
+                    {comment.parentId ? (
+                      <>
+                        Ответ будет удалён без возможности восстановления. Если
+                        к нему есть вложенные ответы, они также будут удалены.
+                      </>
+                    ) : (
+                      <>
+                        Комментарий будет удалён без возможности восстановления.
+                        Если к нему есть ответы, они также будут удалены.
+                      </>
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex-col gap-2 sm:flex-col">
+                  <Button
+                    size="lg"
+                    type="button"
+                    variant="default"
+                    className="w-full text-base"
+                    disabled={isDeleting}
+                    onClick={() => void handleConfirmDelete()}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Spinner data-icon="inline-start" className="size-4" />
+                        Удаление…
+                      </>
+                    ) : (
+                      <>
+                        <Check
+                          data-icon="inline-start"
+                          className="size-4"
+                          aria-hidden
+                        />
+                        Да
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="lg"
+                    type="button"
+                    variant="outline"
+                    className="w-full text-base"
+                    disabled={isDeleting}
+                    onClick={() => setDeleteDialogOpen(false)}
+                  >
+                    <X data-icon="inline-start" className="size-4" aria-hidden />
+                    Нет
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </article>

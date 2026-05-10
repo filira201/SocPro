@@ -22,7 +22,7 @@ type CommentThreadActionsProps = {
   onToggleReply: () => void;
   onToggleShowReplies: () => void;
   onStartEdit: () => void;
-  onDelete: () => void;
+  onRequestDelete: () => void;
 };
 
 export function CommentThreadActions({
@@ -37,7 +37,7 @@ export function CommentThreadActions({
   onToggleReply,
   onToggleShowReplies,
   onStartEdit,
-  onDelete,
+  onRequestDelete,
 }: CommentThreadActionsProps) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -108,7 +108,7 @@ export function CommentThreadActions({
             variant="ghost"
             size="icon-sm"
             disabled={isDeleting}
-            onClick={onDelete}
+            onClick={onRequestDelete}
             aria-label="Удалить комментарий"
           >
             <Trash2 />

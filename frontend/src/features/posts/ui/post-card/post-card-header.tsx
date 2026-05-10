@@ -14,7 +14,7 @@ type PostCardHeaderProps = {
   showOpenPostButton: boolean;
   onOpenPost: () => void;
   onToggleEdit: () => void;
-  onDeletePost: () => void;
+  onRequestDelete: () => void;
   isDeleting: boolean;
 };
 
@@ -23,7 +23,7 @@ export function PostCardHeader({
   showOpenPostButton,
   onOpenPost,
   onToggleEdit,
-  onDeletePost,
+  onRequestDelete,
   isDeleting,
 }: PostCardHeaderProps) {
   const displayDate = post.isEdited ? post.updatedAt : post.createdAt;
@@ -89,7 +89,7 @@ export function PostCardHeader({
               variant="ghost"
               size="icon-sm"
               disabled={isDeleting}
-              onClick={onDeletePost}
+              onClick={onRequestDelete}
               aria-label="Удалить пост"
             >
               <Trash2 />
