@@ -19,8 +19,6 @@ export const profileEditSchema = z.object({
   university: shortText(200),
   course: shortText(200),
   faculty: shortText(200),
-  country: shortText(200),
-  city: shortText(200),
   dateOfBirth: z.string().superRefine((val, ctx) => {
     const s = val.trim();
 

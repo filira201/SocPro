@@ -4,7 +4,6 @@ const router = express.Router();
 const multer = require("multer");
 const { decodeUploadOriginalName } = require("../controllers/_utils");
 const {
-  GeoController,
   UserController,
   PostController,
   CommentController,
@@ -62,8 +61,6 @@ const profileUpload = multer({
 router.post("/register", UserController.register);
 router.post("/login", UserController.login);
 
-router.get("/geo/countries", authenticateToken, GeoController.listCountries);
-router.get("/geo/cities", authenticateToken, GeoController.searchCities);
 router.get("/current", authenticateToken, UserController.current);
 router.get("/users", authenticateToken, UserController.searchUsers);
 router.get(

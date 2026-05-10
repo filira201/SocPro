@@ -311,14 +311,6 @@ const UserController = {
         data.faculty = optionalTrimmedString(req.body, "faculty");
       }
 
-      if (req.body.country !== undefined) {
-        data.country = optionalTrimmedString(req.body, "country");
-      }
-
-      if (req.body.city !== undefined) {
-        data.city = optionalTrimmedString(req.body, "city");
-      }
-
       if (dateOfBirthUpdate !== undefined) {
         data.dateOfBirth = dateOfBirthUpdate;
       }

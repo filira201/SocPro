@@ -7,7 +7,6 @@ const SkillController = require("./skillController");
 const ProjectController = require("./projectController");
 const ApplicationController = require("./applicationController");
 const MemberController = require("./memberController");
-const GeoController = require("./geoController");
 
 module.exports = {
   UserController,
@@ -19,5 +18,4 @@ module.exports = {
   ProjectController,
   ApplicationController,
   MemberController,
-  GeoController,
 };

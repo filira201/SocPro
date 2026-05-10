@@ -16,7 +16,6 @@ import {
 
 import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
-import { CountryCityFields } from "@/features/geo/ui/country-city-fields";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
 import { Calendar } from "@/shared/ui/kit/calendar";
@@ -75,8 +74,6 @@ export function UserProfileEditForm({
       university: user.university ?? "",
       course: user.course ?? "",
       faculty: user.faculty ?? "",
-      country: user.country ?? "",
-      city: user.city ?? "",
       dateOfBirth: parseBirthDateToInput(user.dateOfBirth),
       contacts: defaultContactsFieldArray(user.contacts),
     },
@@ -114,8 +111,6 @@ export function UserProfileEditForm({
           university: values.university,
           course: values.course,
           faculty: values.faculty,
-          country: values.country,
-          city: values.city,
           contacts: values.contacts.map((row) => row.value),
           dateOfBirth: values.dateOfBirth,
           avatarFile,
@@ -415,13 +410,6 @@ export function UserProfileEditForm({
               <FieldError>{errors.course.message}</FieldError>
             ) : null}
           </Field>
-        </FieldGroup>
-      </FieldSet>
-
-      <FieldSet>
-        <FieldLegend>Место жительства</FieldLegend>
-        <FieldGroup>
-          <CountryCityFields control={control} setValue={setValue} errors={errors} />
         </FieldGroup>
       </FieldSet>
 

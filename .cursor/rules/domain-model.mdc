@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## Сущности
 
-- `User` — `email @unique`, `firstName` (обязательное в бизнес-логике; в ответах API — кириллица без пробелов), `lastName?`, `patronymic?`, `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `country`, `city`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Публичное отображение имени в ленте и комментариях: «Имя Фамилия» (без `@`); отчество — в карточке профиля. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`.
+- `User` — `email @unique`, `firstName` (обязательное в бизнес-логике; в ответах API — кириллица без пробелов), `lastName?`, `patronymic?`, `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Публичное отображение имени в ленте и комментариях: «Имя Фамилия» (без `@`); отчество — в карточке профиля. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`.
 - `Skill` — `name @unique`, m2m с `User` и `Project`.
 - `Project` — `title`, `description`, `goals`, `status: ProjectStatus`, `ownerId`, `requiredSkillIds[]`, `members`, `applications`.
 - `ProjectMember` — `(projectId, userId)` `@@unique`, `role: MemberRole`.

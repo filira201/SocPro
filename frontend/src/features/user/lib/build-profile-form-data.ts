@@ -6,8 +6,6 @@ export type ProfileFormSubmitPayload = {
   university: string;
   course: string;
   faculty: string;
-  country: string;
-  city: string;
   contacts: string[];
   /** YYYY-MM-DD или пустая строка для сброса */
   dateOfBirth: string;
@@ -28,8 +26,6 @@ export function buildProfileFormData(
   fd.append("university", payload.university);
   fd.append("course", payload.course);
   fd.append("faculty", payload.faculty);
-  fd.append("country", payload.country);
-  fd.append("city", payload.city);
 
   fd.append(
     "contacts",

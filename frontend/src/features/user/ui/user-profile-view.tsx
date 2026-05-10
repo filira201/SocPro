@@ -141,8 +141,6 @@ export function UserProfileView({
         <OptionalRow label="Учебное заведение" value={user.university} />
         <OptionalRow label="Курс" value={user.course} />
         <OptionalRow label="Факультет" value={user.faculty} />
-        <OptionalRow label="Страна" value={user.country} />
-        <OptionalRow label="Город" value={user.city} />
       </dl>
 
       {user.contacts?.length ? (

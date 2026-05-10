@@ -13,8 +13,6 @@ export type User = {
   university?: string | null;
   course?: string | null;
   faculty?: string | null;
-  country?: string | null;
-  city?: string | null;
   resumeUrl?: string | null;
   resumeOriginalName?: string | null;
   resumeMimeType?: string | null;
