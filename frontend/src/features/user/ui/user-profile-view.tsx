@@ -13,6 +13,7 @@ import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { ROUTES } from "@/shared/model/routes";
 import { ImagePreviewModal } from "@/shared/ui/image-preview-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
+import { Badge } from "@/shared/ui/kit/badge";
 import { Button } from "@/shared/ui/kit/button";
 
 type UserProfileViewProps = {
@@ -152,12 +153,13 @@ export function UserProfileView({
                 a.name.localeCompare(b.name, "ru", { sensitivity: "base" })
               )
               .map((skill) => (
-                <li
+                <Badge
                   key={skill.id}
-                  className="rounded-full border bg-muted/80 px-2.5 py-1 text-sm"
+                  variant="secondary"
+                  className="text-sm font-normal py-4 px-3"
                 >
                   {skill.name}
-                </li>
+                </Badge>
               ))}
           </ul>
         </section>
