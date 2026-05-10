@@ -12,6 +12,7 @@ const {
   decodeUploadOriginalName,
   validateFioPart,
 } = require("./_utils");
+const { cleanSkillKey } = require("../lib/skill-normalize");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -415,12 +416,27 @@ const UserController = {
           .filter(Boolean);
 
         if (names.length) {
-          const matched = await prisma.skill.findMany({
-            where: { name: { in: names, mode: "insensitive" } },
-            select: { id: true },
-          });
+          const keys = names.map((n) => cleanSkillKey(n)).filter(Boolean);
+
+          const [matchedByName, matchedByAlias] = await Promise.all([
+            prisma.skill.findMany({
+              where: { name: { in: names, mode: "insensitive" } },
+              select: { id: true },
+            }),
+            keys.length
+              ? prisma.skillAlias.findMany({
+                  where: { key: { in: keys } },
+                  select: { skillId: true },
+                })
+              : Promise.resolve([]),
+          ]);
+
           resolvedSkillIds = [
-            ...new Set([...resolvedSkillIds, ...matched.map((s) => s.id)]),
+            ...new Set([
+              ...resolvedSkillIds,
+              ...matchedByName.map((s) => s.id),
+              ...matchedByAlias.map((a) => a.skillId),
+            ]),
           ];
         }
       }

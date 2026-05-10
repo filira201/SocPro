@@ -1,4 +1,6 @@
 const { prisma } = require("../prisma/prismaClient");
+const { cleanSkillKey } = require("../lib/skill-normalize");
+const { resolveOrCreateSkill } = require("../lib/skill-resolve");
 
 const SkillController = {
   list: async (req, res) => {
@@ -6,12 +8,27 @@ const SkillController = {
     const take = Math.min(parseInt(req.query.take, 10) || 50, 200);
 
     try {
-      const where = q
-        ? { name: { contains: String(q), mode: "insensitive" } }
-        : {};
+      let where = {};
+
+      if (q) {
+        const needle = String(q);
+        const keyNeedle = cleanSkillKey(needle);
+
+        where = {
+          OR: [
+            { name: { contains: needle, mode: "insensitive" } },
+            {
+              aliases: {
+                some: { key: { contains: keyNeedle, mode: "insensitive" } },
+              },
+            },
+          ],
+        };
+      }
 
       const skills = await prisma.skill.findMany({
         where,
+        include: { aliases: { select: { id: true, key: true } } },
         orderBy: { name: "asc" },
         take,
       });
@@ -30,24 +47,20 @@ const SkillController = {
       return res.status(400).json({ error: "Название навыка обязательно" });
     }
 
-    const normalized = String(name).trim();
-
     try {
-      const existing = await prisma.skill.findFirst({
-        where: { name: { equals: normalized, mode: "insensitive" } },
-      });
+      const { skill, matchedBy } = await resolveOrCreateSkill(prisma, name);
 
-      if (existing) {
-        return res.status(200).json(existing);
+      if (matchedBy === "created") {
+        return res.status(201).json({ ...skill, matchedBy });
       }
 
-      const skill = await prisma.skill.create({
-        data: { name: normalized },
-      });
+      return res.status(200).json({ ...skill, matchedBy });
+    } catch (err) {
+      if (err.code === "EMPTY_NAME") {
+        return res.status(400).json({ error: "Название навыка обязательно" });
+      }
 
-      res.status(201).json(skill);
-    } catch (error) {
-      console.error("Error in skill create", error);
+      console.error("Error in skill create", err);
       res.status(500).json({ error: "Internal server error" });
     }
   },

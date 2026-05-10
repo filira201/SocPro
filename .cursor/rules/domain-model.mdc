@@ -10,7 +10,8 @@ alwaysApply: true
 ## Сущности
 
 - `User` — `email @unique`, `firstName` (обязательное в бизнес-логике; в ответах API — кириллица без пробелов), `lastName?`, `patronymic?`, `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Публичное отображение имени в ленте и комментариях: «Имя Фамилия» (без `@`); отчество — в карточке профиля. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`.
-- `Skill` — `name @unique`, m2m с `User` и `Project`.
+- `Skill` — `name @unique`, m2m с `User` и `Project`; дочерние `SkillAlias` — нормализованные ключи синонимов (`key @unique`) для слияния вариантов ввода и fuzzy-поиска на backend.
+- `SkillAlias` — `key` (уникальный нормализованный вариант названия), `skillId` → один канонический `Skill`.
 - `Project` — `title`, `description`, `goals`, `status: ProjectStatus`, `ownerId`, `requiredSkillIds[]`, `members`, `applications`.
 - `ProjectMember` — `(projectId, userId)` `@@unique`, `role: MemberRole`.
 - `ProjectApplication` — `(projectId, applicantId)` `@@unique`, `message?`, `status: ApplicationStatus`, `decidedAt?`.
@@ -32,6 +33,7 @@ flowchart LR
   ProjectMember -- "is" --> User
   User -- "M2M" --> Skill
   Project -- "requires M2M" --> Skill
+  Skill -- "aliases" --> SkillAlias
   User -- "writes" --> Post
   Post -- "has" --> Comment
   Post -- "has" --> Like

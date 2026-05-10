@@ -144,6 +144,18 @@ model Skill {
 
   projectIds String[]  @db.ObjectId
   projects   Project[] @relation(fields: [projectIds], references: [id])
+
+  /** Нормализованные ключи и синонимы для точного маппинга + индекса Fuse */
+  aliases SkillAlias[]
+}
+
+/** Один канонический навык — много ключей после clean() (синонимы + опечатки через Fuse по haystack). */
+model SkillAlias {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  /** Уникальный нормализованный ключ: lower, trim, без точек, один пробел между словами */
+  key     String @unique
+  skillId String @db.ObjectId
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 }
 
 model Project {
