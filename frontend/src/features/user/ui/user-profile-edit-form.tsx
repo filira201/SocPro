@@ -14,7 +14,7 @@ import {
   type ProfileEditFormValues,
 } from "../model/profile-edit-schema";
 
-import { ProfileSkillsField } from "./profile-skills-field";
+import { ProfileSkillsField } from "./profile-skills";
 
 import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
