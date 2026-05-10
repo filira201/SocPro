@@ -6,6 +6,7 @@ import type { ProfileEditFormValues } from "../model/profile-edit-schema";
 
 import type { Skill, User } from "@/features/auth";
 import {
+  type SkillWithMatch,
   useCreateSkillMutation,
   useLazyListSkillsQuery,
 } from "@/features/skills/api/skills.api";
@@ -19,6 +20,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/shared/ui/kit/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/kit/dialog";
 import {
   Field,
   FieldDescription,
@@ -68,6 +77,10 @@ export function ProfileSkillsField({
   >({});
   const [createHint, setCreateHint] = useState<string | null>(null);
   const [customName, setCustomName] = useState("");
+  const [fuseChoice, setFuseChoice] = useState<{
+    userInput: string;
+    suggestion: SkillWithMatch;
+  } | null>(null);
 
   const [mergedSkills, setMergedSkills] = useState<Skill[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -229,7 +242,7 @@ export function ProfileSkillsField({
   const handleCreateCustom = async () => {
     const name = customName.trim();
 
-    if (!name || disabled || isCreating) {
+    if (!name || disabled || isCreating || fuseChoice) {
       return;
     }
 
@@ -237,6 +250,13 @@ export function ProfileSkillsField({
 
     try {
       const created = await createSkill({ name }).unwrap();
+
+      if (created.matchedBy === "fuse") {
+        setFuseChoice({ userInput: name, suggestion: created });
+
+        return;
+      }
+
       const ids = field.value ?? [];
 
       if (!ids.includes(created.id)) {
@@ -253,6 +273,56 @@ export function ProfileSkillsField({
         setCreateHint(`Сохранено как «${created.name}»`);
       }
 
+      setCustomName("");
+    } catch {
+      setCreateHint("Не удалось добавить навык. Попробуйте ещё раз.");
+    }
+  };
+
+  const fuseDialogBusy = Boolean(fuseChoice && isCreating);
+
+  const handleFuseAccept = () => {
+    if (!fuseChoice || disabled || fuseDialogBusy) {
+      return;
+    }
+
+    addSkill(fuseChoice.suggestion);
+    setCreateHint(`Сохранено как «${fuseChoice.suggestion.name}»`);
+    setFuseChoice(null);
+    setCustomName("");
+  };
+
+  const handleFuseOwn = async () => {
+    if (!fuseChoice || disabled || fuseDialogBusy) {
+      return;
+    }
+
+    setCreateHint(null);
+
+    try {
+      const created = await createSkill({
+        name: fuseChoice.userInput,
+        skipFuse: true,
+      }).unwrap();
+      const ids = field.value ?? [];
+
+      if (!ids.includes(created.id)) {
+        if (ids.length >= 50) {
+          setFuseChoice(null);
+
+          return;
+        }
+
+        field.onChange([...ids, created.id]);
+      }
+
+      setSupplementalNames((prev) => ({ ...prev, [created.id]: created.name }));
+
+      if (created.matchedBy && created.matchedBy !== "created") {
+        setCreateHint(`Сохранено как «${created.name}»`);
+      }
+
+      setFuseChoice(null);
       setCustomName("");
     } catch {
       setCreateHint("Не удалось добавить навык. Попробуйте ещё раз.");
@@ -396,6 +466,7 @@ export function ProfileSkillsField({
             disabled={
               disabled ||
               isCreating ||
+              Boolean(fuseChoice) ||
               !customName.trim() ||
               skillIds.length >= 50
             }
@@ -420,6 +491,62 @@ export function ProfileSkillsField({
       ) : null}
 
       {error?.message ? <FieldError>{error.message}</FieldError> : null}
+
+      <Dialog
+        open={fuseChoice !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setFuseChoice(null);
+          }
+        }}
+      >
+        <DialogContent
+          aria-busy={fuseDialogBusy}
+          showCloseButton={!fuseDialogBusy}
+          className="max-w-md"
+        >
+          {fuseChoice ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Уточните навык</DialogTitle>
+                <DialogDescription>
+                  Сервер предполагает, что вы могли иметь в виду «
+                  {fuseChoice.suggestion.name}». Вы ввели «
+                  {fuseChoice.userInput}». Выберите вариант для сохранения в
+                  профиле.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col gap-2 sm:flex-col">
+                <Button
+                  type="button"
+                  variant="default"
+                  className="w-full"
+                  disabled={disabled || fuseDialogBusy}
+                  onClick={handleFuseAccept}
+                >
+                  «{fuseChoice.suggestion.name}» (как предложено)
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={disabled || fuseDialogBusy}
+                  onClick={() => void handleFuseOwn()}
+                >
+                  {fuseDialogBusy ? (
+                    <>
+                      <Spinner data-icon="inline-start" className="size-4" />
+                      Создание…
+                    </>
+                  ) : (
+                    `«${fuseChoice.userInput}» (как вводили)`
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Field>
   );
 }

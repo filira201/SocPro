@@ -46,9 +46,11 @@ async function ensurePrimaryAlias(prisma, skill) {
  * Разрешение ввода пользователя в канонический Skill.
  * Порядок: точный ключ алиаса → совпадение имени (без регистра) → Fuse → создание нового.
  *
- * @returns {{ skill: import('@prisma/client').Skill, matchedBy: 'alias'|'name'|'fuse'|'created' }}
+ * @param {{ skipFuse?: boolean }} [options] — при `skipFuse: true` не вызывать Fuse (только алиас/имя, затем создание нового).
+ * @returns {Promise<{ skill: import('@prisma/client').Skill, matchedBy: 'alias'|'name'|'fuse'|'created' }>}
  */
-async function resolveOrCreateSkill(prisma, rawName) {
+async function resolveOrCreateSkill(prisma, rawName, options = {}) {
+  const skipFuse = Boolean(options.skipFuse);
   const trimmed = String(rawName ?? "").trim();
 
   if (!trimmed) {
@@ -78,7 +80,7 @@ async function resolveOrCreateSkill(prisma, rawName) {
     return { skill: byName, matchedBy: "name" };
   }
 
-  if (cleaned.length >= FUSE_MIN_QUERY_LEN) {
+  if (!skipFuse && cleaned.length >= FUSE_MIN_QUERY_LEN) {
     const allSkills = await prisma.skill.findMany({
       include: { aliases: true },
       orderBy: { name: "asc" },

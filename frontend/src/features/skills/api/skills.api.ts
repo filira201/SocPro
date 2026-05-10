@@ -24,7 +24,10 @@ export const skillsApi = api.injectEndpoints({
       providesTags: [{ type: "Skill", id: "LIST" }],
     }),
 
-    createSkill: builder.mutation<SkillWithMatch, { name: string }>({
+    createSkill: builder.mutation<
+      SkillWithMatch,
+      { name: string; skipFuse?: boolean }
+    >({
       query: (body) => ({
         url: "/skills",
         method: "POST",

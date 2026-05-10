@@ -44,13 +44,17 @@ const SkillController = {
 
   create: async (req, res) => {
     const { name } = req.body;
+    /** Только точный алиас и совпадение имени; без Fuse (после отказа пользователя от fuzzy в UI). */
+    const skipFuse = req.body.skipFuse === true || req.body.skipFuse === "true";
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "Название навыка обязательно" });
     }
 
     try {
-      const { skill, matchedBy } = await resolveOrCreateSkill(prisma, name);
+      const { skill, matchedBy } = await resolveOrCreateSkill(prisma, name, {
+        skipFuse,
+      });
 
       if (matchedBy === "created") {
         return res.status(201).json({ ...skill, matchedBy });
