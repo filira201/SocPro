@@ -139,8 +139,8 @@ export function UserProfileView({
           </div>
         ) : null}
         <OptionalRow label="Учебное заведение" value={user.university} />
-        <OptionalRow label="Курс" value={user.course} />
         <OptionalRow label="Факультет" value={user.faculty} />
+        <OptionalRow label="Курс" value={user.course} />
       </dl>
 
       {user.contacts?.length ? (
