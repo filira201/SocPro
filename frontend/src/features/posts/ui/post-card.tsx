@@ -1,6 +1,6 @@
 import { Check, X } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { href, useNavigate } from "react-router";
 
 import {
   useDeletePostMutation,
@@ -58,7 +58,7 @@ export function PostCard({
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
 
   const openPost = () => {
-    navigate(ROUTES.POST_DETAILS.replace(":postId", post.id));
+    navigate(href(ROUTES.POST_DETAILS, { postId: post.id }));
   };
 
   const handleLike = () => {

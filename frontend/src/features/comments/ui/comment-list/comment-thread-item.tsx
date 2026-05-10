@@ -1,6 +1,6 @@
 import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import {
   useDeleteCommentMutation,
@@ -246,7 +246,7 @@ export function CommentThreadItem({
       <article className="rounded-lg border p-3">
         <div className="flex items-start gap-3">
           <Link
-            to={ROUTES.USER_DETAILS.replace(":userId", comment.userId)}
+            to={href(ROUTES.USER_DETAILS, { userId: comment.userId })}
             className="shrink-0 rounded-full outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Профиль ${authorPublicName}`}
           >

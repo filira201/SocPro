@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import type { Attachment } from "../../model/types";
 
@@ -25,7 +25,7 @@ export function CommentThreadBody({
           {replyToUserId && replyToDisplayName ? (
             <>
               <Link
-                to={ROUTES.USER_DETAILS.replace(":userId", replyToUserId)}
+                to={href(ROUTES.USER_DETAILS, { userId: replyToUserId })}
                 className="font-medium text-sky-600 hover:underline dark:text-sky-400"
               >
                 {replyToDisplayName}

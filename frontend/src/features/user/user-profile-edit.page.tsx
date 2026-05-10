@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { href, Link, useNavigate, useParams } from "react-router";
 
 import { UserProfileEditForm } from "./ui/user-profile-edit-form";
 
@@ -23,14 +23,14 @@ function UserProfileEditPage() {
     }
 
     if (currentUser.id !== userId) {
-      navigate(ROUTES.USER_DETAILS.replace(":userId", userId), {
+      navigate(href(ROUTES.USER_DETAILS, { userId }), {
         replace: true,
       });
     }
   }, [userId, currentUser, navigate]);
 
   const profileHref = userId
-    ? ROUTES.USER_DETAILS.replace(":userId", userId)
+    ? href(ROUTES.USER_DETAILS, { userId })
     : ROUTES.POSTS;
 
   return (

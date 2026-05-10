@@ -8,6 +8,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import {
+  href,
   Link,
   matchPath,
   NavLink,
@@ -82,13 +83,13 @@ export function AppSidebar() {
         projects,
         {
           title: "Подписчики",
-          to: ROUTES.FOLLOWERS.replace(":userId", currentUser.id),
+          to: href(ROUTES.FOLLOWERS, { userId: currentUser.id }),
           icon: Users,
           end: true as const,
         },
         {
           title: "Подписки",
-          to: ROUTES.FOLLOWING.replace(":userId", currentUser.id),
+          to: href(ROUTES.FOLLOWING, { userId: currentUser.id }),
           icon: UsersRound,
           end: true as const,
         },
@@ -100,7 +101,7 @@ export function AppSidebar() {
   };
 
   const profilePath = currentUser
-    ? ROUTES.USER_DETAILS.replace(":userId", currentUser.id)
+    ? href(ROUTES.USER_DETAILS, { userId: currentUser.id })
     : ROUTES.POSTS;
 
   const avatarSrc = currentUser?.avatarUrl

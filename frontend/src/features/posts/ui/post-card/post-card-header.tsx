@@ -1,5 +1,5 @@
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import { formatPostDate, toAbsoluteUploadUrl } from "../../lib/format";
 import type { Post } from "../../model/types";
@@ -29,7 +29,7 @@ export function PostCardHeader({
   const displayDate = post.isEdited ? post.updatedAt : post.createdAt;
   const authorName = displayPublicName(post.author);
   const authorFallback = userInitials(post.author);
-  const profilePath = ROUTES.USER_DETAILS.replace(":userId", post.authorId);
+  const profilePath = href(ROUTES.USER_DETAILS, { userId: post.authorId });
 
   return (
     <header className="flex items-start gap-3">

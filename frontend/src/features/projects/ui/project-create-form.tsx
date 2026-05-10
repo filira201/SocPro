@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { href, useNavigate } from "react-router";
 
 import { useCreateProjectMutation } from "../api/projects.api";
 import {
@@ -62,7 +62,7 @@ export function ProjectCreateForm({ onCancel }: ProjectCreateFormProps) {
           values.requiredSkillIds.length > 0 ? values.requiredSkillIds : [],
       }).unwrap();
 
-      navigate(ROUTES.PROJECT_DETAILS.replace(":id", project.id), {
+      navigate(href(ROUTES.PROJECT_DETAILS, { id: project.id }), {
         replace: true,
       });
     } catch (err: unknown) {

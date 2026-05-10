@@ -1,4 +1,4 @@
-import { matchPath } from "react-router";
+import { href, matchPath } from "react-router";
 
 import { ROUTES } from "@/shared/model/routes";
 
@@ -102,7 +102,7 @@ export function breadcrumbSegmentsFromPath(
     return [
       {
         label: profileLabel,
-        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+        to: href(ROUTES.USER_DETAILS, { userId: uid }),
       },
       { label: "Редактирование" },
     ];
@@ -128,7 +128,7 @@ export function breadcrumbSegmentsFromPath(
     return [
       {
         label: profileLabel,
-        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+        to: href(ROUTES.USER_DETAILS, { userId: uid }),
       },
       { label: "Подписчики" },
     ];
@@ -145,7 +145,7 @@ export function breadcrumbSegmentsFromPath(
     return [
       {
         label: profileLabel,
-        to: ROUTES.USER_DETAILS.replace(":userId", uid),
+        to: href(ROUTES.USER_DETAILS, { userId: uid }),
       },
       { label: "Подписки" },
     ];

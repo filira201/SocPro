@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import { computeAge, formatRegistrationDate } from "../lib/format-profile";
 
@@ -92,13 +92,13 @@ export function UserProfileView({
             <h1 className="text-2xl font-semibold">{publicTitle}</h1>
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm">
               <Link
-                to={ROUTES.FOLLOWERS.replace(":userId", user.id)}
+                to={href(ROUTES.FOLLOWERS, { userId: user.id })}
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Подписчики: {user.followersCount ?? 0}
               </Link>
               <Link
-                to={ROUTES.FOLLOWING.replace(":userId", user.id)}
+                to={href(ROUTES.FOLLOWING, { userId: user.id })}
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
                 Подписок: {user.followingCount ?? 0}

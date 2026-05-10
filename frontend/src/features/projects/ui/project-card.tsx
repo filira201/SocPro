@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import { displayPublicName } from "@/features/auth";
 import { projectStatusLabel } from "@/features/projects/lib/format-project-status";
@@ -27,15 +27,13 @@ function excerpt(text: string, maxLen: number) {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const href = ROUTES.PROJECT_DETAILS.replace(":id", project.id);
-
   return (
     <Card className="transition-colors hover:bg-muted/40">
       <CardHeader className="gap-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <CardTitle className="text-lg leading-snug">
             <Link
-              to={href}
+              to={href(ROUTES.PROJECT_DETAILS, { id: project.id })}
               className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {project.title}

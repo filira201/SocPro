@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router";
+import { href, Link, useParams } from "react-router";
 
 import { UserProfileView } from "./ui/user-profile-view";
 
@@ -23,7 +23,7 @@ function UserPage() {
 
   const editHref =
     user && isOwner
-      ? ROUTES.USER_PROFILE_EDIT.replace(":userId", user.id)
+      ? href(ROUTES.USER_PROFILE_EDIT, { userId: user.id })
       : undefined;
 
   return (

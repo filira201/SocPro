@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 
 import { FollowToggleButton } from "./follow-toggle-button";
 
@@ -23,7 +23,7 @@ export function FollowUserCard({ user, isFollowing }: FollowUserCardProps) {
   const isSelf = Boolean(currentUser?.id && currentUser.id === user.id);
 
   const title = displayPublicName(user);
-  const profileHref = ROUTES.USER_DETAILS.replace(":userId", user.id);
+  const profileHref = href(ROUTES.USER_DETAILS, { userId: user.id });
   const avatarSrc = user.avatarUrl ? toAbsoluteUploadUrl(user.avatarUrl) : "";
 
   const initials = userInitials(user);

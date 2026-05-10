@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router";
+import { href, Link } from "react-router";
 import { z } from "zod";
 
 import { useCreateCommentMutation } from "../api/comments.api";
@@ -155,7 +155,7 @@ export function CommentComposer({
       {replyToDisplayName && replyToUserId && parentId ? (
         <div className="flex flex-wrap items-baseline gap-1 text-sm">
           <Link
-            to={ROUTES.USER_DETAILS.replace(":userId", replyToUserId)}
+            to={href(ROUTES.USER_DETAILS, { userId: replyToUserId })}
             className="font-medium text-sky-600 hover:underline dark:text-sky-400"
           >
             {replyToDisplayName}

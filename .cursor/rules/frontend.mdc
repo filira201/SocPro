@@ -92,7 +92,20 @@ export const { useListProjectsQuery, useCreateProjectMutation } = projectsApi;
 ## Роуты
 
 - Все пути — в [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts) (`PUBLIC_ROUTES` + `APP_ROUTES`).
-- Параметры — типизировать через `declare module "react-router" { interface Register { parameters: PathParams } }`.
+- Параметры — типизировать через `declare module "react-router" { interface Register { parameters: PathParams } }` (в том же файле `PathParams` сопоставляет шаблон пути и имена параметров).
+- Для переходов с динамическими сегментами использовать **`href` из `react-router`**, а не ручную подстановку строк:
+
+```ts
+import { href, Link, useNavigate } from "react-router";
+import { ROUTES } from "@/shared/model/routes";
+
+<Link to={href(ROUTES.USER_DETAILS, { userId })} />;
+<Link to={href(ROUTES.POST_DETAILS, { postId })} />;
+<Link to={href(ROUTES.PROJECT_DETAILS, { id })} />;
+navigate(href(ROUTES.USER_PROFILE_EDIT, { userId: user.id }));
+```
+
+- **Не использовать** `ROUTES.SOME_PATH.replace(":param", value)` — теряется связь с типами и легко ошибиться в имени параметра.
 - Пейджи через `lazy: () => import("@/features/.../*.page")`. Pages должны экспортировать `export const Component = ...`.
 
 ## Интерактив внутри кликабельных карточек (лента, посты)

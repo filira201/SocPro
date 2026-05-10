@@ -54,7 +54,7 @@ frontend (RTK Query)  --HTTP+JWT-->  backend (/api)
 - Prisma-схема: [backend/prisma/schema.prisma](backend/prisma/schema.prisma).
 - Базовое API frontend: [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts).
 - Фичи frontend: [frontend/src/features/](frontend/src/features/).
-- Маршруты: [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts).
+- Маршруты: [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts) (константы путей + типизация параметров для React Router). Для ссылок и `navigate` с параметрами — функция **`href()`** из `react-router` (см. раздел «Роуты» в [.cursor/rules/frontend.mdc](.cursor/rules/frontend.mdc)).
 - Защита роутов: [frontend/src/app/protected-loader.ts](frontend/src/app/protected-loader.ts), [frontend/src/app/protected-route.tsx](frontend/src/app/protected-route.tsx).
 
 ## Источники документации и MCP

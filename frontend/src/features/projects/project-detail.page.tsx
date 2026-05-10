@@ -1,6 +1,6 @@
 import { format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Link, useParams } from "react-router";
+import { href, Link, useParams } from "react-router";
 
 import { useGetProjectByIdQuery } from "./api/projects.api";
 import { projectStatusLabel } from "./lib/format-project-status";
@@ -37,7 +37,7 @@ function ProjectDetailPage() {
   const globalError = getApiErrorMessage(error as ApiError | undefined);
 
   const ownerHref = project
-    ? ROUTES.USER_DETAILS.replace(":userId", project.owner.id)
+    ? href(ROUTES.USER_DETAILS, { userId: project.owner.id })
     : "";
 
   return (
@@ -78,7 +78,10 @@ function ProjectDetailPage() {
               <h1 className="text-xl font-semibold leading-tight sm:text-2xl">
                 {project.title}
               </h1>
-              <Badge variant="secondary" className="shrink-0 text-sm font-normal">
+              <Badge
+                variant="secondary"
+                className="shrink-0 text-sm font-normal"
+              >
                 {projectStatusLabel(project.status)}
               </Badge>
             </div>
