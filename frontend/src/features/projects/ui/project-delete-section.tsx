@@ -72,10 +72,11 @@ export function ProjectDeleteSection({
               {error}
             </p>
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={() => setOpen(false)}
               disabled={isLoading}
             >
@@ -84,6 +85,8 @@ export function ProjectDeleteSection({
             <Button
               type="button"
               variant="destructive"
+              size="lg"
+              className="min-w-40"
               disabled={isLoading}
               onClick={() => void handleDelete()}
             >
