@@ -1,10 +1,13 @@
 const { prisma } = require("../prisma/prismaClient");
-const { sanitizeUser } = require("./_utils");
+const {
+  MAX_USER_FIO_SEARCH_Q,
+  buildUserFioSearchFilter,
+  mapUsersWithFollowingFlag,
+} = require("../lib/user-directory-list");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_FOLLOW_LIST_LIMIT = 10;
 const MAX_FOLLOW_LIST_LIMIT = 50;
-const MAX_FOLLOW_LIST_Q = 200;
 
 function normalizeFollowListLimit(value) {
   const parsed = Number(value);
@@ -14,61 +17,6 @@ function normalizeFollowListLimit(value) {
   }
 
   return Math.min(parsed, MAX_FOLLOW_LIST_LIMIT);
-}
-
-function buildUserFioSearchFilter(qRaw) {
-  const q = String(qRaw ?? "")
-    .trim()
-    .slice(0, MAX_FOLLOW_LIST_Q);
-
-  if (!q) {
-    return null;
-  }
-
-  const tokens = q.split(/\s+/).filter(Boolean);
-
-  if (!tokens.length) {
-    return null;
-  }
-
-  const tokenClause = (t) => ({
-    OR: [
-      { firstName: { contains: t, mode: "insensitive" } },
-      { lastName: { contains: t, mode: "insensitive" } },
-      { patronymic: { contains: t, mode: "insensitive" } },
-    ],
-  });
-
-  if (tokens.length === 1) {
-    return tokenClause(tokens[0]);
-  }
-
-  return {
-    AND: tokens.map(tokenClause),
-  };
-}
-
-async function mapUsersWithFollowingFlag(viewerId, rawUsers) {
-  if (!rawUsers.length) {
-    return [];
-  }
-
-  const ids = rawUsers.map((u) => u.id);
-
-  const links = await prisma.follows.findMany({
-    where: {
-      followerId: viewerId,
-      followingId: { in: ids },
-    },
-    select: { followingId: true },
-  });
-
-  const followingSet = new Set(links.map((l) => l.followingId));
-
-  return rawUsers.map((u) => ({
-    ...sanitizeUser(u),
-    isFollowing: followingSet.has(u.id),
-  }));
 }
 
 const FollowController = {
@@ -83,7 +31,7 @@ const FollowController = {
       return res.status(400).json({ error: "Некорректный id" });
     }
 
-    if (qRaw.length > MAX_FOLLOW_LIST_Q) {
+    if (qRaw.length > MAX_USER_FIO_SEARCH_Q) {
       return res.status(400).json({ error: "Слишком длинная строка поиска" });
     }
 
@@ -144,7 +92,7 @@ const FollowController = {
       return res.status(400).json({ error: "Некорректный id" });
     }
 
-    if (qRaw.length > MAX_FOLLOW_LIST_Q) {
+    if (qRaw.length > MAX_USER_FIO_SEARCH_Q) {
       return res.status(400).json({ error: "Слишком длинная строка поиска" });
     }
 

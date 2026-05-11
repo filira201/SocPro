@@ -141,6 +141,7 @@ export const followApi = api.injectEndpoints({
         { type: "User", id: followingId },
         /** Все списки подписчиков/подписок (в т.ч. текущая страница «Подписчики» с флагом isFollowing) */
         "FollowList",
+        "UsersDirectory",
       ],
     }),
 
@@ -153,6 +154,7 @@ export const followApi = api.injectEndpoints({
         "User",
         { type: "User", id: followingId },
         "FollowList",
+        "UsersDirectory",
       ],
     }),
   }),

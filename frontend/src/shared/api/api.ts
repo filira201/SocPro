@@ -48,6 +48,7 @@ export const api = createApi({
   tagTypes: [
     "User",
     "FollowList",
+    "UsersDirectory",
     "Post",
     "Project",
     "ProjectMembers",

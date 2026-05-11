@@ -16,11 +16,29 @@ const {
 } = require("./_utils");
 const { cleanSkillKey } = require("../lib/skill-normalize");
 const {
+  MAX_USER_FIO_SEARCH_Q,
+  buildUserFioSearchFilter,
+  mapUsersWithFollowingFlag,
+} = require("../lib/user-directory-list");
+const {
   optimizeImageFile,
   unlinkMulterFiles,
 } = require("../lib/image-optimize");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const DEFAULT_USER_DIRECTORY_LIMIT = 10;
+const MAX_USER_DIRECTORY_LIMIT = 50;
+const MAX_USER_DIRECTORY_FILTER_SKILLS = 20;
+
+function normalizeUserDirectoryLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_USER_DIRECTORY_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_USER_DIRECTORY_LIMIT);
+}
 
 function optionalTrimmedString(body, key) {
   if (body[key] === undefined) {
@@ -396,14 +414,29 @@ const UserController = {
   },
 
   searchUsers: async (req, res) => {
-    const { q, skills, skillNames } = req.query;
-    const take = Math.min(parseInt(req.query.take, 10) || 20, 100);
-    const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+    const viewerId = req.user.userId;
+    const { q, skills, skillNames, cursor } = req.query;
+    const limit = normalizeUserDirectoryLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
+
+    if (qRaw.length > MAX_USER_FIO_SEARCH_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
+    }
 
     try {
-      const skillIds = parseCsvIds(skills);
+      const skillIdsFromParam = parseCsvIds(skills);
 
-      let resolvedSkillIds = skillIds;
+      if (skillIdsFromParam.length > MAX_USER_DIRECTORY_FILTER_SKILLS) {
+        return res
+          .status(400)
+          .json({ error: "Слишком много навыков в фильтре" });
+      }
+
+      let resolvedSkillIds = skillIdsFromParam;
       if (skillNames) {
         const names = String(skillNames)
           .split(",")
@@ -436,39 +469,48 @@ const UserController = {
         }
       }
 
+      if (resolvedSkillIds.length > MAX_USER_DIRECTORY_FILTER_SKILLS) {
+        return res
+          .status(400)
+          .json({ error: "Слишком много навыков в фильтре" });
+      }
+
       const where = { AND: [] };
 
-      if (q) {
-        const needle = String(q);
-        where.AND.push({
-          OR: [
-            { firstName: { contains: needle, mode: "insensitive" } },
-            { lastName: { contains: needle, mode: "insensitive" } },
-            { patronymic: { contains: needle, mode: "insensitive" } },
-          ],
-        });
+      const fioFilter = buildUserFioSearchFilter(qRaw);
+      if (fioFilter) {
+        where.AND.push(fioFilter);
       }
 
       if (resolvedSkillIds.length) {
+        /** Как у списка проектов: у пользователя в профиле должны быть все выбранные навыки. */
         where.AND.push({
-          skills: { some: { id: { in: resolvedSkillIds } } },
+          skillIds: { hasEvery: resolvedSkillIds },
         });
       }
 
       const finalWhere = where.AND.length ? where : {};
 
-      const [items, total] = await Promise.all([
-        prisma.user.findMany({
-          where: finalWhere,
-          include: { skills: true },
-          orderBy: { createdAt: "desc" },
-          take,
-          skip,
-        }),
-        prisma.user.count({ where: finalWhere }),
-      ]);
+      const users = await prisma.user.findMany({
+        where: finalWhere,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
+        orderBy: { createdAt: "desc" },
+      });
 
-      res.json({ items: sanitizeUser(items), total, take, skip });
+      const hasNextPage = users.length > limit;
+      const pageUsers = hasNextPage ? users.slice(0, limit) : users;
+      const items = await mapUsersWithFollowingFlag(viewerId, pageUsers);
+      const nextCursor = hasNextPage
+        ? pageUsers[pageUsers.length - 1]?.id
+        : null;
+
+      res.json({ items, nextCursor });
     } catch (error) {
       console.error("Error in searchUsers", error);
       res.status(500).json({ error: "Internal server error" });

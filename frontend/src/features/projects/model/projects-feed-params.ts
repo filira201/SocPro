@@ -15,7 +15,7 @@ export type ProjectsFeedUrlState = z.infer<typeof projectsFeedUrlSchema> & {
   skillIds: string[];
 };
 
-function parseSkillIdsFromSearchParams(
+export function parseSkillIdsFromSearchParams(
   searchParams: URLSearchParams
 ): string[] {
   const raw = searchParams.get("skills");

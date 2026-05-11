@@ -4,6 +4,7 @@ import {
   LayoutList,
   LogOut,
   User,
+  UserSearch,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -76,11 +77,19 @@ export function AppSidebar() {
     end: true as const,
   };
 
+  const usersDirectory = {
+    title: "Пользователи",
+    to: ROUTES.USERS,
+    icon: UserSearch,
+    end: true as const,
+  };
+
   const navItems = !currentUser
     ? [posts]
     : [
         posts,
         projects,
+        usersDirectory,
         {
           title: "Подписчики",
           to: href(ROUTES.FOLLOWERS, { userId: currentUser.id }),

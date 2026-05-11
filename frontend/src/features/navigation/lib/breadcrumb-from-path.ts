@@ -69,6 +69,10 @@ export function breadcrumbSegmentsFromPath(
     return [{ label: "Проекты" }];
   }
 
+  if (pathname === ROUTES.USERS) {
+    return [{ label: "Пользователи" }];
+  }
+
   if (pathname === ROUTES.PROJECT_CREATE) {
     return [{ label: "Проекты", to: ROUTES.PROJECTS }, { label: "Создание" }];
   }
