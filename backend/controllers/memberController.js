@@ -8,6 +8,10 @@ const ASSIGNABLE_ROLES = new Set(["MEMBER", "ADMIN"]);
 const MemberController = {
   listMembers: async (req, res) => {
     const { id: projectId } = req.params;
+    const take = Math.min(parseInt(req.query.take, 10) || 10, 50);
+    const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+    const qRaw = req.query.q !== undefined ? String(req.query.q) : "";
+    const q = qRaw.trim();
 
     if (!OBJECT_ID_REGEX.test(projectId)) {
       return res.status(400).json({ error: "Некорректный id проекта" });
@@ -22,13 +26,58 @@ const MemberController = {
         return res.status(404).json({ error: "Проект не найден" });
       }
 
-      const members = await prisma.projectMember.findMany({
-        where: { projectId },
-        include: { user: { include: { skills: true } } },
-        orderBy: { joinedAt: "asc" },
-      });
+      let userFilter = {};
 
-      res.json(sanitizeUser(members));
+      if (q.length > 0) {
+        const tokens = q.split(/\s+/).filter(Boolean);
+
+        if (tokens.length === 1) {
+          const t = tokens[0];
+          userFilter = {
+            user: {
+              OR: [
+                { firstName: { contains: t, mode: "insensitive" } },
+                { lastName: { contains: t, mode: "insensitive" } },
+                { patronymic: { contains: t, mode: "insensitive" } },
+              ],
+            },
+          };
+        } else {
+          userFilter = {
+            user: {
+              AND: tokens.map((t) => ({
+                OR: [
+                  { firstName: { contains: t, mode: "insensitive" } },
+                  { lastName: { contains: t, mode: "insensitive" } },
+                  { patronymic: { contains: t, mode: "insensitive" } },
+                ],
+              })),
+            },
+          };
+        }
+      }
+
+      const where = { projectId, ...userFilter };
+
+      const [members, total] = await Promise.all([
+        prisma.projectMember.findMany({
+          where,
+          include: { user: { include: { skills: true } } },
+          orderBy: { joinedAt: "asc" },
+          take,
+          skip,
+        }),
+        prisma.projectMember.count({ where }),
+      ]);
+
+      res.json(
+        sanitizeUser({
+          items: members,
+          total,
+          take,
+          skip,
+        }),
+      );
     } catch (error) {
       console.error("Error in listMembers", error);
       res.status(500).json({ error: "Internal server error" });

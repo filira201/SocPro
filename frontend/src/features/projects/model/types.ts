@@ -40,6 +40,14 @@ export type ProjectMemberRow = {
   user: User;
 };
 
+/** Ответ списка участников (GET /projects/:id/members). */
+export type ProjectMembersListResponse = {
+  items: ProjectMemberRow[];
+  total: number;
+  take: number;
+  skip: number;
+};
+
 export type ProjectDetail = {
   id: string;
   title: string;

@@ -3,6 +3,7 @@ import type {
   ProjectApplication,
   ProjectCreatedPayload,
   ProjectDetail,
+  ProjectMembersListResponse,
   ProjectUpdateResponse,
   ProjectsListResponse,
 } from "../model/types";
@@ -56,6 +57,59 @@ export const projectsApi = api.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "Project" as const, id }],
     }),
 
+    getProjectMembers: builder.query<
+      ProjectMembersListResponse,
+      {
+        projectId: string;
+        skip: number;
+        take: number;
+        q: string;
+        /** Не уходит на сервер; меняется после мутаций, чтобы сбросить merge-кэш. */
+        listEpoch?: number;
+      }
+    >({
+      query: ({ projectId, skip, take, q }) => ({
+        url: `/projects/${projectId}/members`,
+        params: { skip, take, q },
+      }),
+      serializeQueryArgs: ({ queryArgs }) => {
+        const epoch = queryArgs.listEpoch ?? 0;
+
+        return `getProjectMembers(${queryArgs.projectId},${queryArgs.q},${epoch})`;
+      },
+      merge: (currentCache, incoming, { arg }) => {
+        if (arg.skip === 0) {
+          return incoming;
+        }
+
+        if (!currentCache) {
+          return incoming;
+        }
+
+        return {
+          ...incoming,
+          items: [...currentCache.items, ...incoming.items],
+          total: incoming.total,
+          take: incoming.take,
+          skip: arg.skip,
+        };
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        if (!previousArg) {
+          return true;
+        }
+
+        return (
+          currentArg.projectId !== previousArg.projectId ||
+          currentArg.q !== previousArg.q ||
+          (currentArg.listEpoch ?? 0) !== (previousArg.listEpoch ?? 0)
+        );
+      },
+      providesTags: (_r, _e, { projectId }) => [
+        { type: "ProjectMembers" as const, id: projectId },
+      ],
+    }),
+
     updateProject: builder.mutation<
       ProjectUpdateResponse,
       { id: string; body: FormData }
@@ -97,6 +151,7 @@ export const projectsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
+        { type: "ProjectMembers" as const, id: projectId },
       ],
     }),
 
@@ -111,6 +166,7 @@ export const projectsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
+        { type: "ProjectMembers" as const, id: projectId },
       ],
     }),
 
@@ -125,6 +181,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
         { type: "Project" as const, id: "LIST" },
+        { type: "ProjectMembers" as const, id: projectId },
       ],
     }),
 
@@ -140,6 +197,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
         { type: "Project" as const, id: "LIST" },
+        { type: "ProjectMembers" as const, id: projectId },
       ],
     }),
 
@@ -162,6 +220,7 @@ export const {
   useGetProjectsListQuery,
   useCreateProjectMutation,
   useGetProjectByIdQuery,
+  useGetProjectMembersQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useDecideApplicationMutation,

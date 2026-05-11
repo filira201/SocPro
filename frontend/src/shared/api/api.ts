@@ -50,6 +50,7 @@ export const api = createApi({
     "FollowList",
     "Post",
     "Project",
+    "ProjectMembers",
     "Skill",
     "Application",
     "Member",
