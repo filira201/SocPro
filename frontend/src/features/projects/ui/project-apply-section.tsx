@@ -108,10 +108,11 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
               </DialogDescription>
             </DialogHeader>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-3">
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={() => setCancelOpen(false)}
                 disabled={busy}
               >
@@ -120,6 +121,7 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
               <Button
                 type="button"
                 variant="destructive"
+                size="lg"
                 disabled={busy}
                 onClick={() => void handleCancel()}
               >
@@ -177,10 +179,11 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
               {error}
             </p>
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={() => setOpen(false)}
               disabled={busy}
             >
@@ -188,6 +191,7 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
             </Button>
             <Button
               type="button"
+              size="lg"
               disabled={busy}
               onClick={() => void handleApply()}
             >
