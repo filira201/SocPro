@@ -28,6 +28,13 @@ import {
   FieldSet,
 } from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/kit/select";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 type ProjectEditFormProps = {
@@ -202,18 +209,31 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
             <FieldLabel htmlFor="edit-project-status">
               Статус проекта
             </FieldLabel>
-            <select
-              id="edit-project-status"
-              className="flex h-9 w-full max-w-md rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              aria-invalid={Boolean(errors.status)}
-              {...register("status")}
+            <Select
+              value={status}
+              onValueChange={(value) =>
+                setValue("status", value as ProjectEditFormValues["status"], {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+              disabled={isLoading}
             >
-              {PROJECT_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="edit-project-status"
+                className="h-9 w-full max-w-md"
+                aria-invalid={Boolean(errors.status)}
+              >
+                <SelectValue placeholder="Выберите статус" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.status?.message ? (
               <FieldError>{errors.status.message}</FieldError>
             ) : null}
