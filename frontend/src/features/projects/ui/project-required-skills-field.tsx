@@ -11,12 +11,17 @@ export type ProjectRequiredSkillsFieldProps<
   TFieldValues extends FieldValues & { requiredSkillIds: string[] },
 > = {
   control: Control<TFieldValues>;
+  seedSkills?: { id: string; name: string }[] | null;
   disabled?: boolean;
 };
 
 export function ProjectRequiredSkillsField<
   TFieldValues extends FieldValues & { requiredSkillIds: string[] },
->({ control, disabled }: ProjectRequiredSkillsFieldProps<TFieldValues>) {
+>({
+  control,
+  seedSkills,
+  disabled,
+}: ProjectRequiredSkillsFieldProps<TFieldValues>) {
   const {
     fieldError,
     skillIds,
@@ -29,7 +34,7 @@ export function ProjectRequiredSkillsField<
   } = useSkillIdsField({
     control,
     name: "requiredSkillIds" as FieldPath<TFieldValues>,
-    seedSkills: [],
+    seedSkills,
     disabled,
   });
 

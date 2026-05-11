@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useController, useForm, useWatch } from "react-hook-form";
 
 import { useUpdateProjectMutation } from "../api/projects.api";
 import {
@@ -20,6 +20,7 @@ import { Button } from "@/shared/ui/kit/button";
 import { Checkbox } from "@/shared/ui/kit/checkbox";
 import {
   Field,
+  FieldContent,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -85,6 +86,10 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
   });
 
   const status = useWatch({ control, name: "status" });
+  const { field: acceptingApplicationsField } = useController({
+    control,
+    name: "acceptingApplications",
+  });
 
   useEffect(() => {
     reset(toEditDefaults(project));
@@ -214,20 +219,16 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
             ) : null}
           </Field>
 
-          <Field className="mt-4 flex flex-row items-start gap-3 space-y-0">
-            <Controller
-              name="acceptingApplications"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  id="edit-project-accepting"
-                  checked={field.value}
-                  onCheckedChange={(v) => field.onChange(v === true)}
-                  disabled={terminal || isLoading}
-                />
-              )}
+          <Field orientation="horizontal" className="mt-4">
+            <Checkbox
+              id="edit-project-accepting"
+              checked={acceptingApplicationsField.value}
+              onCheckedChange={(checked) =>
+                acceptingApplicationsField.onChange(checked === true)
+              }
+              disabled={terminal || isLoading}
             />
-            <div className="grid gap-1.5 leading-none">
+            <FieldContent className="grid gap-1.5 leading-none">
               <FieldLabel
                 htmlFor="edit-project-accepting"
                 className="cursor-pointer"
@@ -240,14 +241,18 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
                   выключен.
                 </p>
               ) : null}
-            </div>
+            </FieldContent>
           </Field>
         </FieldGroup>
       </FieldSet>
 
       <FieldSet className="pt-2">
         <FieldLegend className="text-base">Требуемые навыки</FieldLegend>
-        <ProjectRequiredSkillsField control={control} disabled={isLoading} />
+        <ProjectRequiredSkillsField
+          control={control}
+          seedSkills={project.requiredSkills}
+          disabled={isLoading}
+        />
       </FieldSet>
     </form>
   );
