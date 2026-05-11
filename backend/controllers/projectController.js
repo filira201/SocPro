@@ -14,6 +14,10 @@ const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const DEFAULT_PROJECT_LIST_LIMIT = 10;
+const MAX_PROJECT_LIST_LIMIT = 100;
+const MAX_PROJECT_LIST_Q = 200;
+const MAX_PROJECT_FILTER_SKILL_IDS = 20;
 const PROJECT_STATUSES = new Set([
   "OPEN",
   "IN_PROGRESS",
@@ -29,6 +33,32 @@ const parseCsvIds = (value) => {
     .map((s) => s.trim())
     .filter((s) => OBJECT_ID_REGEX.test(s));
 };
+
+function normalizeProjectListLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_PROJECT_LIST_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_PROJECT_LIST_LIMIT);
+}
+
+function parseMemberProjectsFilter(value) {
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function parseProjectsSortOldestFirst(value) {
+  return (
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "old"
+  );
+}
 
 function parseRequiredSkillIdsFromBody(raw) {
   if (raw === undefined || raw === null || raw === "") {
@@ -167,26 +197,43 @@ const ProjectController = {
   },
 
   getAllProjects: async (req, res) => {
-    const { q, skills, status, ownerId } = req.query;
-    const take = Math.min(parseInt(req.query.take, 10) || 20, 100);
-    const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+    const userId = req.user.userId;
+    const { q, skills, status, ownerId, cursor, sort, member } = req.query;
+    const limit = normalizeProjectListLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
+
+    if (qRaw.length > MAX_PROJECT_LIST_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
+    }
+
+    const skillIdsRaw = parseCsvIds(skills);
+
+    if (skillIdsRaw.length > MAX_PROJECT_FILTER_SKILL_IDS) {
+      return res.status(400).json({ error: "Слишком много навыков в фильтре" });
+    }
+
+    const skillIds = skillIdsRaw;
+    const oldestFirst = parseProjectsSortOldestFirst(sort);
+    const memberOnly = parseMemberProjectsFilter(member);
 
     try {
       const where = { AND: [] };
+      const qTrimmed = qRaw.trim();
 
-      if (q) {
+      if (qTrimmed) {
         where.AND.push({
-          OR: [
-            { title: { contains: String(q), mode: "insensitive" } },
-            { description: { contains: String(q), mode: "insensitive" } },
-          ],
+          title: { contains: qTrimmed, mode: "insensitive" },
         });
       }
 
-      const skillIds = parseCsvIds(skills);
       if (skillIds.length) {
+        /** Все выбранные в фильтре id должны входить в `requiredSkillIds` проекта (логическое И). */
         where.AND.push({
-          requiredSkills: { some: { id: { in: skillIds } } },
+          requiredSkillIds: { hasEvery: skillIds },
         });
       }
 
@@ -198,34 +245,48 @@ const ProjectController = {
         where.AND.push({ ownerId: String(ownerId) });
       }
 
+      if (memberOnly) {
+        where.AND.push({
+          members: { some: { userId: String(userId) } },
+        });
+      }
+
       const finalWhere = where.AND.length ? where : {};
 
-      const [items, total] = await Promise.all([
-        prisma.project.findMany({
-          where: finalWhere,
-          include: {
-            owner: true,
-            requiredSkills: true,
-            _count: {
-              select: {
-                members: true,
-                applications: true,
-                attachments: true,
-              },
+      const projects = await prisma.project.findMany({
+        where: finalWhere,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
+        include: {
+          owner: true,
+          requiredSkills: true,
+          _count: {
+            select: {
+              members: true,
+              applications: true,
+              attachments: true,
             },
           },
-          orderBy: { createdAt: "desc" },
-          take,
-          skip,
-        }),
-        prisma.project.count({ where: finalWhere }),
-      ]);
+        },
+        orderBy: {
+          createdAt: oldestFirst ? "asc" : "desc",
+        },
+      });
+
+      const hasNextPage = projects.length > limit;
+      const items = (hasNextPage ? projects.slice(0, limit) : projects).map(
+        (p) => normalizeProjectForApi(p),
+      );
+      const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
 
       res.json({
-        items: sanitizeUser(items.map((p) => normalizeProjectForApi(p))),
-        total,
-        take,
-        skip,
+        items: sanitizeUser(items),
+        nextCursor,
       });
     } catch (error) {
       console.error("Error in getAllProjects", error);

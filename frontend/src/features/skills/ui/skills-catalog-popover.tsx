@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { LOADING_MESSAGE, MIN_SEARCH_CHARS } from "../model/constants";
 
 import type { Skill } from "@/features/auth";
+import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Command,
@@ -35,6 +36,10 @@ type SkillsCatalogPopoverProps = {
   catalogBlocked: boolean;
   /** Когда все совпадения из API уже в выбранном списке */
   allAlreadySelectedMessage?: string;
+  /** Текст на кнопке открытия каталога */
+  triggerLabel?: string;
+  /** Доп. классы кнопки-триггера */
+  triggerClassName?: string;
 };
 
 export function SkillsCatalogPopover({
@@ -52,6 +57,8 @@ export function SkillsCatalogPopover({
   disabled,
   catalogBlocked,
   allAlreadySelectedMessage = "Все подходящие навыки уже выбраны",
+  triggerLabel = "Добавить из каталога",
+  triggerClassName,
 }: SkillsCatalogPopoverProps) {
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -59,11 +66,14 @@ export function SkillsCatalogPopover({
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full justify-start sm:w-auto"
+          className={cn(
+            "h-11 w-full justify-start sm:w-auto",
+            triggerClassName
+          )}
           disabled={disabled || catalogBlocked}
         >
           <Search data-icon="inline-start" className="size-4" aria-hidden />
-          Добавить из каталога
+          {triggerLabel}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(100vw-2rem,22rem)] p-0" align="start">

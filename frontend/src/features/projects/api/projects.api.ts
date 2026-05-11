@@ -1,33 +1,104 @@
+import { defaultSerializeQueryArgs } from "@reduxjs/toolkit/query";
+
 import type {
   ApplyToProjectBody,
   ProjectApplication,
   ProjectCreatedPayload,
   ProjectDetail,
   ProjectMembersListResponse,
-  ProjectUpdateResponse,
+  ProjectsListQuery,
   ProjectsListResponse,
+  ProjectUpdateResponse,
 } from "../model/types";
 
 import { api } from "@/shared/api/api";
 
-export type ProjectsListQuery = {
-  take?: number;
-  skip?: number;
-};
-
-/** По умолчанию для GET /projects (пагинацию можно добавить вторым эндпоинтом или сменой типа arg). */
-const DEFAULT_PROJECTS_LIST_TAKE = 100;
+function normalizeProjectsListQueryForCompare(
+  arg: ProjectsListQuery | undefined
+) {
+  return {
+    limit: arg?.limit ?? 10,
+    cursor: arg?.cursor ?? null,
+    q: (arg?.q ?? "").trim() || null,
+    member: arg?.member === true,
+    sort: arg?.sort === "old" ? "old" : "new",
+    skillsKey:
+      [...(arg?.skillIds ?? [])].filter(Boolean).sort().join(",") || null,
+  };
+}
 
 export const projectsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getProjectsList: builder.query<ProjectsListResponse, void>({
-      query: () => ({
-        url: "/projects",
-        params: {
-          take: DEFAULT_PROJECTS_LIST_TAKE,
-          skip: 0,
-        },
-      }),
+    getProjectsList: builder.query<
+      ProjectsListResponse,
+      ProjectsListQuery | undefined
+    >({
+      query: (params) => {
+        const request = params ?? {};
+        const limit = request.limit ?? 10;
+        const skillIds = request.skillIds ?? [];
+        const skillsCsv = skillIds.length ? skillIds.join(",") : undefined;
+
+        return {
+          url: "/projects",
+          params: {
+            limit,
+            ...(request.cursor ? { cursor: request.cursor } : {}),
+            ...(request.q?.trim() ? { q: request.q.trim() } : {}),
+            ...(request.member ? { member: "1" } : {}),
+            ...(request.sort === "old" ? { sort: "old" } : {}),
+            ...(skillsCsv ? { skills: skillsCsv } : {}),
+          },
+        };
+      },
+      serializeQueryArgs: ({ queryArgs, endpointDefinition, endpointName }) => {
+        const { cursor, skillIds, ...rest } = queryArgs ?? {};
+        void cursor;
+
+        const normalized = {
+          ...rest,
+          ...(skillIds?.length
+            ? { skillIds: [...skillIds].filter(Boolean).sort() }
+            : {}),
+        };
+
+        return defaultSerializeQueryArgs({
+          queryArgs: normalized,
+          endpointDefinition,
+          endpointName,
+        });
+      },
+      merge: (currentCache, newItems, { arg }) => {
+        if (!arg || !arg.cursor) {
+          currentCache.items = newItems.items;
+          currentCache.nextCursor = newItems.nextCursor;
+
+          return;
+        }
+
+        const existingIds = new Set(currentCache.items.map((item) => item.id));
+        currentCache.items.push(
+          ...newItems.items.filter((item) => !existingIds.has(item.id))
+        );
+        currentCache.nextCursor = newItems.nextCursor;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        if (previousArg === undefined) {
+          return true;
+        }
+
+        const cur = normalizeProjectsListQueryForCompare(currentArg);
+        const prev = normalizeProjectsListQueryForCompare(previousArg);
+
+        return (
+          cur.cursor !== prev.cursor ||
+          cur.q !== prev.q ||
+          cur.member !== prev.member ||
+          cur.sort !== prev.sort ||
+          cur.skillsKey !== prev.skillsKey ||
+          cur.limit !== prev.limit
+        );
+      },
       providesTags: (result) =>
         result
           ? [

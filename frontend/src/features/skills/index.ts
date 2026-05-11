@@ -3,7 +3,9 @@ export {
   useCreateSkillMutation,
   useLazyListSkillsQuery,
   useListSkillsQuery,
+  useResolveSkillsByIdsQuery,
   type SkillCreateMatch,
+  type SkillIdName,
   type SkillWithMatch,
 } from "./api/skills.api";
 export {

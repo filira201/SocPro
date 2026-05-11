@@ -2,6 +2,20 @@ const { prisma } = require("../prisma/prismaClient");
 const { cleanSkillKey } = require("../lib/skill-normalize");
 const { resolveOrCreateSkill } = require("../lib/skill-resolve");
 
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const MAX_SKILL_RESOLVE_IDS = 30;
+
+function parseSkillIdsParam(value) {
+  if (!value) {
+    return [];
+  }
+
+  return String(value)
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => OBJECT_ID_REGEX.test(s));
+}
+
 const SkillController = {
   list: async (req, res) => {
     const { q } = req.query;
@@ -38,6 +52,33 @@ const SkillController = {
       res.json(skills);
     } catch (error) {
       console.error("Error in skill list", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
+  resolveByIds: async (req, res) => {
+    const ids = parseSkillIdsParam(req.query.ids);
+
+    if (!ids.length) {
+      return res.json([]);
+    }
+
+    if (ids.length > MAX_SKILL_RESOLVE_IDS) {
+      return res.status(400).json({ error: "Слишком много идентификаторов" });
+    }
+
+    const unique = [...new Set(ids)];
+
+    try {
+      const skills = await prisma.skill.findMany({
+        where: { id: { in: unique } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      });
+
+      res.json(skills);
+    } catch (error) {
+      console.error("Error in skill resolveByIds", error);
       res.status(500).json({ error: "Internal server error" });
     }
   },

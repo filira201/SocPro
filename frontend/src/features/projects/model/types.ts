@@ -4,12 +4,26 @@ import type { Attachment } from "@/features/posts/model/types";
 /** Вложение проекта (структура как у поста). */
 export type ProjectAttachment = Attachment;
 
-/** Ответ списка проектов (GET /projects). */
+/** Ответ списка проектов (GET /projects, курсорная пагинация). */
 export type ProjectsListResponse = {
   items: ProjectListItem[];
-  total: number;
-  take: number;
-  skip: number;
+  nextCursor: string | null;
+};
+
+export const PROJECTS_LIST_SORT_VALUES = ["new", "old"] as const;
+export type ProjectsListSort = (typeof PROJECTS_LIST_SORT_VALUES)[number];
+
+/** Аргументы GET /projects для RTK Query. */
+export type ProjectsListQuery = {
+  cursor?: string | null;
+  limit?: number;
+  /** Поиск по названию проекта. */
+  q?: string;
+  sort?: ProjectsListSort;
+  /** Только проекты, где текущий пользователь в составе. */
+  member?: boolean;
+  /** Все перечисленные навыки должны быть среди требуемых к проекту. */
+  skillIds?: string[];
 };
 
 export type ProjectListItem = {

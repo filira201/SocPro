@@ -259,6 +259,7 @@ router.delete(
 
 //Роуты для навыков
 router.get("/skills", authenticateToken, SkillController.list);
+router.get("/skills/resolve", authenticateToken, SkillController.resolveByIds);
 router.post("/skills", authenticateToken, SkillController.create);
 
 //Роуты для проектов
