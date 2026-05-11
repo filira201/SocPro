@@ -2,6 +2,51 @@ const { prisma } = require("../prisma/prismaClient");
 const { sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const DEFAULT_FOLLOW_LIST_LIMIT = 10;
+const MAX_FOLLOW_LIST_LIMIT = 50;
+const MAX_FOLLOW_LIST_Q = 200;
+
+function normalizeFollowListLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_FOLLOW_LIST_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_FOLLOW_LIST_LIMIT);
+}
+
+function buildUserFioSearchFilter(qRaw) {
+  const q = String(qRaw ?? "")
+    .trim()
+    .slice(0, MAX_FOLLOW_LIST_Q);
+
+  if (!q) {
+    return null;
+  }
+
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  if (!tokens.length) {
+    return null;
+  }
+
+  const tokenClause = (t) => ({
+    OR: [
+      { firstName: { contains: t, mode: "insensitive" } },
+      { lastName: { contains: t, mode: "insensitive" } },
+      { patronymic: { contains: t, mode: "insensitive" } },
+    ],
+  });
+
+  if (tokens.length === 1) {
+    return tokenClause(tokens[0]);
+  }
+
+  return {
+    AND: tokens.map(tokenClause),
+  };
+}
 
 async function mapUsersWithFollowingFlag(viewerId, rawUsers) {
   if (!rawUsers.length) {
@@ -30,9 +75,20 @@ const FollowController = {
   listFollowers: async (req, res) => {
     const { id } = req.params;
     const viewerId = req.user.userId;
+    const { cursor, q } = req.query;
+    const limit = normalizeFollowListLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
 
     if (!OBJECT_ID_REGEX.test(id)) {
       return res.status(400).json({ error: "Некорректный id" });
+    }
+
+    if (qRaw.length > MAX_FOLLOW_LIST_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
     }
 
     try {
@@ -45,15 +101,32 @@ const FollowController = {
         return res.status(404).json({ error: "Пользователь не найден" });
       }
 
+      const userFilter = buildUserFioSearchFilter(qRaw);
+      const where = {
+        followingId: id,
+        ...(userFilter ? { follower: userFilter } : {}),
+      };
+
       const rows = await prisma.follows.findMany({
-        where: { followingId: id },
+        where,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
         include: { follower: true },
+        orderBy: { id: "desc" },
       });
 
-      const users = rows.map((r) => r.follower);
+      const hasNextPage = rows.length > limit;
+      const pageRows = hasNextPage ? rows.slice(0, limit) : rows;
+      const users = pageRows.map((r) => r.follower);
       const items = await mapUsersWithFollowingFlag(viewerId, users);
+      const nextCursor = hasNextPage ? pageRows[pageRows.length - 1]?.id : null;
 
-      res.json({ items });
+      res.json({ items, nextCursor });
     } catch (error) {
       console.error("Error in listFollowers", error);
       res.status(500).json({ error: "Internal server error" });
@@ -63,9 +136,20 @@ const FollowController = {
   listFollowing: async (req, res) => {
     const { id } = req.params;
     const viewerId = req.user.userId;
+    const { cursor, q } = req.query;
+    const limit = normalizeFollowListLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
 
     if (!OBJECT_ID_REGEX.test(id)) {
       return res.status(400).json({ error: "Некорректный id" });
+    }
+
+    if (qRaw.length > MAX_FOLLOW_LIST_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
     }
 
     try {
@@ -78,15 +162,32 @@ const FollowController = {
         return res.status(404).json({ error: "Пользователь не найден" });
       }
 
+      const userFilter = buildUserFioSearchFilter(qRaw);
+      const where = {
+        followerId: id,
+        ...(userFilter ? { following: userFilter } : {}),
+      };
+
       const rows = await prisma.follows.findMany({
-        where: { followerId: id },
+        where,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
         include: { following: true },
+        orderBy: { id: "desc" },
       });
 
-      const users = rows.map((r) => r.following);
+      const hasNextPage = rows.length > limit;
+      const pageRows = hasNextPage ? rows.slice(0, limit) : rows;
+      const users = pageRows.map((r) => r.following);
       const items = await mapUsersWithFollowingFlag(viewerId, users);
+      const nextCursor = hasNextPage ? pageRows[pageRows.length - 1]?.id : null;
 
-      res.json({ items });
+      res.json({ items, nextCursor });
     } catch (error) {
       console.error("Error in listFollowing", error);
       res.status(500).json({ error: "Internal server error" });
