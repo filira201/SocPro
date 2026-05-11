@@ -14,6 +14,7 @@ import { ProjectEditForm } from "./ui/project-edit-form";
 import { ProjectMembersPanel } from "./ui/project-members-panel";
 
 import { displayPublicName, selectCurrentUser } from "@/features/auth";
+import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
@@ -196,6 +197,26 @@ function ProjectDetailPage() {
                   </p>
                 </section>
 
+                {(project.attachments ?? []).length > 0 ? (
+                  <section className="grid gap-2">
+                    <h2 className="font-medium text-foreground">Документы</h2>
+                    <ul className="grid gap-2">
+                      {(project.attachments ?? []).map((att) => (
+                        <li key={att.id}>
+                          <a
+                            href={toAbsoluteUploadUrl(att.url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            {att.originalName ?? att.filename}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+
                 <section className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <h2 className="font-medium text-foreground">
@@ -277,7 +298,7 @@ function ProjectDetailPage() {
 
             {tab === "settings" && perms.canManageProject ? (
               <div className="grid gap-8">
-                <ProjectEditForm project={project} />
+                <ProjectEditForm key={project.id} project={project} />
                 {perms.isOwner ? (
                   <ProjectDeleteSection
                     projectId={project.id}

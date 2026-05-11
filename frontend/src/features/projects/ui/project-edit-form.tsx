@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { useController, useForm, useWatch } from "react-hook-form";
 
 import { useUpdateProjectMutation } from "../api/projects.api";
+import { buildUpdateProjectFormData } from "../lib/build-project-form-data";
+import {
+  MAX_PROJECT_ATTACHMENTS,
+  PROJECT_ATTACHMENTS_LIMIT_ERROR,
+  PROJECT_DOCUMENT_ACCEPT,
+} from "../lib/project-attachments";
 import {
   isTerminalProjectStatus,
   PROJECT_STATUS_OPTIONS,
@@ -12,7 +18,7 @@ import {
   projectEditSchema,
   type ProjectEditFormValues,
 } from "../model/project-edit-schema";
-import type { ProjectDetail, UpdateProjectBody } from "../model/types";
+import type { ProjectDetail } from "../model/types";
 
 import { ProjectRequiredSkillsField } from "./project-required-skills-field";
 
@@ -65,26 +71,15 @@ function toEditDefaults(project: ProjectDetail): ProjectEditFormValues {
   };
 }
 
-function buildUpdateBody(values: ProjectEditFormValues): UpdateProjectBody {
-  const body: UpdateProjectBody = {
-    title: values.title.trim(),
-    description: values.description.trim(),
-    goals: values.goals.trim(),
-    status: values.status,
-    requiredSkillIds: values.requiredSkillIds,
-  };
-
-  if (!isTerminalProjectStatus(values.status)) {
-    body.acceptingApplications = values.acceptingApplications;
-  }
-
-  return body;
-}
-
 export function ProjectEditForm({ project }: ProjectEditFormProps) {
   const [updateProject, { isLoading }] = useUpdateProjectMutation();
   const [formError, setFormError] = useState<string | null>(null);
   const [savedHint, setSavedHint] = useState<string | null>(null);
+  const [newDocumentFiles, setNewDocumentFiles] = useState<File[]>([]);
+  const [pendingRemoveAttachmentIds, setPendingRemoveAttachmentIds] = useState<
+    string[]
+  >([]);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
 
   const {
     register,
@@ -115,15 +110,69 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
     }
   }, [status, setValue]);
 
+  const keptAttachmentCount =
+    (project.attachments ?? []).filter(
+      (a) => !pendingRemoveAttachmentIds.includes(a.id)
+    ).length + newDocumentFiles.length;
+
+  const handleDocumentsChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const incoming = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (incoming.length === 0) {
+      return;
+    }
+
+    const keptExisting = (project.attachments ?? []).filter(
+      (a) => !pendingRemoveAttachmentIds.includes(a.id)
+    ).length;
+    const room =
+      MAX_PROJECT_ATTACHMENTS - keptExisting - newDocumentFiles.length;
+
+    if (incoming.length > room) {
+      setDocumentsError(PROJECT_ATTACHMENTS_LIMIT_ERROR);
+
+      return;
+    }
+
+    setDocumentsError(null);
+    setNewDocumentFiles((current) => [...current, ...incoming]);
+  };
+
+  const removeNewDocumentAt = (index: number) => {
+    setNewDocumentFiles((current) => current.filter((_, i) => i !== index));
+    setDocumentsError(null);
+  };
+
+  const toggleRemoveExisting = (attachmentId: string) => {
+    setPendingRemoveAttachmentIds((current) =>
+      current.includes(attachmentId)
+        ? current.filter((id) => id !== attachmentId)
+        : [...current, attachmentId]
+    );
+    setDocumentsError(null);
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     setSavedHint(null);
+    setDocumentsError(null);
 
     try {
+      const body = buildUpdateProjectFormData(values, {
+        newFiles: newDocumentFiles,
+        removeAttachmentIds: pendingRemoveAttachmentIds,
+      });
+
       await updateProject({
         id: project.id,
-        body: buildUpdateBody(values),
+        body,
       }).unwrap();
+      setNewDocumentFiles([]);
+      setPendingRemoveAttachmentIds([]);
+      setDocumentsError(null);
       setSavedHint("Изменения сохранены");
     } catch (err: unknown) {
       setFormError(
@@ -288,6 +337,90 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
               ) : null}
             </FieldContent>
           </Field>
+        </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Документы проекта</FieldLegend>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="edit-project-documents">
+              Добавить файлы (PDF или Word, всего не более{" "}
+              {MAX_PROJECT_ATTACHMENTS})
+            </FieldLabel>
+            <Input
+              id="edit-project-documents"
+              type="file"
+              multiple
+              accept={PROJECT_DOCUMENT_ACCEPT}
+              className="cursor-pointer"
+              disabled={
+                isLoading || keptAttachmentCount >= MAX_PROJECT_ATTACHMENTS
+              }
+              onChange={handleDocumentsChange}
+            />
+            <p className="mt-1 text-sm text-muted-foreground">
+              Сейчас в проекте (с учётом изменений): {keptAttachmentCount} /{" "}
+              {MAX_PROJECT_ATTACHMENTS}
+            </p>
+            {documentsError ? <FieldError>{documentsError}</FieldError> : null}
+          </Field>
+          {(project.attachments ?? []).length > 0 ? (
+            <ul className="grid gap-1 text-sm">
+              {(project.attachments ?? []).map((att) => {
+                const marked = pendingRemoveAttachmentIds.includes(att.id);
+
+                return (
+                  <li
+                    key={att.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-2 py-1.5"
+                  >
+                    <span
+                      className={
+                        marked
+                          ? "min-w-0 truncate text-muted-foreground line-through"
+                          : "min-w-0 truncate"
+                      }
+                    >
+                      {att.originalName ?? att.filename}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      disabled={isLoading}
+                      onClick={() => toggleRemoveExisting(att.id)}
+                    >
+                      {marked ? "Вернуть" : "Убрать"}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+          {newDocumentFiles.length > 0 ? (
+            <ul className="mt-2 grid gap-1 text-sm">
+              {newDocumentFiles.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.size}-${index}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed px-2 py-1.5"
+                >
+                  <span className="min-w-0 truncate">Новый: {file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={isLoading}
+                    onClick={() => removeNewDocumentAt(index)}
+                  >
+                    Убрать
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </FieldGroup>
       </FieldSet>
 

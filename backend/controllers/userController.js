@@ -5,6 +5,8 @@ const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 
+const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
+
 const {
   validateRegister,
   validateLogin,
@@ -13,28 +15,12 @@ const {
   validateFioPart,
 } = require("./_utils");
 const { cleanSkillKey } = require("../lib/skill-normalize");
-const { optimizeImageFile, unlinkMulterFiles } = require("../lib/image-optimize");
+const {
+  optimizeImageFile,
+  unlinkMulterFiles,
+} = require("../lib/image-optimize");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-
-function unlinkUploadByPublicUrl(urlPath) {
-  if (
-    !urlPath ||
-    typeof urlPath !== "string" ||
-    !urlPath.startsWith("/uploads/")
-  ) {
-    return;
-  }
-
-  const base = path.basename(urlPath);
-
-  if (!base || base === "." || base === "..") {
-    return;
-  }
-
-  const full = path.join(__dirname, "../uploads", base);
-  fs.unlink(full, () => {});
-}
 
 function optionalTrimmedString(body, key) {
   if (body[key] === undefined) {

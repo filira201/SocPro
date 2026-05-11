@@ -1,4 +1,8 @@
 import type { Skill, User } from "@/features/auth";
+import type { Attachment } from "@/features/posts/model/types";
+
+/** Вложение проекта (структура как у поста). */
+export type ProjectAttachment = Attachment;
 
 /** Ответ списка проектов (GET /projects). */
 export type ProjectsListResponse = {
@@ -22,6 +26,8 @@ export type ProjectListItem = {
   _count: {
     members: number;
     applications: number;
+    /** С бэка с новой версии API; для старых ответов может отсутствовать. */
+    attachments?: number;
   };
 };
 
@@ -59,6 +65,7 @@ export type ProjectDetail = {
     decidedAt?: string | null;
   } | null;
   applications?: ProjectApplication[];
+  attachments?: ProjectAttachment[];
 };
 
 /** Заявка (GET /projects/:id для owner/ADMIN или список заявок). */
@@ -79,27 +86,11 @@ export type ProjectUpdateResponse = Omit<
   "isOwner" | "isMember" | "myApplication" | "applications"
 >;
 
-export type UpdateProjectBody = {
-  title: string;
-  description: string;
-  goals: string;
-  status?: string;
-  acceptingApplications?: boolean;
-  requiredSkillIds?: string[];
-};
-
 /** Ответ POST /projects — без расширенных полей GET. */
 export type ProjectCreatedPayload = Omit<
   ProjectDetail,
   "isOwner" | "isMember" | "myApplication" | "applications"
 >;
-
-export type CreateProjectBody = {
-  title: string;
-  description: string;
-  goals: string;
-  requiredSkillIds?: string[];
-};
 
 export type ApplyToProjectBody = {
   message?: string;

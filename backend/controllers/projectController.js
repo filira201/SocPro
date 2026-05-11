@@ -1,11 +1,17 @@
 const { prisma } = require("../prisma/prismaClient");
+const { unlinkMulterFiles } = require("../lib/image-optimize");
 const {
   canManageProjectAsAdminOrOwner,
   canManageMembersAsOwnerOnly,
   isTerminalProjectStatus,
   normalizeProjectForApi,
 } = require("../lib/project-access");
-const { sanitizeUser } = require("./_utils");
+const {
+  MAX_PROJECT_ATTACHMENTS,
+  PROJECT_ATTACHMENTS_LIMIT_ERROR,
+} = require("../lib/project-attachments");
+const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
+const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const PROJECT_STATUSES = new Set([
@@ -24,6 +30,53 @@ const parseCsvIds = (value) => {
     .filter((s) => OBJECT_ID_REGEX.test(s));
 };
 
+function parseRequiredSkillIdsFromBody(raw) {
+  if (raw === undefined || raw === null || raw === "") {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
+  }
+  const str = String(raw).trim();
+  if (!str) {
+    return [];
+  }
+  if (str.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }
+  return parseCsvIds(str);
+}
+
+function parseRemoveAttachmentIds(value) {
+  if (value === undefined || value === null || value === "") {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
+  }
+  const s = String(value).trim();
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
+    } catch {
+      return [];
+    }
+  }
+  return parseCsvIds(s);
+}
+
 function parseAcceptingApplicationsBody(value) {
   if (value === undefined) {
     return undefined;
@@ -40,20 +93,41 @@ function parseAcceptingApplicationsBody(value) {
   return null;
 }
 
+function projectDocumentAttachmentData(file) {
+  return {
+    url: `/uploads/${file.filename}`,
+    filename: file.filename,
+    originalName: decodeUploadOriginalName(file.originalname),
+    mimeType: file.mimetype,
+    size: file.size,
+    kind: "document",
+  };
+}
+
 const ProjectController = {
   createProject: async (req, res) => {
-    const { title, description, goals } = req.body;
     const ownerId = req.user.userId;
+    const files = req.files || [];
+
+    const title = String(req.body.title ?? "").trim();
+    const description = String(req.body.description ?? "").trim();
+    const goals = String(req.body.goals ?? "").trim();
 
     if (!title || !description || !goals) {
-      return res
-        .status(400)
-        .json({ error: "Title, description и goals обязательны" });
+      await unlinkMulterFiles(files);
+      return res.status(400).json({
+        error: "Название, описание и цели обязательны",
+      });
     }
 
-    const requiredSkillIds = Array.isArray(req.body.requiredSkillIds)
-      ? req.body.requiredSkillIds.filter((id) => OBJECT_ID_REGEX.test(id))
-      : parseCsvIds(req.body.requiredSkillIds);
+    if (files.length > MAX_PROJECT_ATTACHMENTS) {
+      await unlinkMulterFiles(files);
+      return res.status(400).json({ error: PROJECT_ATTACHMENTS_LIMIT_ERROR });
+    }
+
+    const requiredSkillIds = parseRequiredSkillIdsFromBody(
+      req.body.requiredSkillIds,
+    );
 
     try {
       const project = await prisma.project.create({
@@ -68,16 +142,25 @@ const ProjectController = {
           members: {
             create: { userId: ownerId, role: "OWNER" },
           },
+          ...(files.length
+            ? {
+                attachments: {
+                  create: files.map(projectDocumentAttachmentData),
+                },
+              }
+            : {}),
         },
         include: {
           owner: true,
           requiredSkills: true,
           members: { include: { user: true } },
+          attachments: { orderBy: { createdAt: "asc" } },
         },
       });
 
       res.status(201).json(sanitizeUser(normalizeProjectForApi(project)));
     } catch (error) {
+      await unlinkMulterFiles(files);
       console.error("Error in createProject", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -123,7 +206,13 @@ const ProjectController = {
           include: {
             owner: true,
             requiredSkills: true,
-            _count: { select: { members: true, applications: true } },
+            _count: {
+              select: {
+                members: true,
+                applications: true,
+                attachments: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
           take,
@@ -159,6 +248,7 @@ const ProjectController = {
           owner: true,
           requiredSkills: true,
           members: { include: { user: true } },
+          attachments: { orderBy: { createdAt: "asc" } },
         },
       });
 
@@ -209,14 +299,20 @@ const ProjectController = {
   updateProject: async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
+    const files = req.files || [];
+    const removeAttachmentIds = parseRemoveAttachmentIds(
+      req.body.removeAttachmentIds,
+    );
 
     if (!OBJECT_ID_REGEX.test(id)) {
+      await unlinkMulterFiles(files);
       return res.status(400).json({ error: "Некорректный id" });
     }
 
     try {
       const project = await prisma.project.findUnique({ where: { id } });
       if (!project) {
+        await unlinkMulterFiles(files);
         return res.status(404).json({ error: "Проект не найден" });
       }
 
@@ -225,19 +321,70 @@ const ProjectController = {
       });
 
       if (!canManageProjectAsAdminOrOwner(project, userId, membership)) {
+        await unlinkMulterFiles(files);
         return res.status(403).json({ error: "Нет доступа" });
+      }
+
+      const attachmentCount = await prisma.projectAttachment.count({
+        where: { projectId: id },
+      });
+
+      const uniqueRemoveIds = [...new Set(removeAttachmentIds)];
+
+      const existingToRemove =
+        uniqueRemoveIds.length > 0
+          ? await prisma.projectAttachment.findMany({
+              where: { projectId: id, id: { in: uniqueRemoveIds } },
+              select: { id: true, url: true },
+            })
+          : [];
+
+      if (
+        uniqueRemoveIds.length > 0 &&
+        existingToRemove.length !== uniqueRemoveIds.length
+      ) {
+        await unlinkMulterFiles(files);
+        return res
+          .status(400)
+          .json({ error: "Некорректные вложения для удаления" });
+      }
+
+      const remainingAfterRemove = attachmentCount - existingToRemove.length;
+
+      if (remainingAfterRemove + files.length > MAX_PROJECT_ATTACHMENTS) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: PROJECT_ATTACHMENTS_LIMIT_ERROR });
       }
 
       const { title, description, goals, status } = req.body;
 
       const data = {
-        title: title || undefined,
-        description: description || undefined,
-        goals: goals || undefined,
+        title:
+          title !== undefined ? String(title).trim() || undefined : undefined,
+        description:
+          description !== undefined
+            ? String(description).trim() || undefined
+            : undefined,
+        goals:
+          goals !== undefined ? String(goals).trim() || undefined : undefined,
       };
+
+      if (data.title !== undefined && !data.title) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: "Укажите название проекта" });
+      }
+      if (data.description !== undefined && !data.description) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: "Укажите описание" });
+      }
+      if (data.goals !== undefined && !data.goals) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: "Укажите цели" });
+      }
 
       if (status !== undefined) {
         if (!PROJECT_STATUSES.has(String(status))) {
+          await unlinkMulterFiles(files);
           return res.status(400).json({ error: "Некорректный статус" });
         }
         const nextStatus = String(status);
@@ -251,6 +398,7 @@ const ProjectController = {
 
       if (isTerminalProjectStatus(nextStatus)) {
         if (req.body.acceptingApplications !== undefined) {
+          await unlinkMulterFiles(files);
           return res.status(400).json({
             error:
               "Нельзя менять acceptingApplications при статусе «Выполнен» или «Закрыт»",
@@ -265,6 +413,7 @@ const ProjectController = {
           accParsed === null &&
           req.body.acceptingApplications !== undefined
         ) {
+          await unlinkMulterFiles(files);
           return res
             .status(400)
             .json({ error: "acceptingApplications: укажите true или false" });
@@ -275,24 +424,46 @@ const ProjectController = {
       }
 
       if (req.body.requiredSkillIds !== undefined) {
-        const arr = Array.isArray(req.body.requiredSkillIds)
-          ? req.body.requiredSkillIds.filter((sid) => OBJECT_ID_REGEX.test(sid))
-          : parseCsvIds(req.body.requiredSkillIds);
+        const arr = parseRequiredSkillIdsFromBody(req.body.requiredSkillIds);
         data.requiredSkillIds = { set: arr };
       }
 
+      const attachmentUpdate = {
+        ...(uniqueRemoveIds.length
+          ? {
+              deleteMany: {
+                id: { in: uniqueRemoveIds },
+              },
+            }
+          : {}),
+        ...(files.length
+          ? { create: files.map(projectDocumentAttachmentData) }
+          : {}),
+      };
+
+      const hasAttachmentOps = uniqueRemoveIds.length > 0 || files.length > 0;
+
       const updated = await prisma.project.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          ...(hasAttachmentOps ? { attachments: attachmentUpdate } : {}),
+        },
         include: {
           owner: true,
           requiredSkills: true,
           members: { include: { user: true } },
+          attachments: { orderBy: { createdAt: "asc" } },
         },
       });
 
+      for (const row of existingToRemove) {
+        unlinkUploadByPublicUrl(row.url);
+      }
+
       res.json(sanitizeUser(normalizeProjectForApi(updated)));
     } catch (error) {
+      await unlinkMulterFiles(files);
       console.error("Error in updateProject", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -313,6 +484,14 @@ const ProjectController = {
       }
       if (!canManageMembersAsOwnerOnly(project, userId)) {
         return res.status(403).json({ error: "Нет доступа" });
+      }
+
+      const attachments = await prisma.projectAttachment.findMany({
+        where: { projectId: id },
+        select: { url: true },
+      });
+      for (const row of attachments) {
+        unlinkUploadByPublicUrl(row.url);
       }
 
       await prisma.$transaction([

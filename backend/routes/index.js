@@ -15,6 +15,10 @@ const {
   MemberController,
 } = require("../controllers");
 const authenticateToken = require("../middleware/auth");
+const {
+  MAX_PROJECT_ATTACHMENTS,
+  PROJECT_ATTACHMENTS_LIMIT_ERROR,
+} = require("../lib/project-attachments");
 
 const destination = "uploads";
 
@@ -70,6 +74,38 @@ const resumeMimeAllowlist = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
+
+const projectDocumentsUpload = multer({
+  storage,
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    if (file.fieldname !== "documents") {
+      return cb(new Error("Некорректное поле файла"));
+    }
+    if (!resumeMimeAllowlist.has(file.mimetype)) {
+      return cb(
+        new Error("Допустимы только PDF или документы Word (.doc, .docx)"),
+      );
+    }
+    cb(null, true);
+  },
+}).array("documents", MAX_PROJECT_ATTACHMENTS);
+
+function handleProjectDocumentsUpload(req, res, next) {
+  projectDocumentsUpload(req, res, (err) => {
+    if (!err) {
+      return next();
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({ error: PROJECT_ATTACHMENTS_LIMIT_ERROR });
+    }
+    const message =
+      err.code === "LIMIT_FILE_SIZE" || err.message === "File too large"
+        ? "Файл слишком большой"
+        : err.message || "Ошибка загрузки файла";
+    return res.status(400).json({ error: message });
+  });
+}
 
 const profileUpload = multer({
   storage,
@@ -204,14 +240,24 @@ router.get("/skills", authenticateToken, SkillController.list);
 router.post("/skills", authenticateToken, SkillController.create);
 
 //Роуты для проектов
-router.post("/projects", authenticateToken, ProjectController.createProject);
+router.post(
+  "/projects",
+  authenticateToken,
+  handleProjectDocumentsUpload,
+  ProjectController.createProject,
+);
 router.get("/projects", authenticateToken, ProjectController.getAllProjects);
 router.get(
   "/projects/:id",
   authenticateToken,
   ProjectController.getProjectById,
 );
-router.put("/projects/:id", authenticateToken, ProjectController.updateProject);
+router.put(
+  "/projects/:id",
+  authenticateToken,
+  handleProjectDocumentsUpload,
+  ProjectController.updateProject,
+);
 router.delete(
   "/projects/:id",
   authenticateToken,

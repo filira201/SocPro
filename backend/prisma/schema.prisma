@@ -177,9 +177,24 @@ model Project {
 
   members      ProjectMember[]
   applications ProjectApplication[]
+  attachments  ProjectAttachment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/** Вложения проекта (PDF/Word); не более 10 на проект — инвариант в приложении. */
+model ProjectAttachment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String   @db.ObjectId
+  url          String
+  filename     String
+  originalName String?
+  mimeType     String
+  size         Int
+  kind         String
+  createdAt    DateTime @default(now())
 }
 
 model ProjectMember {

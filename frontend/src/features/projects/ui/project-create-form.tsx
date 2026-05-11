@@ -4,6 +4,12 @@ import { useForm } from "react-hook-form";
 import { href, useNavigate } from "react-router";
 
 import { useCreateProjectMutation } from "../api/projects.api";
+import { buildCreateProjectFormData } from "../lib/build-project-form-data";
+import {
+  MAX_PROJECT_ATTACHMENTS,
+  PROJECT_ATTACHMENTS_LIMIT_ERROR,
+  PROJECT_DOCUMENT_ACCEPT,
+} from "../lib/project-attachments";
 import {
   projectCreateSchema,
   type ProjectCreateFormValues,
@@ -33,7 +39,8 @@ export function ProjectCreateForm({ onCancel }: ProjectCreateFormProps) {
   const navigate = useNavigate();
   const [createProject, { isLoading }] = useCreateProjectMutation();
   const [formError, setFormError] = useState<string | null>(null);
-
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
   const {
     register,
     control,
@@ -52,15 +59,21 @@ export function ProjectCreateForm({ onCancel }: ProjectCreateFormProps) {
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
+    setDocumentsError(null);
 
     try {
-      const project = await createProject({
-        title: values.title,
-        description: values.description,
-        goals: values.goals,
-        requiredSkillIds:
-          values.requiredSkillIds.length > 0 ? values.requiredSkillIds : [],
-      }).unwrap();
+      const formData = buildCreateProjectFormData(
+        {
+          title: values.title,
+          description: values.description,
+          goals: values.goals,
+          requiredSkillIds:
+            values.requiredSkillIds.length > 0 ? values.requiredSkillIds : [],
+        },
+        documentFiles
+      );
+
+      const project = await createProject(formData).unwrap();
 
       navigate(href(ROUTES.PROJECT_DETAILS, { id: project.id }), {
         replace: true,
@@ -71,6 +84,33 @@ export function ProjectCreateForm({ onCancel }: ProjectCreateFormProps) {
       );
     }
   });
+
+  const handleDocumentsChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const incoming = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (incoming.length === 0) {
+      return;
+    }
+
+    const room = MAX_PROJECT_ATTACHMENTS - documentFiles.length;
+
+    if (incoming.length > room) {
+      setDocumentsError(PROJECT_ATTACHMENTS_LIMIT_ERROR);
+
+      return;
+    }
+
+    setDocumentsError(null);
+    setDocumentFiles((current) => [...current, ...incoming]);
+  };
+
+  const removeDocumentAt = (index: number) => {
+    setDocumentFiles((current) => current.filter((_, i) => i !== index));
+    setDocumentsError(null);
+  };
 
   return (
     <form
@@ -151,6 +191,54 @@ export function ProjectCreateForm({ onCancel }: ProjectCreateFormProps) {
             Статус по умолчанию — открытый проект с приёмом заявок; изменить их
             можно будет позже в карточке проекта.
           </p>
+        </FieldGroup>
+      </FieldSet>
+
+      <FieldSet>
+        <FieldLegend>Документы проекта</FieldLegend>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="project-documents">
+              Файлы (PDF или Word, не более {MAX_PROJECT_ATTACHMENTS})
+            </FieldLabel>
+            <Input
+              id="project-documents"
+              type="file"
+              multiple
+              accept={PROJECT_DOCUMENT_ACCEPT}
+              className="cursor-pointer"
+              disabled={
+                isLoading || documentFiles.length >= MAX_PROJECT_ATTACHMENTS
+              }
+              onChange={handleDocumentsChange}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Выбрано: {documentFiles.length} / {MAX_PROJECT_ATTACHMENTS}
+            </p>
+            {documentsError ? <FieldError>{documentsError}</FieldError> : null}
+          </Field>
+          {documentFiles.length > 0 ? (
+            <ul className="mt-2 grid gap-1 text-sm">
+              {documentFiles.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.size}-${index}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-2 py-1.5"
+                >
+                  <span className="min-w-0 truncate">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={isLoading}
+                    onClick={() => removeDocumentAt(index)}
+                  >
+                    Убрать
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </FieldGroup>
       </FieldSet>
 

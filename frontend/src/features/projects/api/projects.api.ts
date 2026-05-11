@@ -1,12 +1,10 @@
 import type {
   ApplyToProjectBody,
-  CreateProjectBody,
   ProjectApplication,
   ProjectCreatedPayload,
   ProjectDetail,
   ProjectUpdateResponse,
   ProjectsListResponse,
-  UpdateProjectBody,
 } from "../model/types";
 
 import { api } from "@/shared/api/api";
@@ -41,7 +39,7 @@ export const projectsApi = api.injectEndpoints({
           : [{ type: "Project" as const, id: "LIST" }],
     }),
 
-    createProject: builder.mutation<ProjectCreatedPayload, CreateProjectBody>({
+    createProject: builder.mutation<ProjectCreatedPayload, FormData>({
       query: (body) => ({
         url: "/projects",
         method: "POST",
@@ -60,7 +58,7 @@ export const projectsApi = api.injectEndpoints({
 
     updateProject: builder.mutation<
       ProjectUpdateResponse,
-      { id: string; body: UpdateProjectBody }
+      { id: string; body: FormData }
     >({
       query: ({ id, body }) => ({
         url: `/projects/${id}`,

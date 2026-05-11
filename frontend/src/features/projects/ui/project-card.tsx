@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { href, Link } from "react-router";
 
 import { displayPublicName } from "@/features/auth";
@@ -32,6 +33,8 @@ export function ProjectCard({
   project,
   isOwnedByCurrentUser = false,
 }: ProjectCardProps) {
+  const attachmentCount = project._count.attachments ?? 0;
+
   return (
     <Card className="transition-colors hover:bg-muted/40">
       <CardHeader className="gap-2">
@@ -64,6 +67,15 @@ export function ProjectCard({
             >
               {projectStatusLabel(project.status)}
             </Badge>
+            {attachmentCount > 0 ? (
+              <Badge
+                variant="outline"
+                className="gap-1 px-2.5 py-3.5 text-sm font-normal"
+              >
+                <FileText className="size-3.5 shrink-0" aria-hidden />
+                {attachmentCount}
+              </Badge>
+            ) : null}
           </div>
         </div>
         <CardDescription className="line-clamp-3 text-sm">
