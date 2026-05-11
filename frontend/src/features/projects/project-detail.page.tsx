@@ -1,7 +1,7 @@
 import { format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useState } from "react";
-import { href, Link, useParams } from "react-router";
+import { href, Link, useNavigate, useParams } from "react-router";
 
 import { useGetProjectByIdQuery } from "./api/projects.api";
 import { getProjectPermissions } from "./lib/project-permissions";
@@ -37,6 +37,7 @@ function formatStatusAt(iso: string | null | undefined) {
 }
 
 function ProjectDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const invalidId = !id || !OBJECT_ID_REGEX.test(id);
   const currentUser = useAppSelector(selectCurrentUser);
@@ -66,12 +67,14 @@ function ProjectDetailPage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
-      <Link
-        to={ROUTES.PROJECTS}
-        className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+      <Button
+        type="button"
+        variant="ghost"
+        className="text-muted-foreground"
+        onClick={() => navigate(-1)}
       >
         Назад к проектам
-      </Link>
+      </Button>
 
       {invalidId ? (
         <p className="mt-4 text-muted-foreground">Некорректная ссылка</p>

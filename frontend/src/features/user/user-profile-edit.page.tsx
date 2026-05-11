@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { href, Link, useNavigate, useParams } from "react-router";
+import { href, useNavigate, useParams } from "react-router";
 
 import { UserProfileEditForm } from "./ui/user-profile-edit-form";
 
 import { selectCurrentUser, useGetUserByIdQuery } from "@/features/auth";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
+import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
 function UserProfileEditPage() {
@@ -36,12 +37,14 @@ function UserProfileEditPage() {
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
       <div className="grid gap-4">
-        <Link
-          to={profileHref}
-          className="w-fit justify-self-start text-sm text-muted-foreground underline-offset-4 hover:underline"
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-fit justify-self-start text-muted-foreground"
+          onClick={() => navigate(-1)}
         >
-          Назад к профилю
-        </Link>
+          Назад
+        </Button>
 
         {isLoading ? (
           <div className="flex justify-center py-8 text-muted-foreground">
