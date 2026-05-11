@@ -14,11 +14,17 @@ export function ProjectApplicationsBadge({
   compact = false,
   className,
 }: ProjectApplicationsBadgeProps) {
+  const base = "px-2.5 py-3.5 text-sm font-normal";
+
   if (acceptingApplications) {
     return (
       <Badge
-        variant="default"
-        className={cn("px-2.5 py-3.5 text-sm font-normal", className)}
+        variant="outline"
+        className={cn(
+          base,
+          "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-300",
+          className
+        )}
         title="Можно подать заявку на участие — откройте карточку проекта"
       >
         {compact ? "Приём открыт" : "Принимаем заявки"}
@@ -29,7 +35,11 @@ export function ProjectApplicationsBadge({
   return (
     <Badge
       variant="outline"
-      className={cn("px-2.5 py-3.5 text-sm font-normal", className)}
+      className={cn(
+        base,
+        "border-destructive/50 bg-destructive/10 text-destructive dark:border-destructive/50 dark:bg-destructive/15 dark:text-destructive",
+        className
+      )}
       title="Новые заявки не принимаются"
     >
       {compact ? "Приём закрыт" : "Заявки не принимаются"}

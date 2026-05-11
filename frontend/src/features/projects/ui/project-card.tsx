@@ -46,7 +46,10 @@ export function ProjectCard({
           </CardTitle>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             {isOwnedByCurrentUser ? (
-              <Badge className="px-2.5 py-3.5 text-sm font-normal">
+              <Badge
+                variant="ghost"
+                className="px-2.5 py-3.5 text-sm font-normal"
+              >
                 Мой проект
               </Badge>
             ) : null}
