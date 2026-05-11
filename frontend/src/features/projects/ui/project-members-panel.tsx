@@ -183,10 +183,12 @@ export function ProjectMembersPanel({
               подать заявку, если проект принимает заявки.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
+              size="lg"
+              className="min-w-28"
               onClick={() => setLeaveSelfOpen(false)}
             >
               Отмена
@@ -194,6 +196,8 @@ export function ProjectMembersPanel({
             <Button
               type="button"
               variant="destructive"
+              size="lg"
+              className="min-w-28"
               disabled={busy}
               onClick={() => {
                 void runRemove(currentUserId);
@@ -223,10 +227,11 @@ export function ProjectMembersPanel({
                 : null}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={() => setRemoveTarget(null)}
             >
               Отмена
@@ -234,6 +239,7 @@ export function ProjectMembersPanel({
             <Button
               type="button"
               variant="destructive"
+              size="lg"
               disabled={busy || !removeTarget}
               onClick={() => {
                 if (removeTarget) {
