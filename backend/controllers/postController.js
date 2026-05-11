@@ -3,6 +3,10 @@ const {
   optimizeUploadedImages,
   unlinkMulterFiles,
 } = require("../lib/image-optimize");
+const {
+  MAX_POST_ATTACHMENTS,
+  POST_ATTACHMENTS_LIMIT_ERROR,
+} = require("../lib/post-attachments");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -137,6 +141,11 @@ const PostController = {
       return res.status(400).json({ error: "Все поля обязательны" });
     }
 
+    if (files.length > MAX_POST_ATTACHMENTS) {
+      await unlinkMulterFiles(files);
+      return res.status(400).json({ error: POST_ATTACHMENTS_LIMIT_ERROR });
+    }
+
     try {
       await optimizeUploadedImages(files);
     } catch (e) {
@@ -161,6 +170,7 @@ const PostController = {
 
       res.json(created);
     } catch (error) {
+      await unlinkMulterFiles(files);
       console.error("Error in createPost", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -242,9 +252,11 @@ const PostController = {
     const removeAttachmentIds = parseRemoveAttachmentIds(
       req.body.removeAttachmentIds,
     );
+    const uniqueRemoveIds = [...new Set(removeAttachmentIds)];
     const userId = req.user.userId;
 
     if (!OBJECT_ID_REGEX.test(id)) {
+      await unlinkMulterFiles(files);
       return res.status(400).json({ error: "Некорректный id" });
     }
 
@@ -263,23 +275,26 @@ const PostController = {
       });
 
       if (!post) {
+        await unlinkMulterFiles(files);
         return res.status(404).json({ error: "Пост не найден" });
       }
 
       if (post.authorId !== userId) {
+        await unlinkMulterFiles(files);
         return res.status(403).json({ error: "Нет доступа" });
       }
 
-      if (removeAttachmentIds.length) {
+      if (uniqueRemoveIds.length) {
         const existingAttachments = await prisma.postAttachment.findMany({
           where: {
             postId: id,
-            id: { in: removeAttachmentIds },
+            id: { in: uniqueRemoveIds },
           },
           select: { id: true },
         });
 
-        if (existingAttachments.length !== removeAttachmentIds.length) {
+        if (existingAttachments.length !== uniqueRemoveIds.length) {
+          await unlinkMulterFiles(files);
           return res
             .status(400)
             .json({ error: "Некорректные вложения для удаления" });
@@ -288,14 +303,20 @@ const PostController = {
 
       const remainingExistingAttachments = Math.max(
         0,
-        (post._count?.attachments ?? 0) - removeAttachmentIds.length,
+        (post._count?.attachments ?? 0) - uniqueRemoveIds.length,
       );
+
+      if (remainingExistingAttachments + files.length > MAX_POST_ATTACHMENTS) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: POST_ATTACHMENTS_LIMIT_ERROR });
+      }
 
       if (
         !String(content || "").trim() &&
         files.length === 0 &&
         remainingExistingAttachments === 0
       ) {
+        await unlinkMulterFiles(files);
         return res.status(400).json({ error: "Все поля обязательны" });
       }
 
@@ -313,10 +334,10 @@ const PostController = {
         data: {
           ...(content !== undefined ? { content: String(content).trim() } : {}),
           attachments: {
-            ...(removeAttachmentIds.length
+            ...(uniqueRemoveIds.length
               ? {
                   deleteMany: {
-                    id: { in: removeAttachmentIds },
+                    id: { in: uniqueRemoveIds },
                   },
                 }
               : {}),
@@ -329,6 +350,7 @@ const PostController = {
 
       res.json(updated);
     } catch (error) {
+      await unlinkMulterFiles(files);
       console.error("Error in updatePost", error);
       res.status(500).json({ error: "Internal server error" });
     }

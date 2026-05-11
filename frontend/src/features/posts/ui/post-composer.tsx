@@ -4,6 +4,10 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useCreatePostMutation } from "../api/posts.api";
+import {
+  MAX_POST_ATTACHMENTS,
+  POST_ATTACHMENTS_LIMIT_ERROR,
+} from "../lib/post-attachments";
 import { postSchema, type PostFormValues } from "../model/schemas";
 
 import { getApiErrorMessage } from "@/shared/lib/api-error";
@@ -11,6 +15,7 @@ import { Button } from "@/shared/ui/kit/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/shared/ui/kit/field";
@@ -26,6 +31,7 @@ export function PostComposer() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [filesLimitError, setFilesLimitError] = useState<string | null>(null);
   const [createPost, { isLoading }] = useCreatePostMutation();
   const {
     formState: { errors },
@@ -38,18 +44,36 @@ export function PostComposer() {
   });
 
   const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(event.target.files || []).map((file) => ({
-      file,
-      previewUrl: file.type.startsWith("image/")
-        ? URL.createObjectURL(file)
-        : null,
-    }));
-
-    setFiles((current) => [...current, ...selected]);
+    const raw = Array.from(event.target.files || []);
     event.target.value = "";
+
+    if (raw.length === 0) {
+      return;
+    }
+
+    setFiles((current) => {
+      const room = MAX_POST_ATTACHMENTS - current.length;
+
+      if (raw.length > room) {
+        queueMicrotask(() => setFilesLimitError(POST_ATTACHMENTS_LIMIT_ERROR));
+
+        return current;
+      }
+
+      queueMicrotask(() => setFilesLimitError(null));
+      const incoming = raw.map((file) => ({
+        file,
+        previewUrl: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : null,
+      }));
+
+      return [...current, ...incoming];
+    });
   };
 
   const removeFile = (index: number) => {
+    setFilesLimitError(null);
     setFiles((current) => {
       const file = current[index];
 
@@ -63,6 +87,7 @@ export function PostComposer() {
 
   const onSubmit = async (values: PostFormValues) => {
     setFormError(null);
+    setFilesLimitError(null);
 
     if (!values.content.trim() && files.length === 0) {
       setFormError("Добавьте текст или файл");
@@ -153,20 +178,29 @@ export function PostComposer() {
         ) : null}
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-          >
-            <Image />
-            Прикрепить файлы
-          </Button>
+          <div className="flex flex-col gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || files.length >= MAX_POST_ATTACHMENTS}
+            >
+              <Image />
+              Прикрепить файлы
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Файлов: {files.length} / {MAX_POST_ATTACHMENTS}
+            </p>
+            {filesLimitError ? (
+              <FieldError role="alert">{filesLimitError}</FieldError>
+            ) : null}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
             multiple
             className="hidden"
+            disabled={isLoading || files.length >= MAX_POST_ATTACHMENTS}
             onChange={handleFilesChange}
           />
 

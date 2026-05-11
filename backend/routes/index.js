@@ -16,6 +16,10 @@ const {
 } = require("../controllers");
 const authenticateToken = require("../middleware/auth");
 const {
+  MAX_POST_ATTACHMENTS,
+  POST_ATTACHMENTS_LIMIT_ERROR,
+} = require("../lib/post-attachments");
+const {
   MAX_PROJECT_ATTACHMENTS,
   PROJECT_ATTACHMENTS_LIMIT_ERROR,
 } = require("../lib/project-attachments");
@@ -53,6 +57,24 @@ function rejectSvgImageAttachments(req, file, cb) {
 }
 
 const uploads = multer({ storage, fileFilter: rejectSvgImageAttachments });
+
+const postFilesUpload = uploads.array("files", MAX_POST_ATTACHMENTS);
+
+function handlePostFilesUpload(req, res, next) {
+  postFilesUpload(req, res, (err) => {
+    if (!err) {
+      return next();
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({ error: POST_ATTACHMENTS_LIMIT_ERROR });
+    }
+    const message =
+      err.code === "LIMIT_FILE_SIZE" || err.message === "File too large"
+        ? "Файл слишком большой"
+        : err.message || "Ошибка загрузки файла";
+    return res.status(400).json({ error: message });
+  });
+}
 
 function handleUploadError(uploadMiddleware) {
   return (req, res, next) => {
@@ -176,7 +198,7 @@ router.put(
 router.post(
   "/posts",
   authenticateToken,
-  handleUploadError(uploads.array("files")),
+  handlePostFilesUpload,
   PostController.createPost,
 );
 router.get("/posts", authenticateToken, PostController.getAllPosts);
@@ -189,7 +211,7 @@ router.get(
 router.patch(
   "/posts/:id",
   authenticateToken,
-  handleUploadError(uploads.array("files")),
+  handlePostFilesUpload,
   PostController.updatePost,
 );
 router.delete("/posts/:id", authenticateToken, PostController.deletePost);

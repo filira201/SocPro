@@ -6,6 +6,7 @@ import type { Attachment } from "../../model/types";
 
 import type { SelectedFile } from "@/shared/lib/use-selected-files-preview";
 import { Button } from "@/shared/ui/kit/button";
+import { FieldError } from "@/shared/ui/kit/field";
 import { Textarea } from "@/shared/ui/kit/textarea";
 
 type PostCardEditorProps = {
@@ -20,6 +21,9 @@ type PostCardEditorProps = {
   onSave: () => void;
   isUpdating: boolean;
   saveError?: string | null;
+  addFilesDisabled?: boolean;
+  filesLimitError?: string | null;
+  attachmentCountLabel?: string;
 };
 
 export function PostCardEditor({
@@ -34,6 +38,9 @@ export function PostCardEditor({
   onSave,
   isUpdating,
   saveError,
+  addFilesDisabled = false,
+  filesLimitError = null,
+  attachmentCountLabel,
 }: PostCardEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -130,21 +137,33 @@ export function PostCardEditor({
           ))}
         </div>
       ) : null}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-1">
         <Button
           type="button"
           variant="outline"
           size="sm"
+          disabled={isUpdating || addFilesDisabled}
           onClick={() => fileInputRef.current?.click()}
         >
           <Paperclip />
           Файлы
         </Button>
+        {attachmentCountLabel ? (
+          <p className="text-xs text-muted-foreground">
+            {attachmentCountLabel}
+          </p>
+        ) : null}
+        {filesLimitError ? (
+          <FieldError role="alert" className="text-right">
+            {filesLimitError}
+          </FieldError>
+        ) : null}
         <input
           ref={fileInputRef}
           type="file"
           multiple
           className="hidden"
+          disabled={isUpdating || addFilesDisabled}
           onChange={(event) => {
             const files = event.target.files;
 

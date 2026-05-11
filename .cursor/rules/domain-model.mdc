@@ -16,7 +16,7 @@ alwaysApply: true
 - `ProjectAttachment` — файл проекта (те же смысловые поля, что у `PostAttachment`: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`); допустимые типы файлов задаёт API (PDF/Word как у резюме); `projectId`.
 - `ProjectMember` — `(projectId, userId)` `@@unique`, `role: MemberRole`.
 - `ProjectApplication` — `(projectId, applicantId)` `@@unique`, `message?`, `status: ApplicationStatus`, `decidedAt?`.
-- `Post` — `content`, `authorId`, `likes`, `comments`, `attachments`, `createdAt`, `updatedAt`. Если `updatedAt !== createdAt`, UI показывает `Изменено` и дату изменения.
+- `Post` — `content`, `authorId`, `likes`, `comments`, `attachments`, `createdAt`, `updatedAt`. Если `updatedAt !== createdAt`, UI показывает `Изменено` и дату изменения. **Инвариант:** не более **10** вложений `PostAttachment` на один пост (изображения и документы вместе; проверка в приложении + лимит multer на маршрутах постов).
 - `PostAttachment` — файл поста: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind` (`image` | `document`), `postId`.
 - `Like` — `(userId, postId)` с `@@unique([userId, postId])`.
 - `Comment` — `userId`, `postId`, `content`, `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.

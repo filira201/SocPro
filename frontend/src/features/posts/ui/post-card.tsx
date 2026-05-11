@@ -8,6 +8,10 @@ import {
   useUnlikePostMutation,
   useUpdatePostMutation,
 } from "../api/posts.api";
+import {
+  MAX_POST_ATTACHMENTS,
+  POST_ATTACHMENTS_LIMIT_ERROR,
+} from "../lib/post-attachments";
 import type { Post } from "../model/types";
 
 import { AttachmentList } from "./attachment-list";
@@ -56,6 +60,7 @@ export function PostCard({
   const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
+  const [filesLimitError, setFilesLimitError] = useState<string | null>(null);
 
   const openPost = () => {
     navigate(href(ROUTES.POST_DETAILS, { postId: post.id }));
@@ -71,8 +76,33 @@ export function PostCard({
     void likePost(post.id);
   };
 
+  const keptAttachmentsCount = post.attachments.filter(
+    (a) => !removedAttachmentIds.includes(a.id)
+  ).length;
+  const totalAttachmentsSlots = keptAttachmentsCount + newFiles.length;
+
+  const handleEditFilesChange = (list: FileList) => {
+    const raw = Array.from(list);
+    const room = MAX_POST_ATTACHMENTS - keptAttachmentsCount - newFiles.length;
+
+    if (raw.length > room) {
+      setFilesLimitError(POST_ATTACHMENTS_LIMIT_ERROR);
+
+      return;
+    }
+
+    setFilesLimitError(null);
+    addFiles(raw);
+  };
+
   const handleSave = async () => {
     setEditSaveError(null);
+
+    if (totalAttachmentsSlots > MAX_POST_ATTACHMENTS) {
+      setEditSaveError(POST_ATTACHMENTS_LIMIT_ERROR);
+
+      return;
+    }
 
     const body = new FormData();
     body.append("content", content);
@@ -86,6 +116,7 @@ export function PostCard({
       revokeAll(newFiles);
       setRemovedAttachmentIds([]);
       clearFiles();
+      setFilesLimitError(null);
       setIsEditing(false);
     } catch (err) {
       setEditSaveError(
@@ -118,6 +149,7 @@ export function PostCard({
         onOpenPost={openPost}
         onToggleEdit={() => {
           setEditSaveError(null);
+          setFilesLimitError(null);
           setIsEditing((value) => !value);
         }}
         onRequestDelete={() => setDeleteDialogOpen(true)}
@@ -183,22 +215,30 @@ export function PostCard({
           onContentChange={setContent}
           attachments={visibleAttachments}
           newFiles={newFiles}
-          onRemoveAttachment={(attachmentId) =>
-            setRemovedAttachmentIds((current) => [...current, attachmentId])
-          }
-          onRemoveNewFile={removeFile}
-          onFilesChange={addFiles}
+          onRemoveAttachment={(attachmentId) => {
+            setFilesLimitError(null);
+            setRemovedAttachmentIds((current) => [...current, attachmentId]);
+          }}
+          onRemoveNewFile={(index) => {
+            setFilesLimitError(null);
+            removeFile(index);
+          }}
+          onFilesChange={handleEditFilesChange}
           onCancel={() => {
             revokeAll(newFiles);
             setContent(post.content);
             setRemovedAttachmentIds([]);
             setEditSaveError(null);
+            setFilesLimitError(null);
             clearFiles();
             setIsEditing(false);
           }}
           onSave={() => void handleSave()}
           isUpdating={isUpdating}
           saveError={editSaveError}
+          addFilesDisabled={totalAttachmentsSlots >= MAX_POST_ATTACHMENTS}
+          filesLimitError={filesLimitError}
+          attachmentCountLabel={`Вложения: ${totalAttachmentsSlots} / ${MAX_POST_ATTACHMENTS}`}
         />
       ) : post.content ? (
         <p className="whitespace-pre-wrap text-base">{post.content}</p>
