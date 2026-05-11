@@ -58,7 +58,34 @@ export type ProjectDetail = {
     createdAt?: string;
     decidedAt?: string | null;
   } | null;
-  applications?: unknown[];
+  applications?: ProjectApplication[];
+};
+
+/** Заявка (GET /projects/:id для owner/ADMIN или список заявок). */
+export type ProjectApplication = {
+  id: string;
+  projectId?: string;
+  applicantId: string;
+  message: string | null;
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | string;
+  createdAt: string;
+  decidedAt?: string | null;
+  applicant: User & { skills?: Skill[] };
+};
+
+/** Ответ PUT /projects/:id (без isOwner / isMember / applications). */
+export type ProjectUpdateResponse = Omit<
+  ProjectDetail,
+  "isOwner" | "isMember" | "myApplication" | "applications"
+>;
+
+export type UpdateProjectBody = {
+  title: string;
+  description: string;
+  goals: string;
+  status?: string;
+  acceptingApplications?: boolean;
+  requiredSkillIds?: string[];
 };
 
 /** Ответ POST /projects — без расширенных полей GET. */
@@ -72,4 +99,8 @@ export type CreateProjectBody = {
   description: string;
   goals: string;
   requiredSkillIds?: string[];
+};
+
+export type ApplyToProjectBody = {
+  message?: string;
 };

@@ -1,8 +1,12 @@
 import type {
+  ApplyToProjectBody,
   CreateProjectBody,
+  ProjectApplication,
   ProjectCreatedPayload,
   ProjectDetail,
+  ProjectUpdateResponse,
   ProjectsListResponse,
+  UpdateProjectBody,
 } from "../model/types";
 
 import { api } from "@/shared/api/api";
@@ -53,6 +57,106 @@ export const projectsApi = api.injectEndpoints({
       query: (id) => `/projects/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Project" as const, id }],
     }),
+
+    updateProject: builder.mutation<
+      ProjectUpdateResponse,
+      { id: string; body: UpdateProjectBody }
+    >({
+      query: ({ id, body }) => ({
+        url: `/projects/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: "Project" as const, id },
+        { type: "Project" as const, id: "LIST" },
+      ],
+    }),
+
+    deleteProject: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/projects/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_r, _e, id) => [
+        { type: "Project" as const, id: "LIST" },
+        { type: "Project" as const, id },
+      ],
+    }),
+
+    decideApplication: builder.mutation<
+      ProjectApplication,
+      {
+        applicationId: string;
+        projectId: string;
+        status: "ACCEPTED" | "REJECTED";
+      }
+    >({
+      query: ({ applicationId, status }) => ({
+        url: `/applications/${applicationId}`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+      ],
+    }),
+
+    applyToProject: builder.mutation<
+      ProjectApplication,
+      { projectId: string; body: ApplyToProjectBody }
+    >({
+      query: ({ projectId, body }) => ({
+        url: `/projects/${projectId}/apply`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+      ],
+    }),
+
+    removeProjectMember: builder.mutation<
+      { message: string },
+      { projectId: string; userId: string }
+    >({
+      query: ({ projectId, userId }) => ({
+        url: `/projects/${projectId}/members/${userId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "Project" as const, id: "LIST" },
+      ],
+    }),
+
+    updateProjectMemberRole: builder.mutation<
+      unknown,
+      { projectId: string; userId: string; role: "MEMBER" | "ADMIN" }
+    >({
+      query: ({ projectId, userId, role }) => ({
+        url: `/projects/${projectId}/members/${userId}`,
+        method: "PATCH",
+        body: { role },
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "Project" as const, id: "LIST" },
+      ],
+    }),
+
+    cancelApplication: builder.mutation<
+      { message: string },
+      { applicationId: string; projectId: string }
+    >({
+      query: ({ applicationId }) => ({
+        url: `/applications/${applicationId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+      ],
+    }),
   }),
 });
 
@@ -60,4 +164,11 @@ export const {
   useGetProjectsListQuery,
   useCreateProjectMutation,
   useGetProjectByIdQuery,
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
+  useDecideApplicationMutation,
+  useApplyToProjectMutation,
+  useRemoveProjectMemberMutation,
+  useUpdateProjectMemberRoleMutation,
+  useCancelApplicationMutation,
 } = projectsApi;

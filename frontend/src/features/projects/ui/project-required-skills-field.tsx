@@ -1,6 +1,4 @@
-import type { Control } from "react-hook-form";
-
-import type { ProjectCreateFormValues } from "../model/project-create-schema";
+import type { Control, FieldPath, FieldValues } from "react-hook-form";
 
 import { useSkillIdsField } from "@/features/user/ui/profile-skills/model/use-skill-ids-field";
 import { CustomSkillRow } from "@/features/user/ui/profile-skills/ui/custom-skill-row";
@@ -9,15 +7,16 @@ import { SelectedSkillsChips } from "@/features/user/ui/profile-skills/ui/select
 import { SkillsCatalogPopover } from "@/features/user/ui/profile-skills/ui/skills-catalog-popover";
 import { Field, FieldDescription, FieldError } from "@/shared/ui/kit/field";
 
-export type ProjectRequiredSkillsFieldProps = {
-  control: Control<ProjectCreateFormValues>;
+export type ProjectRequiredSkillsFieldProps<
+  TFieldValues extends FieldValues & { requiredSkillIds: string[] },
+> = {
+  control: Control<TFieldValues>;
   disabled?: boolean;
 };
 
-export function ProjectRequiredSkillsField({
-  control,
-  disabled,
-}: ProjectRequiredSkillsFieldProps) {
+export function ProjectRequiredSkillsField<
+  TFieldValues extends FieldValues & { requiredSkillIds: string[] },
+>({ control, disabled }: ProjectRequiredSkillsFieldProps<TFieldValues>) {
   const {
     fieldError,
     skillIds,
@@ -29,7 +28,7 @@ export function ProjectRequiredSkillsField({
     createHint,
   } = useSkillIdsField({
     control,
-    name: "requiredSkillIds",
+    name: "requiredSkillIds" as FieldPath<TFieldValues>,
     seedSkills: [],
     disabled,
   });

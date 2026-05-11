@@ -1,7 +1,7 @@
 import { href, Link } from "react-router";
 
 import { displayPublicName } from "@/features/auth";
-import { projectStatusLabel } from "@/features/projects/lib/format-project-status";
+import { projectStatusLabel } from "@/features/projects/lib/project-status-options";
 import type { ProjectListItem } from "@/features/projects/model/types";
 import { ProjectApplicationsBadge } from "@/features/projects/ui/project-applications-badge";
 import { ROUTES } from "@/shared/model/routes";
