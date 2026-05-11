@@ -7,8 +7,11 @@ export const PAGE_SIZE = 20;
 /** Поиск по API с одного символа; пустая строка — первые навыки каталога */
 export const MIN_SEARCH_CHARS = 1;
 
-/** Максимум навыков в профиле */
-export const MAX_PROFILE_SKILLS = 50;
+/** Максимум выбранных навыков в одном поле (профиль, проект и т.д.) */
+export const MAX_SKILL_IDS = 50;
+
+/** @deprecated Используйте MAX_SKILL_IDS */
+export const MAX_PROFILE_SKILLS = MAX_SKILL_IDS;
 
 /** Отступ от низа списка до подгрузки следующей страницы */
 export const SCROLL_LOAD_THRESHOLD_PX = 72;

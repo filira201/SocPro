@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 import { useState } from "react";
 
-import type { FuseChoiceState } from "../model/use-profile-skills-field";
+import type { FuseChoiceState } from "../model/use-skill-ids-field";
 
 import { Button } from "@/shared/ui/kit/button";
 import {
@@ -14,6 +14,13 @@ import {
 } from "@/shared/ui/kit/dialog";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
+export type FuseSkillContext = "profile" | "project";
+
+const FUSE_CHOICE_INSTRUCTION: Record<FuseSkillContext, string> = {
+  profile: "Выберите вариант для сохранения в профиль.",
+  project: "Выберите вариант для добавления в требуемые навыки проекта.",
+};
+
 type FuseSkillConfirmDialogProps = {
   open: boolean;
   fuseChoice: FuseChoiceState | null;
@@ -22,6 +29,8 @@ type FuseSkillConfirmDialogProps = {
   onOpenChange: (open: boolean) => void;
   onAccept: () => void;
   onOwn: () => void | Promise<void>;
+  /** Куда попадёт выбранный навык — влияет на текст подсказки */
+  context?: FuseSkillContext;
 };
 
 type Step = "pick" | "confirm";
@@ -34,6 +43,7 @@ export function FuseSkillConfirmDialog({
   onOpenChange,
   onAccept,
   onOwn,
+  context = "profile",
 }: FuseSkillConfirmDialogProps) {
   const [step, setStep] = useState<Step>("pick");
   const [pendingAction, setPendingAction] = useState<"accept" | "own" | null>(
@@ -57,6 +67,8 @@ export function FuseSkillConfirmDialog({
     }
   };
 
+  const choiceInstruction = FUSE_CHOICE_INSTRUCTION[context];
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -77,7 +89,7 @@ export function FuseSkillConfirmDialog({
                 <span className="font-medium text-foreground">
                   «{fuseChoice.userInput}»
                 </span>
-                . Выберите вариант для сохранения в профиле
+                . {choiceInstruction}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex-col gap-2 sm:flex-col">

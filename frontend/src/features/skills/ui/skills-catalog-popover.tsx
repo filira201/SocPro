@@ -33,6 +33,8 @@ type SkillsCatalogPopoverProps = {
   onPick: (skill: Skill) => void;
   disabled?: boolean;
   catalogBlocked: boolean;
+  /** Когда все совпадения из API уже в выбранном списке */
+  allAlreadySelectedMessage?: string;
 };
 
 export function SkillsCatalogPopover({
@@ -49,6 +51,7 @@ export function SkillsCatalogPopover({
   onPick,
   disabled,
   catalogBlocked,
+  allAlreadySelectedMessage = "Все подходящие навыки уже выбраны",
 }: SkillsCatalogPopoverProps) {
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -78,9 +81,7 @@ export function SkillsCatalogPopover({
                 {LOADING_MESSAGE}
               </div>
             ) : mergedSkillsCount > 0 && visibleSkills.length === 0 ? (
-              <CommandEmpty>
-                Все подходящие навыки уже добавлены в профиль
-              </CommandEmpty>
+              <CommandEmpty>{allAlreadySelectedMessage}</CommandEmpty>
             ) : visibleSkills.length === 0 ? (
               <CommandEmpty>
                 {debouncedSearch.length >= MIN_SEARCH_CHARS

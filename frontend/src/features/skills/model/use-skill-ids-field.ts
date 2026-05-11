@@ -7,7 +7,7 @@ import {
 } from "react-hook-form";
 
 import {
-  MAX_PROFILE_SKILLS,
+  MAX_SKILL_IDS,
   MIN_SEARCH_CHARS,
   PAGE_SIZE,
   SCROLL_LOAD_THRESHOLD_PX,
@@ -34,7 +34,7 @@ export function useSkillIdsField<
   control,
   name,
   seedSkills,
-  maxSkills = MAX_PROFILE_SKILLS,
+  maxSkills = MAX_SKILL_IDS,
   disabled,
 }: {
   control: Control<TFieldValues>;
