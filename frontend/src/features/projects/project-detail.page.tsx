@@ -239,7 +239,7 @@ function ProjectDetailPage() {
                   )}
                 </section>
 
-                {currentUser?.id ? (
+                {currentUser?.id && !project.isMember ? (
                   <section className="grid gap-2 border-t pt-4">
                     <h2 className="font-medium text-foreground">Участие</h2>
                     <ProjectApplySection project={project} />
