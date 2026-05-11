@@ -3,13 +3,16 @@ import { Link } from "react-router";
 import { useGetProjectsListQuery } from "./api/projects.api";
 import { ProjectCard } from "./ui/project-card";
 
+import { selectCurrentUser } from "@/features/auth";
 import { getApiErrorMessage } from "@/shared/lib/api-error";
+import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
 function ProjectsPage() {
   const { data, isLoading, error } = useGetProjectsListQuery();
+  const currentUser = useAppSelector(selectCurrentUser);
 
   const items = data?.items ?? [];
   const globalError = getApiErrorMessage(error);
@@ -45,7 +48,10 @@ function ProjectsPage() {
         <ul className="mt-6 grid gap-4">
           {items.map((project) => (
             <li key={project.id}>
-              <ProjectCard project={project} />
+              <ProjectCard
+                project={project}
+                isOwnedByCurrentUser={currentUser?.id === project.owner.id}
+              />
             </li>
           ))}
         </ul>

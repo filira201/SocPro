@@ -15,6 +15,7 @@ import {
 
 type ProjectCardProps = {
   project: ProjectListItem;
+  isOwnedByCurrentUser?: boolean;
 };
 
 function excerpt(text: string, maxLen: number) {
@@ -27,7 +28,10 @@ function excerpt(text: string, maxLen: number) {
   return `${t.slice(0, maxLen).trim()}…`;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  isOwnedByCurrentUser = false,
+}: ProjectCardProps) {
   return (
     <Card className="transition-colors hover:bg-muted/40">
       <CardHeader className="gap-2">
@@ -41,6 +45,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </Link>
           </CardTitle>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            {isOwnedByCurrentUser ? (
+              <Badge className="font-normal">Мой проект</Badge>
+            ) : null}
             <ProjectApplicationsBadge
               acceptingApplications={project.acceptingApplications}
               compact
