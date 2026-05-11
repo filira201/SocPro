@@ -104,9 +104,12 @@ function ProjectDetailPage() {
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                 <ProjectApplicationsBadge
                   acceptingApplications={project.acceptingApplications}
-                  className="text-sm font-normal"
+                  className="px-2.5 py-3.5 text-sm font-normal"
                 />
-                <Badge variant="secondary" className="text-sm font-normal">
+                <Badge
+                  variant="secondary"
+                  className="px-2.5 py-3.5 text-sm font-normal"
+                >
                   {projectStatusLabel(project.status)}
                 </Badge>
               </div>
@@ -205,9 +208,6 @@ function ProjectDetailPage() {
                   <div className="grid gap-2">
                     <h2 className="font-medium text-foreground">Заявки</h2>
                     <div className="flex flex-wrap items-center gap-2">
-                      <ProjectApplicationsBadge
-                        acceptingApplications={project.acceptingApplications}
-                      />
                       <span className="text-muted-foreground">
                         {project.acceptingApplications
                           ? "Можно подать заявку на участие в проекте."
@@ -225,7 +225,10 @@ function ProjectDetailPage() {
                     <ul className="flex flex-wrap gap-2">
                       {project.requiredSkills.map((s) => (
                         <li key={s.id}>
-                          <Badge variant="outline" className="font-normal">
+                          <Badge
+                            variant="secondary"
+                            className="px-2.5 py-3.5 text-sm font-normal"
+                          >
                             {s.name}
                           </Badge>
                         </li>

@@ -105,7 +105,10 @@ export function ProjectApplicationsPanel({
                 >
                   {displayPublicName(app.applicant)}
                 </Link>
-                <Badge variant="outline" className="w-fit font-normal">
+                <Badge
+                  variant="outline"
+                  className="w-fit px-2.5 py-3.5 text-sm font-normal"
+                >
                   {applicationStatusLabel(app.status)}
                 </Badge>
                 <span className="text-xs text-muted-foreground">

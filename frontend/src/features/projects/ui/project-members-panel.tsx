@@ -114,7 +114,10 @@ export function ProjectMembersPanel({
                 >
                   {displayPublicName(m.user)}
                 </Link>
-                <Badge variant="secondary" className="shrink-0 font-normal">
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 px-2.5 py-3.5 text-sm font-normal"
+                >
                   {memberRoleLabel(m.role)}
                 </Badge>
               </div>

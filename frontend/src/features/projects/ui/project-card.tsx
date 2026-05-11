@@ -46,14 +46,19 @@ export function ProjectCard({
           </CardTitle>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             {isOwnedByCurrentUser ? (
-              <Badge className="font-normal">Мой проект</Badge>
+              <Badge className="px-2.5 py-3.5 text-sm font-normal">
+                Мой проект
+              </Badge>
             ) : null}
             <ProjectApplicationsBadge
               acceptingApplications={project.acceptingApplications}
               compact
-              className="font-normal"
+              className="px-2.5 py-3.5 text-sm font-normal"
             />
-            <Badge variant="secondary" className="font-normal">
+            <Badge
+              variant="secondary"
+              className="px-2.5 py-3.5 text-sm font-normal"
+            >
               {projectStatusLabel(project.status)}
             </Badge>
           </div>

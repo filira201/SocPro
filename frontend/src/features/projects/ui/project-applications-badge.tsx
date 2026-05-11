@@ -1,3 +1,4 @@
+import { cn } from "@/shared/lib/css";
 import { Badge } from "@/shared/ui/kit/badge";
 
 type ProjectApplicationsBadgeProps = {
@@ -17,7 +18,7 @@ export function ProjectApplicationsBadge({
     return (
       <Badge
         variant="default"
-        className={className}
+        className={cn("px-2.5 py-3.5 text-sm font-normal", className)}
         title="Можно подать заявку на участие — откройте карточку проекта"
       >
         {compact ? "Приём открыт" : "Принимаем заявки"}
@@ -28,7 +29,7 @@ export function ProjectApplicationsBadge({
   return (
     <Badge
       variant="outline"
-      className={className}
+      className={cn("px-2.5 py-3.5 text-sm font-normal", className)}
       title="Новые заявки не принимаются"
     >
       {compact ? "Приём закрыт" : "Заявки не принимаются"}
