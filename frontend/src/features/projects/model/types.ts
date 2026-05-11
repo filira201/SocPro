@@ -22,6 +22,8 @@ export type ProjectsListQuery = {
   sort?: ProjectsListSort;
   /** Только проекты, где текущий пользователь в составе. */
   member?: boolean;
+  /** Только проекты, которые сейчас принимают заявки на участие. */
+  acceptingApplications?: boolean;
   /** Все перечисленные навыки должны быть среди требуемых к проекту. */
   skillIds?: string[];
 };

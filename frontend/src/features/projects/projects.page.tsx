@@ -25,7 +25,10 @@ import {
 import { Spinner } from "@/shared/ui/kit/spinner";
 
 type ProjectsListBlockProps = {
-  apiFilters: Pick<ProjectsListQuery, "q" | "member" | "sort" | "skillIds">;
+  apiFilters: Pick<
+    ProjectsListQuery,
+    "q" | "member" | "acceptingApplications" | "sort" | "skillIds"
+  >;
   emptyMessage: string;
 };
 
@@ -123,6 +126,7 @@ function ProjectsPage() {
     titleInput,
     setTitleInput,
     setMember,
+    setAcceptingApplications,
     setSort,
     setSkillIds,
     apiFilters,
@@ -132,6 +136,7 @@ function ProjectsPage() {
   const hasTextFilters =
     Boolean(feedFromUrl.q.trim()) ||
     feedFromUrl.member ||
+    feedFromUrl.acceptingApplications ||
     feedFromUrl.skillIds.length > 0;
 
   const emptyMessage = hasTextFilters
@@ -176,6 +181,22 @@ function ProjectsPage() {
                 htmlFor="projects-feed-member"
               >
                 Только проекты, где я участник
+              </label>
+            </div>
+
+            <div className="flex w-fit max-w-full items-center gap-2">
+              <Checkbox
+                id="projects-feed-accepting"
+                checked={feedFromUrl.acceptingApplications}
+                onCheckedChange={(checked) =>
+                  setAcceptingApplications(checked === true)
+                }
+              />
+              <label
+                className="cursor-pointer text-sm leading-none whitespace-nowrap select-none"
+                htmlFor="projects-feed-accepting"
+              >
+                Только с открытыми заявками
               </label>
             </div>
 

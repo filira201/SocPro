@@ -8,6 +8,7 @@ export const MAX_PROJECT_FEED_SKILL_IDS = 20;
 const projectsFeedUrlSchema = z.object({
   q: z.string().transform((s) => s.trim().slice(0, 200)),
   member: z.boolean(),
+  acceptingApplications: z.boolean(),
   sort: z.enum(PROJECTS_LIST_SORT_VALUES),
 });
 
@@ -37,6 +38,7 @@ export function parseProjectsFeedSearchParams(
 ): ProjectsFeedUrlState {
   const rawQ = searchParams.get("q") ?? "";
   const rawMember = searchParams.get("member");
+  const rawAccepting = searchParams.get("accepting");
   const rawSort = searchParams.get("sort");
 
   const skillIds = parseSkillIdsFromSearchParams(searchParams);
@@ -44,11 +46,18 @@ export function parseProjectsFeedSearchParams(
   const parsed = projectsFeedUrlSchema.safeParse({
     q: rawQ,
     member: rawMember === "1",
+    acceptingApplications: rawAccepting === "1",
     sort: rawSort === "old" ? "old" : "new",
   });
 
   if (!parsed.success) {
-    return { q: "", member: false, sort: "new", skillIds };
+    return {
+      q: "",
+      member: false,
+      acceptingApplications: false,
+      sort: "new",
+      skillIds,
+    };
   }
 
   return { ...parsed.data, skillIds };
@@ -56,10 +65,14 @@ export function parseProjectsFeedSearchParams(
 
 export function projectsFeedToListQuery(
   feed: ProjectsFeedUrlState
-): Pick<ProjectsListQuery, "q" | "member" | "sort" | "skillIds"> {
+): Pick<
+  ProjectsListQuery,
+  "q" | "member" | "acceptingApplications" | "sort" | "skillIds"
+> {
   return {
     ...(feed.q ? { q: feed.q } : {}),
     ...(feed.member ? { member: true } : {}),
+    ...(feed.acceptingApplications ? { acceptingApplications: true } : {}),
     ...(feed.sort === "old" ? { sort: "old" } : {}),
     ...(feed.skillIds.length ? { skillIds: feed.skillIds } : {}),
   };

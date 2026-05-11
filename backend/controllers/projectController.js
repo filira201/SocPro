@@ -198,7 +198,8 @@ const ProjectController = {
 
   getAllProjects: async (req, res) => {
     const userId = req.user.userId;
-    const { q, skills, status, ownerId, cursor, sort, member } = req.query;
+    const { q, skills, status, ownerId, cursor, sort, member, accepting } =
+      req.query;
     const limit = normalizeProjectListLimit(req.query.limit);
     const qRaw = q !== undefined ? String(q) : "";
 
@@ -219,6 +220,7 @@ const ProjectController = {
     const skillIds = skillIdsRaw;
     const oldestFirst = parseProjectsSortOldestFirst(sort);
     const memberOnly = parseMemberProjectsFilter(member);
+    const acceptingApplicationsOnly = parseMemberProjectsFilter(accepting);
 
     try {
       const where = { AND: [] };
@@ -249,6 +251,10 @@ const ProjectController = {
         where.AND.push({
           members: { some: { userId: String(userId) } },
         });
+      }
+
+      if (acceptingApplicationsOnly) {
+        where.AND.push({ acceptingApplications: true });
       }
 
       const finalWhere = where.AND.length ? where : {};

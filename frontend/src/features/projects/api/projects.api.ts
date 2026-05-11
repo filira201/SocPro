@@ -21,6 +21,7 @@ function normalizeProjectsListQueryForCompare(
     cursor: arg?.cursor ?? null,
     q: (arg?.q ?? "").trim() || null,
     member: arg?.member === true,
+    acceptingApplications: arg?.acceptingApplications === true,
     sort: arg?.sort === "old" ? "old" : "new",
     skillsKey:
       [...(arg?.skillIds ?? [])].filter(Boolean).sort().join(",") || null,
@@ -46,6 +47,7 @@ export const projectsApi = api.injectEndpoints({
             ...(request.cursor ? { cursor: request.cursor } : {}),
             ...(request.q?.trim() ? { q: request.q.trim() } : {}),
             ...(request.member ? { member: "1" } : {}),
+            ...(request.acceptingApplications ? { accepting: "1" } : {}),
             ...(request.sort === "old" ? { sort: "old" } : {}),
             ...(skillsCsv ? { skills: skillsCsv } : {}),
           },
@@ -94,6 +96,7 @@ export const projectsApi = api.injectEndpoints({
           cur.cursor !== prev.cursor ||
           cur.q !== prev.q ||
           cur.member !== prev.member ||
+          cur.acceptingApplications !== prev.acceptingApplications ||
           cur.sort !== prev.sort ||
           cur.skillsKey !== prev.skillsKey ||
           cur.limit !== prev.limit

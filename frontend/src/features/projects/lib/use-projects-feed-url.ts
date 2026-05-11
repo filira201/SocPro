@@ -81,6 +81,26 @@ export function useProjectsFeedUrl() {
     [setSearchParams]
   );
 
+  const setAcceptingApplications = useCallback(
+    (acceptingApplications: boolean) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+
+          if (acceptingApplications) {
+            next.set("accepting", "1");
+          } else {
+            next.delete("accepting");
+          }
+
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
   const setSort = useCallback(
     (sort: ProjectsListSort) => {
       setSearchParams(
@@ -129,8 +149,9 @@ export function useProjectsFeedUrl() {
   const feedResetKey = useMemo(() => {
     const skillsKey = [...feedFromUrl.skillIds].sort().join(",");
 
-    return `${feedFromUrl.q}|${feedFromUrl.member ? "1" : ""}|${feedFromUrl.sort}|${skillsKey}`;
+    return `${feedFromUrl.q}|${feedFromUrl.member ? "1" : ""}|${feedFromUrl.acceptingApplications ? "A" : ""}|${feedFromUrl.sort}|${skillsKey}`;
   }, [
+    feedFromUrl.acceptingApplications,
     feedFromUrl.member,
     feedFromUrl.q,
     feedFromUrl.sort,
@@ -142,6 +163,7 @@ export function useProjectsFeedUrl() {
     titleInput,
     setTitleInput,
     setMember,
+    setAcceptingApplications,
     setSort,
     setSkillIds,
     apiFilters,
