@@ -1,6 +1,7 @@
 import { format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
-import { useState, type MouseEvent } from "react";
+import { ChevronRight } from "lucide-react";
+import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { href, Link } from "react-router";
 
 import { useDecideApplicationMutation } from "../api/projects.api";
@@ -94,6 +95,10 @@ export function ProjectApplicationsPanel({
     }
   };
 
+  const openApplicationDetail = (app: ProjectApplication) => {
+    setDetailApp(app);
+  };
+
   const handleCardClick = (
     app: ProjectApplication,
     e: MouseEvent<HTMLLIElement>
@@ -102,7 +107,23 @@ export function ProjectApplicationsPanel({
       return;
     }
 
-    setDetailApp(app);
+    openApplicationDetail(app);
+  };
+
+  const handleCardKeyDown = (
+    app: ProjectApplication,
+    e: KeyboardEvent<HTMLLIElement>
+  ) => {
+    if (e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+
+    if (isInsideInteractiveTarget(e.target)) {
+      return;
+    }
+
+    e.preventDefault();
+    openApplicationDetail(app);
   };
 
   if (!applications.length) {
@@ -124,9 +145,12 @@ export function ProjectApplicationsPanel({
           return (
             <li
               key={app.id}
-              role="presentation"
-              className="cursor-pointer rounded-lg border bg-card/50 p-4"
+              role="button"
+              tabIndex={0}
+              aria-label={`Открыть заявку: ${displayPublicName(app.applicant)}`}
+              className="group cursor-pointer rounded-lg border border-border bg-card/50 p-4 shadow-sm transition-colors duration-150 hover:border-primary/35 hover:bg-muted/45 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-muted/60"
               onClick={(e) => handleCardClick(app, e)}
+              onKeyDown={(e) => handleCardKeyDown(app, e)}
             >
               <div className="grid gap-3 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -170,6 +194,14 @@ export function ProjectApplicationsPanel({
                     ) : null}
                   </>
                 )}
+
+                <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground transition-colors group-hover:text-foreground">
+                  <span>Подробнее</span>
+                  <ChevronRight
+                    className="size-3.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+                    aria-hidden
+                  />
+                </div>
 
                 {isPending ? (
                   <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
