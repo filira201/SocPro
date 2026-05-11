@@ -21,7 +21,7 @@ alwaysApply: true
 - `Like` — `(userId, postId)` с `@@unique([userId, postId])`.
 - `Comment` — `userId`, `postId`, `content`, `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.
 - `CommentAttachment` — файл комментария: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`, `commentId`.
-- `Follows` — `followerId`, `followingId`, уникальная пара `@@unique([followerId, followingId])`.
+- `Follows` — `id`, `followerId`, `followingId`, уникальная пара `@@unique([followerId, followingId])`. Для API списков подписчиков/подписок курсор пагинации привязан к **`Follows.id`** (поля `createdAt` у модели нет).
 
 ## Связи
 

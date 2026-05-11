@@ -21,10 +21,14 @@ backend/
     index.js                 # реэкспорт всех контроллеров
     userController.js
     postController.js
+    commentController.js
+    likeController.js
+    followController.js
+    skillController.js
     projectController.js
     applicationController.js
     memberController.js
-    ...
+  lib/                       # общая логика без HTTP (напр. user-directory-list.js)
   prisma/
     schema.prisma
     prismaClient.js
@@ -77,7 +81,7 @@ res.json({ ...sanitizeUser(project), isOwner });
   if (!OBJECT_ID_REGEX.test(id)) return res.status(400).json({ error: "Некорректный id" });
   if (!body.field) return res.status(400).json({ error: "Поле обязательно" });
   ```
-- Email regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`. Username: `/^[\p{L}\p{N}_-]{3,32}$/u` (Unicode letters и цифры, также `_` и `-`). Пароль: `length >= 6`.
+- Email regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`. Пароль: `length >= 6` (см. `_utils`).
 
 ## Авторизация
 
@@ -93,7 +97,10 @@ res.json({ ...sanitizeUser(project), isOwner });
 - Поле `originalName` в БД/API хранить человекочитаемым именем; при приёме из multer при необходимости декодировать (`latin1` → `utf8`), см. `decodeUploadOriginalName` в [backend/controllers/_utils.js](backend/controllers/_utils.js).
 - Для вложений хранить `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`. `kind = "image"` если `mimeType.startsWith("image/")`, иначе `"document"`.
 - Публичный URL файла: `/uploads/<filename>`, статика раздаётся в [backend/app.js](backend/app.js).
-- Лента постов и список комментариев должны поддерживать cursor pagination: `?cursor=<id>&limit=<n>`, ответ `{ items, nextCursor }`.
+- Лента постов и список комментариев — cursor pagination: `?cursor=<id>&limit=<n>`, ответ `{ items, nextCursor }`.
+- **GET `/users`** (каталог, `UserController.searchUsers`): ответ **`{ items, nextCursor }`**; query: `limit`, `cursor`, `q` (поиск по ФИО по словам), `skills` (CSV id), опционально `skillNames`; фильтр по навыкам — **`skillIds: { hasEvery }`** у пользователя; к объекту пользователя в ответе добавляется **`isFollowing`** для текущего зрителя (см. [backend/lib/user-directory-list.js](backend/lib/user-directory-list.js)).
+- **GET `/users/:id/followers`** и **`/users/:id/following`**: `{ items, nextCursor }`, курсор по **`Follows.id`**, `q` по ФИО связанного пользователя; общие хелперы ФИО / `isFollowing` — в `user-directory-list.js`.
+- **GET `/projects`**: курсор по `Project.id`, `sort`, `member=1` (проекты с участием текущего пользователя), **`accepting=1`** (только `acceptingApplications: true`), `skills` (CSV; **все** id должны входить в `requiredSkillIds` проекта — `hasEvery`), `q` по названию.
 - Ответ поста для frontend должен включать `author`, `attachments`, `likeCount`, `commentCount`, `likedByUser`, `isOwner`, `isEdited`.
 - Ответ комментария должен включать `user`, `attachments`, `isOwner`, `isEdited`.
 - При удалении поста транзакционно удалять связанные comments, likes, post attachments и comment attachments.

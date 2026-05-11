@@ -43,13 +43,12 @@ features/<name>/
 ```
 
 - Для `features/auth` UI-компоненты (layout, header, формы) хранить в `features/auth/ui/`.
-- В текущей итерации переименование `compose -> ui` сделано только для `features/auth`; остальные фичи переименовываются отдельно в следующих итерациях.
-- Комментарии выделены в отдельную фичу `features/comments` (api/model/ui/index.ts).
-- Для comments использовать директорию `ui/` (не `compose/`).
+- Комментарии — фича `features/comments` (`api/`, `model/`, `ui/`, `index.ts`).
+- Специализированные страницы-обёртки (например `followers.page.tsx`, `following.page.tsx`) могут жить рядом с фичей-источником данных (`features/follow`) — lazy-роут в [frontend/src/app/router.tsx](frontend/src/app/router.tsx) импортирует `*.page.tsx`.
 
 ## RTK Query
 
-- Базовый `api` объявлен ОДИН раз в [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts) (`reducerPath: "splitApi"`, `tagTypes: ["User", "Post", "Project", "Skill", ...]`).
+- Базовый `api` объявлен ОДИН раз в [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts) (`reducerPath: "splitApi"`). Актуальный список **`tagTypes`**: `User`, `FollowList`, `UsersDirectory`, `Post`, `Project`, `ProjectMembers`, `Skill`, `Application`, `Member` — при новых эндпоинтах при необходимости расширять здесь же.
 - Эндпоинты добавлять через `api.injectEndpoints({ endpoints: (builder) => ({...}) })` в `features/<name>/api/<name>.api.ts`.
 - Никаких новых `createApi`, никакого прямого `fetch`/`axios`.
 - После мутации, меняющей данные, использовать `invalidatesTags`.
@@ -62,19 +61,25 @@ import { api } from "@/shared/api/api";
 
 export const projectsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    listProjects: builder.query<ProjectsList, ProjectsQuery>({
-      query: (params) => ({ url: "/projects", params }),
-      providesTags: ["Project"],
+    getProjectsList: builder.query<ProjectsListResponse, ProjectsListQuery>({
+      query: (params) => ({ url: "/projects", params: { ... } }),
+      providesTags: (result) =>
+        result
+          ? [{ type: "Project", id: "LIST" }, ...result.items.map((p) => ({ type: "Project", id: p.id }))]
+          : [{ type: "Project", id: "LIST" }],
     }),
-    createProject: builder.mutation<Project, CreateProjectPayload>({
+    createProject: builder.mutation<ProjectCreatedPayload, FormData>({
       query: (body) => ({ url: "/projects", method: "POST", body }),
-      invalidatesTags: ["Project"],
+      invalidatesTags: (result) => [
+        { type: "Project", id: "LIST" },
+        ...(result ? [{ type: "Project", id: result.id }] : []),
+      ],
     }),
   }),
 });
-
-export const { useListProjectsQuery, useCreateProjectMutation } = projectsApi;
 ```
+
+Реальная реализация списка проектов — в [frontend/src/features/projects/api/projects.api.ts](frontend/src/features/projects/api/projects.api.ts): курсор, `serializeQueryArgs` + `merge` для infinite scroll, фильтры в query.
 
 ## Авторизация
 
@@ -107,6 +112,16 @@ navigate(href(ROUTES.USER_PROFILE_EDIT, { userId: user.id }));
 
 - **Не использовать** `ROUTES.SOME_PATH.replace(":param", value)` — теряется связь с типами и легко ошибиться в имени параметра.
 - Пейджи через `lazy: () => import("@/features/.../*.page")`. Pages должны экспортировать `export const Component = ...`.
+
+### URL и ленты с фильтрами
+
+- **Проекты** (`use-projects-feed-url`, [frontend/src/features/projects/model/projects-feed-params.ts](frontend/src/features/projects/model/projects-feed-params.ts)): в querystring синхронизируются `q`, `member` (`1`), **`accepting`** (`1` — только проекты с `acceptingApplications`), `skills` (CSV id навыков), `sort` (`old` | по умолчанию новые первые).
+- **Каталог пользователей** (`/users`, `use-users-directory-url`): `q`, `skills` (как у проектов), лимит навыков в URL — см. `MAX_PROJECT_FEED_SKILL_IDS` / общий парсер в `projects-feed-params`.
+- **Подписчики / подписки**: параметр `q` (ФИО), debounce записи в URL — `use-follow-list-url`.
+
+### «Назад» со страниц деталей
+
+- Верхние элементы вроде «Назад к ленте» / «Назад к проектам» — это **`Button variant="ghost"`** + **`navigate(-1)`**, а не `Link` на фиксированный маршрут (пост, профиль, создание/карточка проекта и т.д.).
 
 ## Интерактив внутри кликабельных карточек (лента, посты)
 

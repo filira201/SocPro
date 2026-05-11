@@ -15,9 +15,10 @@ MVP-социальная сеть для студентов и не только
 4. Публикация постов в общей ленте.
 5. Просмотр, комментирование и оценка (лайки) чужих постов.
 6. Создание проектов с описанием, целями и требуемыми навыками.
-7. Поиск пользователей по навыкам и компетенциям.
+7. Поиск пользователей по навыкам и компетенциям (каталог всех пользователей на странице **`/users`** с фильтрами по ФИО и навыкам в URL, курсорная подгрузка).
 8. Подача заявок на участие в проектах.
 9. Создатель проекта управляет заявками и составом участников.
+10. Списки подписчиков и подписок (**`/followers/:userId`**, **`/following/:userId`**) с поиском по ФИО в URL и курсорной подгрузкой.
 
 ## Технологический стек
 
@@ -53,8 +54,9 @@ frontend (RTK Query)  --HTTP+JWT-->  backend (/api)
 - Роуты backend: [backend/routes/index.js](backend/routes/index.js).
 - Prisma-схема: [backend/prisma/schema.prisma](backend/prisma/schema.prisma).
 - Базовое API frontend: [frontend/src/shared/api/api.ts](frontend/src/shared/api/api.ts).
-- Фичи frontend: [frontend/src/features/](frontend/src/features/).
-- Маршруты: [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts) (константы путей + типизация параметров для React Router). Для ссылок и `navigate` с параметрами — функция **`href()`** из `react-router` (см. раздел «Роуты» в [.cursor/rules/frontend.mdc](.cursor/rules/frontend.mdc)).
+- Фичи frontend: [frontend/src/features/](frontend/src/features/). Примеры: `posts`, `projects`, `users-directory` (каталог `/users`), `follow` + страницы `followers`/`following`, `user`, `auth`, `skills`, `notifications`.
+- Маршруты: [frontend/src/shared/model/routes.ts](frontend/src/shared/model/routes.ts) (константы путей + типизация параметров для React Router). В т.ч. **`ROUTES.USERS`** = `/users` (каталог; не путать с **`ROUTES.USER_DETAILS`** = `/users/:userId`). Для ссылок и `navigate` с параметрами — функция **`href()`** из `react-router` (см. раздел «Роуты» в [.cursor/rules/frontend.mdc](.cursor/rules/frontend.mdc)).
+- Боковая навигация и шапка: [frontend/src/features/navigation/app-sidebar.tsx](frontend/src/features/navigation/app-sidebar.tsx), [frontend/src/features/navigation/app-content-header.tsx](frontend/src/features/navigation/app-content-header.tsx); хлебные крошки — [frontend/src/features/navigation/lib/breadcrumb-from-path.ts](frontend/src/features/navigation/lib/breadcrumb-from-path.ts).
 - Защита роутов: [frontend/src/app/protected-loader.ts](frontend/src/app/protected-loader.ts), [frontend/src/app/protected-route.tsx](frontend/src/app/protected-route.tsx).
 
 ## Источники документации и MCP
