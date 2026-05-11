@@ -168,16 +168,15 @@ const ProjectController = {
 
       const isOwner = project.ownerId === userId;
       const requesterMembership = project.members.find(
-        (m) => m.userId === userId,
+        (m) => String(m.userId) === String(userId),
       );
       const isMember = Boolean(requesterMembership);
 
-      let myApplication = null;
-      if (!isMember) {
-        myApplication = await prisma.projectApplication.findFirst({
-          where: { projectId: id, applicantId: userId },
-        });
-      }
+      /** Всегда для текущего пользователя: нужно и участникам (например, ADMIN), и соискателям. */
+      const myApplication = await prisma.projectApplication.findFirst({
+        where: { projectId: id, applicantId: String(userId) },
+        orderBy: { createdAt: "desc" },
+      });
 
       let applications = undefined;
       if (

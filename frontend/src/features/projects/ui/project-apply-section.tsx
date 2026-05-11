@@ -1,12 +1,14 @@
 import { useState } from "react";
 
 import {
+  projectsApi,
   useApplyToProjectMutation,
   useCancelApplicationMutation,
 } from "../api/projects.api";
 import type { ProjectDetail } from "../model/types";
 
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
+import { useAppDispatch } from "@/shared/lib/redux";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Dialog,
@@ -23,6 +25,7 @@ type ProjectApplySectionProps = {
 };
 
 export function ProjectApplySection({ project }: ProjectApplySectionProps) {
+  const dispatch = useAppDispatch();
   const [apply, { isLoading: applying }] = useApplyToProjectMutation();
   const [cancel, { isLoading: cancelling }] = useCancelApplicationMutation();
   const [open, setOpen] = useState(false);
@@ -42,6 +45,12 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
       }).unwrap();
       setOpen(false);
       setMessage("");
+      void dispatch(
+        projectsApi.endpoints.getProjectById.initiate(project.id, {
+          subscribe: false,
+          forceRefetch: true,
+        })
+      );
     } catch (err: unknown) {
       setError(
         getApiErrorMessage(err as ApiError, "Не удалось отправить заявку")
