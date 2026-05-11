@@ -1,14 +1,58 @@
+import type { Draft } from "@reduxjs/toolkit";
+import { defaultSerializeQueryArgs } from "@reduxjs/toolkit/query";
+
 import type { PaginatedResponse, Post, PostsQuery } from "../model/types";
 
+import type { AppDispatch, RootState } from "@/app/store";
 import { api } from "@/shared/api/api";
 
-function patchPostLike(post: Post, likedByUser: boolean) {
-  if (post.likedByUser === likedByUser) {
-    return;
+function normalizePostsQueryForCompare(arg: PostsQuery | undefined) {
+  return {
+    limit: arg?.limit ?? 10,
+    cursor: arg?.cursor ?? null,
+    q: (arg?.q ?? "").trim() || null,
+    mine: arg?.mine === true,
+    sort: arg?.sort === "old" ? "old" : "new",
+  };
+}
+
+type SplitApiQueryEntry = {
+  endpointName?: string;
+  status?: string;
+  originalArgs?: unknown;
+};
+
+export function patchAllGetPostsLists(
+  dispatch: AppDispatch,
+  getState: () => RootState,
+  recipe: (draft: Draft<PaginatedResponse<Post>>) => void
+) {
+  const patches: Array<{ undo: () => void }> = [];
+  const queries = getState().splitApi.queries as Record<
+    string,
+    SplitApiQueryEntry | undefined
+  >;
+
+  for (const entry of Object.values(queries)) {
+    if (
+      entry?.endpointName === "getPosts" &&
+      entry.status === "fulfilled" &&
+      entry.originalArgs !== undefined &&
+      entry.originalArgs !== null
+    ) {
+      patches.push(
+        dispatch(
+          postsApi.util.updateQueryData(
+            "getPosts",
+            entry.originalArgs as PostsQuery,
+            recipe
+          )
+        )
+      );
+    }
   }
 
-  post.likedByUser = likedByUser;
-  post.likeCount += likedByUser ? 1 : -1;
+  return patches;
 }
 
 export const postsApi = api.injectEndpoints({
@@ -16,16 +60,29 @@ export const postsApi = api.injectEndpoints({
     getPosts: builder.query<PaginatedResponse<Post>, PostsQuery | undefined>({
       query: (params) => {
         const request = params ?? {};
+        const limit = request.limit ?? 10;
 
         return {
           url: "/posts",
           params: {
-            limit: request.limit ?? 10,
+            limit,
             ...(request.cursor ? { cursor: request.cursor } : {}),
+            ...(request.q?.trim() ? { q: request.q.trim() } : {}),
+            ...(request.mine ? { mine: "1" } : {}),
+            ...(request.sort === "old" ? { sort: "old" } : {}),
           },
         };
       },
-      serializeQueryArgs: ({ endpointName }) => endpointName,
+      serializeQueryArgs: ({ queryArgs, endpointDefinition, endpointName }) => {
+        const { cursor, ...rest } = queryArgs ?? {};
+        void cursor;
+
+        return defaultSerializeQueryArgs({
+          queryArgs: rest,
+          endpointDefinition,
+          endpointName,
+        });
+      },
       merge: (currentCache, newItems, { arg }) => {
         if (!arg || !arg.cursor) {
           currentCache.items = newItems.items;
@@ -41,10 +98,20 @@ export const postsApi = api.injectEndpoints({
         currentCache.nextCursor = newItems.nextCursor;
       },
       forceRefetch({ currentArg, previousArg }) {
-        const currentCursor = currentArg && currentArg.cursor;
-        const previousCursor = previousArg && previousArg.cursor;
+        if (previousArg === undefined) {
+          return true;
+        }
 
-        return currentCursor !== previousCursor;
+        const cur = normalizePostsQueryForCompare(currentArg);
+        const prev = normalizePostsQueryForCompare(previousArg);
+
+        return (
+          cur.cursor !== prev.cursor ||
+          cur.q !== prev.q ||
+          cur.mine !== prev.mine ||
+          cur.sort !== prev.sort ||
+          cur.limit !== prev.limit
+        );
       },
       providesTags: (result) =>
         result
@@ -67,21 +134,8 @@ export const postsApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
-      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-              if (!draft.items.some((post) => post.id === data.id)) {
-                draft.items.unshift(data);
-              }
-            })
-          );
-        } catch {
-          dispatch(api.util.invalidateTags([{ type: "Post", id: "LIST" }]));
-        }
-      },
+      invalidatesTags: (_result, error) =>
+        error ? [] : [{ type: "Post", id: "LIST" }],
     }),
     updatePost: builder.mutation<Post, { id: string; body: FormData }>({
       query: ({ id, body }) => ({
@@ -89,47 +143,16 @@ export const postsApi = api.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-              const index = draft.items.findIndex((post) => post.id === id);
-
-              if (index !== -1) {
-                draft.items[index] = data;
-              }
-            })
-          );
-          dispatch(
-            postsApi.util.updateQueryData("getPostById", id, (draft) => {
-              Object.assign(draft, data);
-            })
-          );
-        } catch {
-          /* ошибка сохранения — текст ошибки на карточке, без лишнего refetch */
-        }
-      },
+      invalidatesTags: (_result, error, { id }) =>
+        error ? [] : [{ type: "Post", id }],
     }),
     deletePost: builder.mutation<unknown, string>({
       query: (id) => ({
         url: `/posts/${id}`,
         method: "DELETE",
       }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
-        const patch = dispatch(
-          postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-            draft.items = draft.items.filter((post) => post.id !== id);
-          })
-        );
-
-        try {
-          await queryFulfilled;
-        } catch {
-          patch.undo();
-        }
-      },
+      invalidatesTags: (_result, error) =>
+        error ? [] : [{ type: "Post", id: "LIST" }],
     }),
     likePost: builder.mutation<unknown, string>({
       query: (postId) => ({
@@ -137,52 +160,16 @@ export const postsApi = api.injectEndpoints({
         method: "POST",
         body: { postId },
       }),
-      onQueryStarted(postId, { dispatch, queryFulfilled }) {
-        const patches = [
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-              const post = draft.items.find((item) => item.id === postId);
-
-              if (post) {
-                patchPostLike(post, true);
-              }
-            })
-          ),
-          dispatch(
-            postsApi.util.updateQueryData("getPostById", postId, (draft) => {
-              patchPostLike(draft, true);
-            })
-          ),
-        ];
-
-        queryFulfilled.catch(() => patches.forEach((patch) => patch.undo()));
-      },
+      invalidatesTags: (_result, error, postId) =>
+        error ? [] : [{ type: "Post", id: postId }],
     }),
     unlikePost: builder.mutation<unknown, string>({
       query: (postId) => ({
         url: `/likes/${postId}`,
         method: "DELETE",
       }),
-      onQueryStarted(postId, { dispatch, queryFulfilled }) {
-        const patches = [
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
-              const post = draft.items.find((item) => item.id === postId);
-
-              if (post) {
-                patchPostLike(post, false);
-              }
-            })
-          ),
-          dispatch(
-            postsApi.util.updateQueryData("getPostById", postId, (draft) => {
-              patchPostLike(draft, false);
-            })
-          ),
-        ];
-
-        queryFulfilled.catch(() => patches.forEach((patch) => patch.undo()));
-      },
+      invalidatesTags: (_result, error, postId) =>
+        error ? [] : [{ type: "Post", id: postId }],
     }),
   }),
 });

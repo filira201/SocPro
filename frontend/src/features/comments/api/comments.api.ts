@@ -5,7 +5,11 @@ import type {
   PaginatedResponse,
 } from "../model/types";
 
-import { postsApi } from "@/features/posts/api/posts.api";
+import type { AppDispatch, RootState } from "@/app/store";
+import {
+  patchAllGetPostsLists,
+  postsApi,
+} from "@/features/posts/api/posts.api";
 import { api } from "@/shared/api/api";
 
 const ROOT_INITIAL_COMMENT_LIMIT = 3;
@@ -60,20 +64,22 @@ export const commentsApi = api.injectEndpoints({
         method: "POST",
         body,
       }),
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
         const postId = String(arg.get("postId") || "");
 
         try {
           const { data } = await queryFulfilled;
 
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
+          patchAllGetPostsLists(
+            dispatch as AppDispatch,
+            getState as () => RootState,
+            (draft) => {
               const post = draft.items.find((item) => item.id === postId);
 
               if (post) {
                 post.commentCount += 1;
               }
-            })
+            }
           );
           dispatch(
             postsApi.util.updateQueryData("getPostById", postId, (draft) => {
@@ -162,19 +168,21 @@ export const commentsApi = api.injectEndpoints({
         url: `/comments/${id}`,
         method: "DELETE",
       }),
-      async onQueryStarted({ postId }, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ postId }, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
           const decreaseBy = Math.max(1, data.deletedCount ?? 1);
 
-          dispatch(
-            postsApi.util.updateQueryData("getPosts", undefined, (draft) => {
+          patchAllGetPostsLists(
+            dispatch as AppDispatch,
+            getState as () => RootState,
+            (draft) => {
               const post = draft.items.find((item) => item.id === postId);
 
               if (post) {
                 post.commentCount = Math.max(0, post.commentCount - decreaseBy);
               }
-            })
+            }
           );
           dispatch(
             postsApi.util.updateQueryData("getPostById", postId, (draft) => {

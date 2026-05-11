@@ -95,7 +95,7 @@ export const projectsApi = api.injectEndpoints({
         };
       },
       forceRefetch({ currentArg, previousArg }) {
-        if (!previousArg) {
+        if (!previousArg || !currentArg) {
           return true;
         }
 

@@ -24,6 +24,7 @@ function parseRemoveAttachmentIds(value) {
 }
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
+const MAX_POST_SEARCH_Q = 200;
 
 function normalizeLimit(value) {
   const parsed = Number(value);
@@ -33,6 +34,53 @@ function normalizeLimit(value) {
   }
 
   return Math.min(parsed, MAX_LIMIT);
+}
+
+function parseMineOnly(value) {
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function parseSortOldestFirst(value) {
+  return (
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "old"
+  );
+}
+
+function buildPostSearchFilter(qRaw) {
+  const q = String(qRaw ?? "").trim();
+
+  if (!q) {
+    return null;
+  }
+
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  if (!tokens.length) {
+    return null;
+  }
+
+  const tokenClause = (t) => ({
+    OR: [
+      { content: { contains: t, mode: "insensitive" } },
+      { author: { firstName: { contains: t, mode: "insensitive" } } },
+      { author: { lastName: { contains: t, mode: "insensitive" } } },
+      { author: { patronymic: { contains: t, mode: "insensitive" } } },
+    ],
+  });
+
+  if (tokens.length === 1) {
+    return tokenClause(tokens[0]);
+  }
+
+  return {
+    AND: tokens.map(tokenClause),
+  };
 }
 
 function attachmentData(file) {
@@ -179,13 +227,39 @@ const PostController = {
     const userId = req.user.userId;
     const { cursor } = req.query;
     const limit = normalizeLimit(req.query.limit);
+    const qRaw = req.query.q !== undefined ? String(req.query.q) : "";
+    const mineOnly = parseMineOnly(req.query.mine);
+    const oldestFirst = parseSortOldestFirst(req.query.sort);
+
+    if (qRaw.length > MAX_POST_SEARCH_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
 
     if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
       return res.status(400).json({ error: "Некорректный cursor" });
     }
 
+    const searchFilter = buildPostSearchFilter(qRaw);
+    const whereParts = [];
+
+    if (mineOnly) {
+      whereParts.push({ authorId: userId });
+    }
+
+    if (searchFilter) {
+      whereParts.push(searchFilter);
+    }
+
+    const where =
+      whereParts.length === 0
+        ? {}
+        : whereParts.length === 1
+          ? whereParts[0]
+          : { AND: whereParts };
+
     try {
       const posts = await prisma.post.findMany({
+        where,
         ...(cursor
           ? {
               cursor: { id: String(cursor) },
@@ -200,7 +274,7 @@ const PostController = {
           comments: true,
         },
         orderBy: {
-          createdAt: "desc",
+          createdAt: oldestFirst ? "asc" : "desc",
         },
       });
 

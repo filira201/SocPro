@@ -33,7 +33,15 @@ export type PaginatedResponse<T> = {
   nextCursor: string | null;
 };
 
+export const POSTS_SORT_VALUES = ["new", "old"] as const;
+export type PostsSort = (typeof POSTS_SORT_VALUES)[number];
+
 export type PostsQuery = {
   cursor?: string | null;
   limit?: number;
+  /** Поиск по тексту поста и по частям ФИО автора (слова через пробел — каждое должно «найтись»). */
+  q?: string;
+  /** Только посты текущего пользователя. */
+  mine?: boolean;
+  sort?: PostsSort;
 };
