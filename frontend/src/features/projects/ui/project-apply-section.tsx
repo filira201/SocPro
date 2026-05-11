@@ -160,25 +160,27 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md gap-4">
           <DialogHeader>
             <DialogTitle>Заявка на участие</DialogTitle>
             <DialogDescription>
               Необязательно кратко расскажите, чем можете быть полезны проекту.
             </DialogDescription>
           </DialogHeader>
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Сообщение для организаторов…"
-            rows={4}
-            className="resize-y"
-          />
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+          <div className="-mx-4 max-h-[50vh] overflow-y-auto overflow-x-hidden overscroll-contain px-4">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Сообщение для организаторов…"
+              rows={4}
+              className="min-h-24 max-h-[42vh] resize-y wrap-break-word"
+            />
+            {error ? (
+              <p className="mt-2 text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
           <DialogFooter className="gap-3">
             <Button
               type="button"

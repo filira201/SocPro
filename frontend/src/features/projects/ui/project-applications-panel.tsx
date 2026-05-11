@@ -206,7 +206,7 @@ export function ProjectApplicationsPanel({
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md gap-4">
           <DialogHeader>
             <DialogTitle>Заявка</DialogTitle>
             <DialogDescription className="sr-only">
@@ -214,60 +214,64 @@ export function ProjectApplicationsPanel({
             </DialogDescription>
           </DialogHeader>
           {detailApp ? (
-            <div className="grid gap-4 text-sm">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <p className="text-lg font-semibold leading-tight">
-                  {displayPublicName(detailApp.applicant)}
-                </p>
-                {detailApp.status !== "PENDING" ? (
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
-                  >
-                    {applicationStatusLabel(detailApp.status)}
-                  </Badge>
-                ) : null}
-              </div>
-
-              {detailApp.status === "PENDING" ? (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Подана {formatAt(detailApp.createdAt)}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
-                  >
-                    {applicationStatusLabel(detailApp.status)}
-                  </Badge>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Подана {formatAt(detailApp.createdAt)}
-                  </p>
-                  {detailApp.decidedAt ? (
-                    <p className="text-base font-medium text-foreground">
-                      Решение {formatAt(detailApp.decidedAt)}
+            <>
+              <div className="-mx-4 max-h-[50vh] overflow-y-auto overflow-x-hidden overscroll-contain px-4">
+                <div className="grid gap-4 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="text-lg font-semibold leading-tight">
+                      {displayPublicName(detailApp.applicant)}
                     </p>
-                  ) : null}
-                </>
-              )}
+                    {detailApp.status !== "PENDING" ? (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                      >
+                        {applicationStatusLabel(detailApp.status)}
+                      </Badge>
+                    ) : null}
+                  </div>
 
-              {detailApp.message?.trim() ? (
-                <div className="rounded-lg border bg-muted/40 p-3">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Сообщение заявителя
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                    {detailApp.message}
-                  </p>
+                  {detailApp.status === "PENDING" ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        Подана {formatAt(detailApp.createdAt)}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                      >
+                        {applicationStatusLabel(detailApp.status)}
+                      </Badge>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Подана {formatAt(detailApp.createdAt)}
+                      </p>
+                      {detailApp.decidedAt ? (
+                        <p className="text-base font-medium text-foreground">
+                          Решение {formatAt(detailApp.decidedAt)}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+
+                  {detailApp.message?.trim() ? (
+                    <div className="rounded-lg border bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Сообщение заявителя
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-sm leading-normal text-foreground">
+                        {detailApp.message}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Сообщение не указано.
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Сообщение не указано.
-                </p>
-              )}
+              </div>
 
               {detailApp.status === "PENDING" ? (
                 <DialogFooter className="gap-3 border-t border-border/60 pt-4 sm:justify-end">
@@ -275,6 +279,7 @@ export function ProjectApplicationsPanel({
                     type="button"
                     variant="outline"
                     size="lg"
+                    className="min-w-28"
                     disabled={isLoading}
                     onClick={() => {
                       setRejectTarget(detailApp);
@@ -286,6 +291,7 @@ export function ProjectApplicationsPanel({
                   <Button
                     type="button"
                     size="lg"
+                    className="min-w-28"
                     disabled={isLoading}
                     onClick={() =>
                       void handleDecide(detailApp, "ACCEPTED", {
@@ -297,7 +303,7 @@ export function ProjectApplicationsPanel({
                   </Button>
                 </DialogFooter>
               ) : null}
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
