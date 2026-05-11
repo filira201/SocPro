@@ -3,6 +3,7 @@ import { href, Link } from "react-router";
 import { displayPublicName } from "@/features/auth";
 import { projectStatusLabel } from "@/features/projects/lib/format-project-status";
 import type { ProjectListItem } from "@/features/projects/model/types";
+import { ProjectApplicationsBadge } from "@/features/projects/ui/project-applications-badge";
 import { ROUTES } from "@/shared/model/routes";
 import { Badge } from "@/shared/ui/kit/badge";
 import {
@@ -39,9 +40,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
               {project.title}
             </Link>
           </CardTitle>
-          <Badge variant="secondary" className="shrink-0 font-normal">
-            {projectStatusLabel(project.status)}
-          </Badge>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            <ProjectApplicationsBadge
+              acceptingApplications={project.acceptingApplications}
+              compact
+              className="font-normal"
+            />
+            <Badge variant="secondary" className="font-normal">
+              {projectStatusLabel(project.status)}
+            </Badge>
+          </div>
         </div>
         <CardDescription className="line-clamp-3 text-sm">
           {excerpt(project.description, 220)}

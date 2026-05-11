@@ -4,6 +4,7 @@ import { href, Link, useParams } from "react-router";
 
 import { useGetProjectByIdQuery } from "./api/projects.api";
 import { projectStatusLabel } from "./lib/format-project-status";
+import { ProjectApplicationsBadge } from "./ui/project-applications-badge";
 
 import { displayPublicName } from "@/features/auth";
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
@@ -78,12 +79,15 @@ function ProjectDetailPage() {
               <h1 className="text-xl font-semibold leading-tight sm:text-2xl">
                 {project.title}
               </h1>
-              <Badge
-                variant="secondary"
-                className="shrink-0 text-sm font-normal"
-              >
-                {projectStatusLabel(project.status)}
-              </Badge>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                <ProjectApplicationsBadge
+                  acceptingApplications={project.acceptingApplications}
+                  className="text-sm font-normal"
+                />
+                <Badge variant="secondary" className="text-sm font-normal">
+                  {projectStatusLabel(project.status)}
+                </Badge>
+              </div>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>
@@ -125,13 +129,15 @@ function ProjectDetailPage() {
                 {formatStatusAt(project.statusUpdatedAt)}
               </p>
             </div>
-            <div>
+            <div className="grid gap-2">
               <h2 className="font-medium text-foreground">Заявки</h2>
-              <p className="text-muted-foreground">
-                {project.acceptingApplications
-                  ? "Принимаем новые заявки"
-                  : "Новые заявки не принимаются"}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground">
+                  {project.acceptingApplications
+                    ? "Принимаем заявки на участие в проекте."
+                    : "Новые заявки сейчас не принимаются."}
+                </span>
+              </div>
             </div>
           </section>
 
