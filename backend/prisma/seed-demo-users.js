@@ -1,5 +1,6 @@
 /**
- * Демо-наполнение: 50 пользователей, посты, комментарии, ответы, лайки, 5 проектов.
+ * Демо-наполнение: 50 пользователей, подписки (0–20 на пользователя), посты, комментарии,
+ * ответы, лайки, 5 проектов.
  *
  * Почта: `<транслит-имени><NN>@mail.ru` (например anna01@mail.ru), пароль у всех: `123123`.
  * Аватар — jdenticon + файл в `uploads/`, как при регистрации.
@@ -59,11 +60,13 @@ const TR = {
 };
 
 function translit(s) {
-  return [...String(s).toLowerCase()]
-    .map((c) => TR[c] ?? (c.match(/[a-z0-9]/i) ? c.toLowerCase() : ""))
-    .join("")
-    .replace(/[^a-z0-9]+/g, "")
-    .slice(0, 20) || "u";
+  return (
+    [...String(s).toLowerCase()]
+      .map((c) => TR[c] ?? (c.match(/[a-z0-9]/i) ? c.toLowerCase() : ""))
+      .join("")
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 20) || "u"
+  );
 }
 
 function rndInt(min, max) {
@@ -459,12 +462,17 @@ async function wipeSeedByEmails(emails) {
   }
 
   await prisma.follows.deleteMany({
-    where: { OR: [{ followerId: { in: userIds } }, { followingId: { in: userIds } }] },
+    where: {
+      OR: [{ followerId: { in: userIds } }, { followingId: { in: userIds } }],
+    },
   });
 
   const tailComments = await prisma.comment.findMany({
     where: {
-      OR: [{ userId: { in: userIds } }, { post: { authorId: { in: userIds } } }],
+      OR: [
+        { userId: { in: userIds } },
+        { post: { authorId: { in: userIds } } },
+      ],
     },
     select: { id: true, parentId: true },
   });
@@ -518,7 +526,9 @@ function buildEmails() {
 }
 
 async function main() {
-  const allSkills = await prisma.skill.findMany({ select: { id: true, name: true } });
+  const allSkills = await prisma.skill.findMany({
+    select: { id: true, name: true },
+  });
   if (!allSkills.length) {
     console.error("В базе нет навыков. Сначала выполните: npm run seed:skills");
     process.exit(1);
@@ -582,7 +592,14 @@ async function main() {
         );
       }
     } else {
-      const opts = ["bio", "dateOfBirth", "university", "faculty", "course", "contacts"];
+      const opts = [
+        "bio",
+        "dateOfBirth",
+        "university",
+        "faculty",
+        "course",
+        "contacts",
+      ];
       const k = rndInt(0, 3);
       const chosen = shuffle(opts).slice(0, k);
       if (chosen.includes("bio")) {
@@ -651,6 +668,21 @@ async function main() {
     .filter(Boolean);
 
   const userIds = users.map((u) => u.id);
+
+  const followRows = [];
+  for (const u of users) {
+    const nFollows = rndInt(0, 20);
+    const others = userIds.filter((id) => id !== u.id);
+    const targets = shuffle(others).slice(0, Math.min(nFollows, others.length));
+    for (const followingId of targets) {
+      followRows.push({ followerId: u.id, followingId });
+    }
+  }
+  for (let i = 0; i < followRows.length; i += 500) {
+    await prisma.follows.createMany({
+      data: followRows.slice(i, i + 500),
+    });
+  }
 
   const postsCreated = [];
   for (const u of users) {
@@ -777,7 +809,10 @@ async function main() {
     const nOutside = totalRequired - nInside;
     const fromU = shuffle([...U]).slice(0, Math.min(nInside, U.length));
     const outsidePool = skillIds.filter((id) => !U.includes(id));
-    const fromOutside = shuffle(outsidePool).slice(0, totalRequired - fromU.length);
+    const fromOutside = shuffle(outsidePool).slice(
+      0,
+      totalRequired - fromU.length,
+    );
     const combined = [...fromU, ...fromOutside];
     if (combined.length < totalRequired) {
       return shuffle(skillIds).slice(0, totalRequired);
@@ -820,7 +855,9 @@ async function main() {
     I.id,
   ]);
   if (projectUserIds.size !== 14) {
-    throw new Error("Внутренняя ошибка: пересечение слотов участников проектов.");
+    throw new Error(
+      "Внутренняя ошибка: пересечение слотов участников проектов.",
+    );
   }
 
   const skillPack = shuffle(skillIds);
@@ -847,10 +884,7 @@ async function main() {
   await createProject(
     o1,
     [reload(o0), reload(C)],
-    skillSubset90FromUnion(
-      [reload(o1), reload(o0), reload(C)],
-      rndInt(8, 14),
-    ),
+    skillSubset90FromUnion([reload(o1), reload(o0), reload(C)], rndInt(8, 14)),
   );
   await createProject(
     o2,
@@ -875,6 +909,7 @@ async function main() {
 
   console.log("Демо-данные созданы:");
   console.log(`  пользователей: ${users.length}, пароль у всех: ${PASSWORD}`);
+  console.log(`  подписок (Follows): ${followRows.length}`);
   console.log(`  постов: ${postsCreated.length}`);
   console.log(
     `  проектов: ${projects.length} (без требований по навыкам — один; у остальных требования на ~90% из навыков участников)`,
