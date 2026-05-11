@@ -111,14 +111,14 @@ function PostsPage() {
         <PostComposer />
 
         <div className="rounded-xl border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-            <div className="relative min-w-0 flex-1 sm:min-w-48">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full min-w-0">
               <SearchIcon
                 className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden
               />
               <Input
-                className="h-10 pl-9"
+                className="h-10 w-full pl-9"
                 value={queryInput}
                 onChange={(e) => setQueryInput(e.target.value)}
                 placeholder="Поиск по тексту или по имени автора…"
@@ -127,7 +127,7 @@ function PostsPage() {
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex w-fit max-w-full items-center gap-2">
                 <Checkbox
                   id="posts-feed-mine"
@@ -151,7 +151,7 @@ function PostsPage() {
               >
                 <SelectTrigger
                   aria-labelledby="posts-feed-sort-label"
-                  className="h-10 w-full min-w-44 sm:w-52"
+                  className="h-10 min-w-44 sm:w-52"
                   size="default"
                 >
                   <SelectValue />
