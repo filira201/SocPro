@@ -1,6 +1,6 @@
 import { format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { href, Link } from "react-router";
 
 import { useDecideApplicationMutation } from "../api/projects.api";
@@ -44,6 +44,14 @@ function formatAt(iso: string | undefined) {
   return isValid(d) ? format(d, "d MMM yyyy, HH:mm", { locale: ru }) : iso;
 }
 
+function isInsideInteractiveTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest("a, button"));
+}
+
 type ProjectApplicationsPanelProps = {
   projectId: string;
   applications: ProjectApplication[];
@@ -58,10 +66,12 @@ export function ProjectApplicationsPanel({
   const [rejectTarget, setRejectTarget] = useState<ProjectApplication | null>(
     null
   );
+  const [detailApp, setDetailApp] = useState<ProjectApplication | null>(null);
 
   const handleDecide = async (
     app: ProjectApplication,
-    status: "ACCEPTED" | "REJECTED"
+    status: "ACCEPTED" | "REJECTED",
+    options?: { onSuccess?: () => void }
   ) => {
     setError(null);
 
@@ -75,11 +85,24 @@ export function ProjectApplicationsPanel({
       if (status === "REJECTED") {
         setRejectTarget(null);
       }
+
+      options?.onSuccess?.();
     } catch (err: unknown) {
       setError(
         getApiErrorMessage(err as ApiError, "Не удалось обработать заявку")
       );
     }
+  };
+
+  const handleCardClick = (
+    app: ProjectApplication,
+    e: MouseEvent<HTMLLIElement>
+  ) => {
+    if (isInsideInteractiveTarget(e.target)) {
+      return;
+    }
+
+    setDetailApp(app);
   };
 
   if (!applications.length) {
@@ -95,57 +118,189 @@ export function ProjectApplicationsPanel({
       ) : null}
 
       <ul className="grid gap-3">
-        {applications.map((app) => (
-          <li key={app.id} className="rounded-lg border bg-card/50 p-4 text-sm">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="grid gap-1">
-                <Link
-                  to={href(ROUTES.USER_DETAILS, { userId: app.applicant.id })}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {displayPublicName(app.applicant)}
-                </Link>
-                <Badge
-                  variant="outline"
-                  className="w-fit px-2.5 py-3.5 text-sm font-normal"
-                >
-                  {applicationStatusLabel(app.status)}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  Подана {formatAt(app.createdAt)}
-                  {app.decidedAt ? ` · решение ${formatAt(app.decidedAt)}` : ""}
-                </span>
-              </div>
-              {app.status === "PENDING" ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={isLoading}
-                    onClick={() => void handleDecide(app, "ACCEPTED")}
+        {applications.map((app) => {
+          const isPending = app.status === "PENDING";
+
+          return (
+            <li
+              key={app.id}
+              role="presentation"
+              className="cursor-pointer rounded-lg border bg-card/50 p-4"
+              onClick={(e) => handleCardClick(app, e)}
+            >
+              <div className="grid gap-3 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <Link
+                    to={href(ROUTES.USER_DETAILS, { userId: app.applicant.id })}
+                    className="min-w-0 text-base font-semibold leading-tight underline-offset-4 hover:underline sm:text-lg"
                   >
-                    Принять
-                  </Button>
+                    {displayPublicName(app.applicant)}
+                  </Link>
+                  {!isPending ? (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                    >
+                      {applicationStatusLabel(app.status)}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                {isPending ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Подана {formatAt(app.createdAt)}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                    >
+                      {applicationStatusLabel(app.status)}
+                    </Badge>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Подана {formatAt(app.createdAt)}
+                    </p>
+                    {app.decidedAt ? (
+                      <p className="text-base font-medium text-foreground">
+                        Решение {formatAt(app.decidedAt)}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+
+                {isPending ? (
+                  <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isLoading}
+                      onClick={() => void handleDecide(app, "ACCEPTED")}
+                    >
+                      Принять
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading}
+                      onClick={() => setRejectTarget(app)}
+                    >
+                      Отклонить
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <Dialog
+        open={detailApp !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailApp(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Заявка</DialogTitle>
+            <DialogDescription className="sr-only">
+              Подробности заявки и сообщение заявителя
+            </DialogDescription>
+          </DialogHeader>
+          {detailApp ? (
+            <div className="grid gap-4 text-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <p className="text-lg font-semibold leading-tight">
+                  {displayPublicName(detailApp.applicant)}
+                </p>
+                {detailApp.status !== "PENDING" ? (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                  >
+                    {applicationStatusLabel(detailApp.status)}
+                  </Badge>
+                ) : null}
+              </div>
+
+              {detailApp.status === "PENDING" ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    Подана {formatAt(detailApp.createdAt)}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 px-2.5 py-1 text-xs font-normal sm:text-sm"
+                  >
+                    {applicationStatusLabel(detailApp.status)}
+                  </Badge>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Подана {formatAt(detailApp.createdAt)}
+                  </p>
+                  {detailApp.decidedAt ? (
+                    <p className="text-base font-medium text-foreground">
+                      Решение {formatAt(detailApp.decidedAt)}
+                    </p>
+                  ) : null}
+                </>
+              )}
+
+              {detailApp.message?.trim() ? (
+                <div className="rounded-lg border bg-muted/40 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Сообщение заявителя
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                    {detailApp.message}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Сообщение не указано.
+                </p>
+              )}
+
+              {detailApp.status === "PENDING" ? (
+                <DialogFooter className="gap-3 border-t border-border/60 pt-4 sm:justify-end">
                   <Button
                     type="button"
-                    size="sm"
                     variant="outline"
+                    size="lg"
                     disabled={isLoading}
-                    onClick={() => setRejectTarget(app)}
+                    onClick={() => {
+                      setRejectTarget(detailApp);
+                      setDetailApp(null);
+                    }}
                   >
                     Отклонить
                   </Button>
-                </div>
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled={isLoading}
+                    onClick={() =>
+                      void handleDecide(detailApp, "ACCEPTED", {
+                        onSuccess: () => setDetailApp(null),
+                      })
+                    }
+                  >
+                    Принять
+                  </Button>
+                </DialogFooter>
               ) : null}
             </div>
-            {app.message?.trim() ? (
-              <p className="mt-2 whitespace-pre-wrap text-muted-foreground">
-                {app.message}
-              </p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={rejectTarget !== null}
@@ -164,10 +319,12 @@ export function ProjectApplicationsPanel({
                 : null}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
+              size="lg"
+              className="min-w-28"
               onClick={() => setRejectTarget(null)}
             >
               Назад
@@ -175,6 +332,8 @@ export function ProjectApplicationsPanel({
             <Button
               type="button"
               variant="destructive"
+              size="lg"
+              className="min-w-28"
               disabled={isLoading || !rejectTarget}
               onClick={() => {
                 if (rejectTarget) {
