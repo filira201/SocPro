@@ -277,12 +277,7 @@ function ProjectDetailPage() {
 
             {tab === "settings" && perms.canManageProject ? (
               <div className="grid gap-8">
-                <div>
-                  <h2 className="mb-4 text-base font-semibold">
-                    Редактирование проекта
-                  </h2>
-                  <ProjectEditForm project={project} />
-                </div>
+                <ProjectEditForm project={project} />
                 {perms.isOwner ? (
                   <ProjectDeleteSection
                     projectId={project.id}

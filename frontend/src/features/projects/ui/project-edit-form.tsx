@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useController, useForm, useWatch } from "react-hook-form";
 
@@ -28,6 +29,12 @@ import {
   FieldSet,
 } from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+} from "@/shared/ui/kit/item";
 import {
   Select,
   SelectContent,
@@ -134,15 +141,22 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
       aria-busy={isLoading}
       className="grid gap-6"
     >
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="submit" disabled={isLoading}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-base font-semibold leading-tight">
+          Редактирование проекта
+        </h2>
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full shrink-0 sm:w-auto"
+        >
           {isLoading ? "Сохранение…" : "Сохранить"}
         </Button>
       </div>
 
       {formError ? (
         <p
-          className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="w-full rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           {formError}
@@ -150,9 +164,20 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
       ) : null}
 
       {savedHint ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          {savedHint}
-        </p>
+        <Item
+          role="status"
+          variant="outline"
+          className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+        >
+          <ItemMedia variant="icon">
+            <CircleCheck className="text-emerald-600 dark:text-emerald-400" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemDescription className="line-clamp-none text-emerald-700 dark:text-emerald-400">
+              {savedHint}
+            </ItemDescription>
+          </ItemContent>
+        </Item>
       ) : null}
 
       <FieldSet>
