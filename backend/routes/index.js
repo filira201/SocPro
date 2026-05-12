@@ -172,6 +172,11 @@ router.get(
   authenticateToken,
   FollowController.listFollowing,
 );
+router.get(
+  "/users/:id/projects",
+  authenticateToken,
+  UserController.listUserProjects,
+);
 router.get("/users/:id", authenticateToken, UserController.getUserById);
 router.put(
   "/users/:id",

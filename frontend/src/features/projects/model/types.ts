@@ -24,6 +24,8 @@ export type ProjectsListQuery = {
   member?: boolean;
   /** Только проекты, которые сейчас принимают заявки на участие. */
   acceptingApplications?: boolean;
+  /** Только проекты, где владелец — выбранный пользователь (блок «Проекты» в профиле). */
+  authorOnly?: boolean;
   /** Все перечисленные навыки должны быть среди требуемых к проекту. */
   skillIds?: string[];
 };

@@ -24,11 +24,15 @@ const {
   optimizeImageFile,
   unlinkMulterFiles,
 } = require("../lib/image-optimize");
+const { normalizeProjectForApi } = require("../lib/project-access");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_USER_DIRECTORY_LIMIT = 10;
 const MAX_USER_DIRECTORY_LIMIT = 50;
 const MAX_USER_DIRECTORY_FILTER_SKILLS = 20;
+const DEFAULT_USER_PROFILE_PROJECTS_LIMIT = 10;
+const MAX_USER_PROFILE_PROJECTS_LIMIT = 50;
+const MAX_USER_PROFILE_PROJECTS_Q = 200;
 
 function normalizeUserDirectoryLimit(value) {
   const parsed = Number(value);
@@ -38,6 +42,24 @@ function normalizeUserDirectoryLimit(value) {
   }
 
   return Math.min(parsed, MAX_USER_DIRECTORY_LIMIT);
+}
+
+function normalizeUserProfileProjectsLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_USER_PROFILE_PROJECTS_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_USER_PROFILE_PROJECTS_LIMIT);
+}
+
+function parseAuthorOnlyProjectsFilter(value) {
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  return v === "1" || v === "true" || v === "yes";
 }
 
 function optionalTrimmedString(body, key) {
@@ -513,6 +535,91 @@ const UserController = {
       res.json({ items, nextCursor });
     } catch (error) {
       console.error("Error in searchUsers", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
+  listUserProjects: async (req, res) => {
+    const { id } = req.params;
+    const { cursor, q, author } = req.query;
+    const limit = normalizeUserProfileProjectsLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
+    const authorOnly = parseAuthorOnlyProjectsFilter(author);
+
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректный id" });
+    }
+
+    if (qRaw.length > MAX_USER_PROFILE_PROJECTS_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
+    }
+
+    try {
+      const exists = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!exists) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+
+      const where = { AND: [] };
+
+      if (authorOnly) {
+        where.AND.push({ ownerId: id });
+      } else {
+        where.AND.push({
+          OR: [{ ownerId: id }, { members: { some: { userId: id } } }],
+        });
+      }
+
+      const qTrimmed = qRaw.trim();
+
+      if (qTrimmed) {
+        where.AND.push({
+          title: { contains: qTrimmed, mode: "insensitive" },
+        });
+      }
+
+      const projects = await prisma.project.findMany({
+        where,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
+        include: {
+          owner: true,
+          requiredSkills: true,
+          _count: {
+            select: {
+              members: true,
+              applications: true,
+              attachments: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const hasNextPage = projects.length > limit;
+      const page = hasNextPage ? projects.slice(0, limit) : projects;
+      const items = page.map((p) => normalizeProjectForApi(p));
+      const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
+
+      res.json({
+        items: sanitizeUser(items),
+        nextCursor,
+      });
+    } catch (error) {
+      console.error("Error in listUserProjects", error);
       res.status(500).json({ error: "Internal server error" });
     }
   },

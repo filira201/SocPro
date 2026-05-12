@@ -75,7 +75,9 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [
         "User",
+        "UserProjects",
         { type: "User", id },
+        { type: "UserProjects", id },
       ],
     }),
   }),

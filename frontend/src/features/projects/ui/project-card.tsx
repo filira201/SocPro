@@ -17,6 +17,8 @@ import {
 type ProjectCardProps = {
   project: ProjectListItem;
   isOwnedByCurrentUser?: boolean;
+  /** Показать бейдж «Автор», если владелец проекта — этот пользователь (страница чужого/своего профиля). */
+  authorBadgeForUserId?: string;
 };
 
 function excerpt(text: string, maxLen: number) {
@@ -32,8 +34,13 @@ function excerpt(text: string, maxLen: number) {
 export function ProjectCard({
   project,
   isOwnedByCurrentUser = false,
+  authorBadgeForUserId,
 }: ProjectCardProps) {
   const attachmentCount = project._count.attachments ?? 0;
+  const showAuthorBadge =
+    Boolean(authorBadgeForUserId) &&
+    project.owner.id === authorBadgeForUserId &&
+    !isOwnedByCurrentUser;
 
   return (
     <Card className="transition-colors hover:bg-muted/40">
@@ -54,6 +61,14 @@ export function ProjectCard({
                 className="px-2.5 py-3.5 text-sm font-normal"
               >
                 Мой проект
+              </Badge>
+            ) : null}
+            {showAuthorBadge ? (
+              <Badge
+                variant="ghost"
+                className="px-2.5 py-3.5 text-sm font-normal"
+              >
+                Автор
               </Badge>
             ) : null}
             <ProjectApplicationsBadge

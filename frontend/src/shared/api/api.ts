@@ -47,6 +47,7 @@ export const api = createApi({
   refetchOnMountOrArgChange: true,
   tagTypes: [
     "User",
+    "UserProjects",
     "FollowList",
     "UsersDirectory",
     "Post",

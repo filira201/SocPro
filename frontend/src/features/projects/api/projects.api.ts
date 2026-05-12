@@ -122,6 +122,7 @@ export const projectsApi = api.injectEndpoints({
       }),
       invalidatesTags: (result) => [
         { type: "Project" as const, id: "LIST" },
+        "UserProjects",
         ...(result ? [{ type: "Project" as const, id: result.id }] : []),
       ],
     }),
@@ -196,6 +197,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { id }) => [
         { type: "Project" as const, id },
         { type: "Project" as const, id: "LIST" },
+        "UserProjects",
       ],
     }),
 
@@ -207,6 +209,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, id) => [
         { type: "Project" as const, id: "LIST" },
         { type: "Project" as const, id },
+        "UserProjects",
       ],
     }),
 
@@ -226,6 +229,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
         { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
       ],
     }),
 
@@ -241,6 +245,7 @@ export const projectsApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
         { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
       ],
     }),
 
@@ -256,6 +261,7 @@ export const projectsApi = api.injectEndpoints({
         { type: "Project" as const, id: projectId },
         { type: "Project" as const, id: "LIST" },
         { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
       ],
     }),
 
@@ -272,6 +278,7 @@ export const projectsApi = api.injectEndpoints({
         { type: "Project" as const, id: projectId },
         { type: "Project" as const, id: "LIST" },
         { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
       ],
     }),
 
@@ -285,6 +292,7 @@ export const projectsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { projectId }) => [
         { type: "Project" as const, id: projectId },
+        "UserProjects",
       ],
     }),
   }),
