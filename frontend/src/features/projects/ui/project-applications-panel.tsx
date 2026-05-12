@@ -464,7 +464,14 @@ export function ProjectApplicationsPanel({
                         ) : (
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <p className="text-lg font-semibold leading-tight">
-                              {displayPublicName(detailApp.applicant)}
+                              <Link
+                                to={href(ROUTES.USER_DETAILS, {
+                                  userId: detailApp.applicant.id,
+                                })}
+                                className="underline-offset-4 hover:underline"
+                              >
+                                {displayPublicName(detailApp.applicant)}
+                              </Link>
                             </p>
                             {detailApp.status !== "PENDING" ? (
                               <Badge
