@@ -88,7 +88,7 @@ export function UserProfileView({
           )}
           <div className="grid gap-1">
             <p className="text-sm text-muted-foreground">
-              Зарегистрирован {registrationLabel}
+              Зарегистрирован(а) {registrationLabel}
             </p>
             <h1 className="text-2xl font-semibold">{publicTitle}</h1>
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm">

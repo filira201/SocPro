@@ -53,6 +53,7 @@ export const api = createApi({
     "Post",
     "Project",
     "ProjectMembers",
+    "ManagedProjectInvites",
     "Skill",
     "Application",
     "Member",

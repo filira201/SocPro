@@ -2,6 +2,8 @@ import { defaultSerializeQueryArgs } from "@reduxjs/toolkit/query";
 
 import type {
   ApplyToProjectBody,
+  ManagedProjectsListQuery,
+  ManagedProjectsListResponse,
   ProjectApplication,
   ProjectCreatedPayload,
   ProjectDetail,
@@ -25,6 +27,17 @@ function normalizeProjectsListQueryForCompare(
     sort: arg?.sort === "old" ? "old" : "new",
     skillsKey:
       [...(arg?.skillIds ?? [])].filter(Boolean).sort().join(",") || null,
+  };
+}
+
+function normalizeManagedProjectsListQueryForCompare(
+  arg: ManagedProjectsListQuery | undefined
+) {
+  return {
+    inviteeId: arg?.inviteeId ?? "",
+    limit: arg?.limit ?? 10,
+    cursor: arg?.cursor ?? null,
+    q: (arg?.q ?? "").trim() || null,
   };
 }
 
@@ -112,6 +125,63 @@ export const projectsApi = api.injectEndpoints({
               })),
             ]
           : [{ type: "Project" as const, id: "LIST" }],
+    }),
+
+    getManagedProjectsList: builder.query<
+      ManagedProjectsListResponse,
+      ManagedProjectsListQuery
+    >({
+      query: ({ inviteeId, cursor, limit = 10, q }) => ({
+        url: "/projects/managed",
+        params: {
+          limit,
+          inviteeId,
+          ...(cursor ? { cursor } : {}),
+          ...(q?.trim() ? { q: q.trim() } : {}),
+        },
+      }),
+      serializeQueryArgs: ({ queryArgs, endpointDefinition, endpointName }) => {
+        const { cursor, ...rest } = queryArgs;
+        void cursor;
+
+        return defaultSerializeQueryArgs({
+          queryArgs: rest,
+          endpointDefinition,
+          endpointName,
+        });
+      },
+      merge: (currentCache, newItems, { arg }) => {
+        if (!arg || !arg.cursor) {
+          currentCache.items = newItems.items;
+          currentCache.nextCursor = newItems.nextCursor;
+
+          return;
+        }
+
+        const existingIds = new Set(currentCache.items.map((item) => item.id));
+        currentCache.items.push(
+          ...newItems.items.filter((item) => !existingIds.has(item.id))
+        );
+        currentCache.nextCursor = newItems.nextCursor;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        if (previousArg === undefined) {
+          return true;
+        }
+
+        const cur = normalizeManagedProjectsListQueryForCompare(currentArg);
+        const prev = normalizeManagedProjectsListQueryForCompare(previousArg);
+
+        return (
+          cur.cursor !== prev.cursor ||
+          cur.q !== prev.q ||
+          cur.inviteeId !== prev.inviteeId ||
+          cur.limit !== prev.limit
+        );
+      },
+      providesTags: (_result, _error, arg) => [
+        { type: "ManagedProjectInvites" as const, id: arg.inviteeId },
+      ],
     }),
 
     createProject: builder.mutation<ProjectCreatedPayload, FormData>({
@@ -233,6 +303,21 @@ export const projectsApi = api.injectEndpoints({
       ],
     }),
 
+    acceptProjectInvitation: builder.mutation<
+      ProjectApplication,
+      { applicationId: string; projectId: string }
+    >({
+      query: ({ applicationId }) => ({
+        url: `/applications/${applicationId}/accept`,
+        method: "POST",
+      }),
+      invalidatesTags: (_r, _e, { projectId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
+      ],
+    }),
+
     applyToProject: builder.mutation<
       ProjectApplication,
       { projectId: string; body: ApplyToProjectBody }
@@ -246,6 +331,27 @@ export const projectsApi = api.injectEndpoints({
         { type: "Project" as const, id: projectId },
         { type: "ProjectMembers" as const, id: projectId },
         "UserProjects",
+      ],
+    }),
+
+    inviteUserToProject: builder.mutation<
+      ProjectApplication,
+      {
+        projectId: string;
+        inviteeId: string;
+        body: { message?: string };
+      }
+    >({
+      query: ({ projectId, inviteeId, body }) => ({
+        url: `/projects/${projectId}/invitations`,
+        method: "POST",
+        body: { inviteeId, ...body },
+      }),
+      invalidatesTags: (_r, _e, { projectId, inviteeId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "ProjectMembers" as const, id: projectId },
+        "UserProjects",
+        { type: "ManagedProjectInvites" as const, id: inviteeId },
       ],
     }),
 
@@ -284,15 +390,28 @@ export const projectsApi = api.injectEndpoints({
 
     cancelApplication: builder.mutation<
       { message: string },
-      { applicationId: string; projectId: string }
+      {
+        applicationId: string;
+        projectId: string;
+        /** Инвалидация списка приглашений в профиле (GET /projects/managed). */
+        managedInviteeId?: string;
+      }
     >({
       query: ({ applicationId }) => ({
         url: `/applications/${applicationId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_r, _e, { projectId }) => [
+      invalidatesTags: (_r, _e, { projectId, managedInviteeId }) => [
         { type: "Project" as const, id: projectId },
         "UserProjects",
+        ...(managedInviteeId
+          ? [
+              {
+                type: "ManagedProjectInvites" as const,
+                id: managedInviteeId,
+              },
+            ]
+          : []),
       ],
     }),
   }),
@@ -300,13 +419,16 @@ export const projectsApi = api.injectEndpoints({
 
 export const {
   useGetProjectsListQuery,
+  useGetManagedProjectsListQuery,
   useCreateProjectMutation,
   useGetProjectByIdQuery,
   useGetProjectMembersQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useDecideApplicationMutation,
+  useAcceptProjectInvitationMutation,
   useApplyToProjectMutation,
+  useInviteUserToProjectMutation,
   useRemoveProjectMemberMutation,
   useUpdateProjectMemberRoleMutation,
   useCancelApplicationMutation,

@@ -276,6 +276,11 @@ router.post(
 );
 router.get("/projects", authenticateToken, ProjectController.getAllProjects);
 router.get(
+  "/projects/managed",
+  authenticateToken,
+  ProjectController.listManagedProjects,
+);
+router.get(
   "/projects/:id",
   authenticateToken,
   ProjectController.getProjectById,
@@ -298,10 +303,20 @@ router.post(
   authenticateToken,
   ApplicationController.apply,
 );
+router.post(
+  "/projects/:id/invitations",
+  authenticateToken,
+  ApplicationController.inviteToProject,
+);
 router.get(
   "/projects/:id/applications",
   authenticateToken,
   ApplicationController.listApplications,
+);
+router.post(
+  "/applications/:id/accept",
+  authenticateToken,
+  ApplicationController.acceptAsInvitee,
 );
 router.patch(
   "/applications/:id",

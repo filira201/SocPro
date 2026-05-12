@@ -49,6 +49,36 @@ export type ProjectListItem = {
   };
 };
 
+/** Заявка приглашённого на проект (фрагмент для GET /projects/managed?inviteeId=). */
+export type InviteeApplicationSummary = {
+  id: string;
+  status: string;
+} | null;
+
+/** Элемент списка «мои проекты как автор/админ» с контекстом приглашения. */
+export type ManagedProjectListItem = ProjectListItem & {
+  inviteeApplication: InviteeApplicationSummary;
+  inviteeIsMember: boolean;
+};
+
+export type ManagedProjectsListResponse = {
+  items: ManagedProjectListItem[];
+  nextCursor: string | null;
+};
+
+/** Аргументы GET /projects/managed. */
+export type ManagedProjectsListQuery = {
+  inviteeId: string;
+  cursor?: string | null;
+  limit?: number;
+  q?: string;
+};
+
+export type InviteToProjectBody = {
+  inviteeId: string;
+  message?: string;
+};
+
 /** Участник проекта (GET /projects/:id, POST /projects). */
 export type ProjectMemberRow = {
   id: string;
@@ -89,6 +119,8 @@ export type ProjectDetail = {
     message?: string | null;
     createdAt?: string;
     decidedAt?: string | null;
+    invitedById?: string | null;
+    invitedBy?: User | null;
   } | null;
   applications?: ProjectApplication[];
   attachments?: ProjectAttachment[];
@@ -99,6 +131,9 @@ export type ProjectApplication = {
   id: string;
   projectId?: string;
   applicantId: string;
+  /** Заполнено, если заявка создана как приглашение от владельца/админа. */
+  invitedById?: string | null;
+  invitedBy?: User | null;
   message: string | null;
   status: "PENDING" | "ACCEPTED" | "REJECTED" | string;
   createdAt: string;

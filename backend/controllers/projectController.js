@@ -300,6 +300,133 @@ const ProjectController = {
     }
   },
 
+  /** Проекты, где текущий пользователь — владелец или администратор (курсор, поиск по названию). */
+  listManagedProjects: async (req, res) => {
+    const userId = req.user.userId;
+    const { q, cursor, inviteeId } = req.query;
+    const limit = normalizeProjectListLimit(req.query.limit);
+    const qRaw = q !== undefined ? String(q) : "";
+
+    if (qRaw.length > MAX_PROJECT_LIST_Q) {
+      return res.status(400).json({ error: "Слишком длинная строка поиска" });
+    }
+
+    if (cursor && !OBJECT_ID_REGEX.test(String(cursor))) {
+      return res.status(400).json({ error: "Некорректный cursor" });
+    }
+
+    const inviteeIdRaw =
+      inviteeId !== undefined && inviteeId !== null && String(inviteeId).trim()
+        ? String(inviteeId).trim()
+        : "";
+    const inviteeIdValid =
+      inviteeIdRaw &&
+      OBJECT_ID_REGEX.test(inviteeIdRaw) &&
+      inviteeIdRaw !== String(userId);
+
+    try {
+      const where = {
+        AND: [
+          {
+            members: {
+              some: {
+                userId: String(userId),
+                role: { in: ["OWNER", "ADMIN"] },
+              },
+            },
+          },
+        ],
+      };
+
+      const qTrimmed = qRaw.trim();
+
+      if (qTrimmed) {
+        where.AND.push({
+          title: { contains: qTrimmed, mode: "insensitive" },
+        });
+      }
+
+      const projects = await prisma.project.findMany({
+        where,
+        ...(cursor
+          ? {
+              cursor: { id: String(cursor) },
+              skip: 1,
+            }
+          : {}),
+        take: limit + 1,
+        include: {
+          owner: true,
+          requiredSkills: true,
+          _count: {
+            select: {
+              members: true,
+              applications: true,
+              attachments: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const hasNextPage = projects.length > limit;
+      const page = hasNextPage ? projects.slice(0, limit) : projects;
+
+      /** Заявки приглашённого пользователя по проектам страницы (для «Пригласить» / «Отозвать»). */
+      let inviteeApplicationByProjectId = new Map();
+      const inviteeMemberProjectIds = new Set();
+      if (inviteeIdValid && page.length) {
+        const projectIds = page.map((p) => p.id);
+        const [apps, inviteeMemberships] = await Promise.all([
+          prisma.projectApplication.findMany({
+            where: {
+              projectId: { in: projectIds },
+              applicantId: String(inviteeIdRaw),
+            },
+          }),
+          prisma.projectMember.findMany({
+            where: {
+              projectId: { in: projectIds },
+              userId: String(inviteeIdRaw),
+            },
+            select: { projectId: true },
+          }),
+        ]);
+        for (const a of apps) {
+          inviteeApplicationByProjectId.set(a.projectId, {
+            id: a.id,
+            status: a.status,
+          });
+        }
+        for (const m of inviteeMemberships) {
+          inviteeMemberProjectIds.add(m.projectId);
+        }
+      }
+
+      const items = page.map((p) => {
+        const normalized = normalizeProjectForApi(p);
+        return {
+          ...normalized,
+          inviteeApplication: inviteeIdValid
+            ? (inviteeApplicationByProjectId.get(p.id) ?? null)
+            : null,
+          inviteeIsMember: inviteeIdValid
+            ? inviteeMemberProjectIds.has(p.id)
+            : false,
+        };
+      });
+      const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
+
+      res.json({
+        items: sanitizeUser(items),
+        nextCursor,
+      });
+    } catch (error) {
+      console.error("Error in listManagedProjects", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
   getProjectById: async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
@@ -333,6 +460,7 @@ const ProjectController = {
       const myApplication = await prisma.projectApplication.findFirst({
         where: { projectId: id, applicantId: String(userId) },
         orderBy: { createdAt: "desc" },
+        include: { invitedBy: true },
       });
 
       let applications = undefined;
@@ -341,7 +469,10 @@ const ProjectController = {
       ) {
         applications = await prisma.projectApplication.findMany({
           where: { projectId: id },
-          include: { applicant: { include: { skills: true } } },
+          include: {
+            applicant: { include: { skills: true } },
+            invitedBy: true,
+          },
           orderBy: { createdAt: "desc" },
         });
       }

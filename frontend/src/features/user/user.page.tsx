@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { href, useNavigate, useParams } from "react-router";
 
+import { UserProfileInviteBlock } from "./ui/user-profile-invite-block";
 import { UserProfileView } from "./ui/user-profile-view";
 
 import { selectCurrentUser, useGetUserByIdQuery } from "@/features/auth";
@@ -61,10 +62,16 @@ function UserPage() {
               editProfileHref={editHref}
               followAction={
                 !isOwner ? (
-                  <FollowToggleButton
-                    targetUserId={user.id}
-                    isFollowing={Boolean(user.isFollowing)}
-                  />
+                  <div
+                    key={user.id}
+                    className="flex flex-col items-end gap-2 sm:flex-row sm:items-center"
+                  >
+                    <FollowToggleButton
+                      targetUserId={user.id}
+                      isFollowing={Boolean(user.isFollowing)}
+                    />
+                    <UserProfileInviteBlock inviteeUser={user} />
+                  </div>
                 ) : undefined
               }
             />
