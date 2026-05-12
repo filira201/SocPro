@@ -18,6 +18,11 @@ import {
   projectEditSchema,
   type ProjectEditFormValues,
 } from "../model/project-edit-schema";
+import {
+  PROJECT_DESCRIPTION_MAX,
+  PROJECT_GOALS_MAX,
+  PROJECT_TITLE_MAX,
+} from "../model/project-field-limits";
 import type { ProjectDetail } from "../model/types";
 
 import { ProjectRequiredSkillsField } from "./project-required-skills-field";
@@ -239,9 +244,13 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
             <Input
               id="edit-project-title"
               autoComplete="off"
+              maxLength={PROJECT_TITLE_MAX}
               aria-invalid={Boolean(errors.title)}
               {...register("title")}
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Обязательно, до {PROJECT_TITLE_MAX} символов.
+            </p>
             {errors.title?.message ? (
               <FieldError>{errors.title.message}</FieldError>
             ) : null}
@@ -254,10 +263,14 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
             <Textarea
               id="edit-project-description"
               rows={6}
+              maxLength={PROJECT_DESCRIPTION_MAX}
               className="min-h-[120px] resize-y"
               aria-invalid={Boolean(errors.description)}
               {...register("description")}
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Обязательно, до {PROJECT_DESCRIPTION_MAX} символов.
+            </p>
             {errors.description?.message ? (
               <FieldError>{errors.description.message}</FieldError>
             ) : null}
@@ -270,10 +283,14 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
             <Textarea
               id="edit-project-goals"
               rows={4}
+              maxLength={PROJECT_GOALS_MAX}
               className="min-h-[96px] resize-y"
               aria-invalid={Boolean(errors.goals)}
               {...register("goals")}
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Обязательно, до {PROJECT_GOALS_MAX} символов.
+            </p>
             {errors.goals?.message ? (
               <FieldError>{errors.goals.message}</FieldError>
             ) : null}

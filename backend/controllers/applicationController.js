@@ -4,6 +4,7 @@ const {
   projectAcceptsApplications,
 } = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
+const { normalizeApplicationMessage } = require("../lib/project-field-limits");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -64,11 +65,16 @@ const ApplicationController = {
         return res.status(400).json({ error: "Заявка уже существует" });
       }
 
+      const msg = normalizeApplicationMessage(message);
+      if (msg.error) {
+        return res.status(400).json({ error: msg.error });
+      }
+
       const application = await prisma.projectApplication.create({
         data: {
           projectId,
           applicantId,
-          message: message ? String(message) : undefined,
+          message: msg.value,
         },
       });
 
@@ -160,11 +166,16 @@ const ApplicationController = {
         return res.status(400).json({ error: "Заявка уже существует" });
       }
 
+      const msg = normalizeApplicationMessage(message);
+      if (msg.error) {
+        return res.status(400).json({ error: msg.error });
+      }
+
       const application = await prisma.projectApplication.create({
         data: {
           projectId,
           applicantId: inviteeIdStr,
-          message: message ? String(message) : undefined,
+          message: msg.value,
           invitedById: invitingUserId,
         },
       });

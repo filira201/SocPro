@@ -164,8 +164,11 @@ model SkillAlias {
 
 model Project {
   id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  /// Обязательно непустое после trim, до 500 символов — проверка в API.
   title       String
+  /// Обязательно непустое после trim, до 5000 символов — проверка в API.
   description String
+  /// Обязательно непустое после trim, до 5000 символов — проверка в API.
   goals       String
   status      ProjectStatus @default(OPEN)
   /** Последнее изменение поля status (для UI «время в текущем статусе»). */
@@ -225,6 +228,7 @@ model ProjectApplication {
   /** Кто принял или отклонил заявку (владелец/админ); при принятии приглашения самим приглашённым — он же. */
   decidedById String?           @db.ObjectId
   decidedBy   User?             @relation("ApplicationDecidedBy", fields: [decidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  /// До 1000 символов после trim; пустое не сохраняется (undefined) — проверка в API.
   message     String?
   status      ApplicationStatus @default(PENDING)
   createdAt   DateTime          @default(now())

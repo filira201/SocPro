@@ -10,6 +10,8 @@ import {
   useApplyToProjectMutation,
   useCancelApplicationMutation,
 } from "../api/projects.api";
+import { projectApplicationMessageSchema } from "../model/project-application-message-schema";
+import { PROJECT_APPLICATION_MESSAGE_MAX } from "../model/project-field-limits";
 import type { ProjectDetail } from "../model/types";
 
 import { displayPublicName } from "@/features/auth";
@@ -71,7 +73,9 @@ function ApplyToProjectDialog({
         <DialogHeader>
           <DialogTitle>Заявка на участие</DialogTitle>
           <DialogDescription>
-            Необязательно кратко расскажите, чем можете быть полезны проекту.
+            По желанию кратко расскажите, чем можете быть полезны проекту (до{" "}
+            {PROJECT_APPLICATION_MESSAGE_MAX} символов; можно отправить без
+            текста).
           </DialogDescription>
         </DialogHeader>
         <div className="-mx-4 max-h-[50vh] overflow-y-auto overflow-x-hidden overscroll-contain px-4">
@@ -80,6 +84,7 @@ function ApplyToProjectDialog({
             onChange={(e) => onMessageChange(e.target.value)}
             placeholder="Сообщение для организаторов…"
             rows={4}
+            maxLength={PROJECT_APPLICATION_MESSAGE_MAX}
             className="min-h-24 max-h-[42vh] resize-y wrap-break-word"
           />
           {error ? (
@@ -134,10 +139,20 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
   const handleApply = async () => {
     setError(null);
 
+    const parsed = projectApplicationMessageSchema.safeParse(message);
+
+    if (!parsed.success) {
+      setError(
+        parsed.error.issues[0]?.message ?? "Некорректное сообщение для заявки"
+      );
+
+      return;
+    }
+
     try {
       await apply({
         projectId: project.id,
-        body: { message: message.trim() || undefined },
+        body: { message: parsed.data || undefined },
       }).unwrap();
       setOpen(false);
       setMessage("");

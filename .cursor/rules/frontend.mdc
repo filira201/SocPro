@@ -115,7 +115,7 @@ navigate(href(ROUTES.USER_PROFILE_EDIT, { userId: user.id }));
 
 ### URL и ленты с фильтрами
 
-- **Проекты** (`use-projects-feed-url`, [frontend/src/features/projects/model/projects-feed-params.ts](frontend/src/features/projects/model/projects-feed-params.ts)): в querystring синхронизируются `q`, `member` (`1`), **`accepting`** (`1` — только проекты с `acceptingApplications`), `skills` (CSV id навыков), `sort` (`old` | по умолчанию новые первые).
+- **Проекты** (`use-projects-feed-url`, [frontend/src/features/projects/model/projects-feed-params.ts](frontend/src/features/projects/model/projects-feed-params.ts)): в querystring синхронизируются `q`, `member` (`1`), **`accepting`** (`1` — только проекты с `acceptingApplications`), `skills` (CSV id навыков), `sort` (`old` | по умолчанию новые первые). Лимиты полей карточки проекта и сообщения заявки — константы [frontend/src/features/projects/model/project-field-limits.ts](frontend/src/features/projects/model/project-field-limits.ts), zod-схемы `project-create-schema` / `project-edit-schema` / `project-application-message-schema`.
 - **Каталог пользователей** (`/users`, `use-users-directory-url`): `q`, `skills` (как у проектов), лимит навыков в URL — см. `MAX_PROJECT_FEED_SKILL_IDS` / общий парсер в `projects-feed-params`.
 - **Подписчики / подписки**: параметр `q` (ФИО), debounce записи в URL — `use-follow-list-url`.
 

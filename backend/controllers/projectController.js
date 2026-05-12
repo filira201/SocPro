@@ -10,6 +10,13 @@ const {
   MAX_PROJECT_ATTACHMENTS,
   PROJECT_ATTACHMENTS_LIMIT_ERROR,
 } = require("../lib/project-attachments");
+const {
+  validateProjectTextsForCreate,
+  validateProjectTextForUpdate,
+  PROJECT_TITLE_MAX,
+  PROJECT_DESCRIPTION_MAX,
+  PROJECT_GOALS_MAX,
+} = require("../lib/project-field-limits");
 const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
@@ -139,16 +146,12 @@ const ProjectController = {
     const ownerId = req.user.userId;
     const files = req.files || [];
 
-    const title = String(req.body.title ?? "").trim();
-    const description = String(req.body.description ?? "").trim();
-    const goals = String(req.body.goals ?? "").trim();
-
-    if (!title || !description || !goals) {
+    const texts = validateProjectTextsForCreate(req.body);
+    if (texts.error) {
       await unlinkMulterFiles(files);
-      return res.status(400).json({
-        error: "Название, описание и цели обязательны",
-      });
+      return res.status(400).json({ error: texts.error });
     }
+    const { title, description, goals } = texts;
 
     if (files.length > MAX_PROJECT_ATTACHMENTS) {
       await unlinkMulterFiles(files);
@@ -562,28 +565,48 @@ const ProjectController = {
 
       const { title, description, goals, status } = req.body;
 
-      const data = {
-        title:
-          title !== undefined ? String(title).trim() || undefined : undefined,
-        description:
-          description !== undefined
-            ? String(description).trim() || undefined
-            : undefined,
-        goals:
-          goals !== undefined ? String(goals).trim() || undefined : undefined,
-      };
+      const data = {};
 
-      if (data.title !== undefined && !data.title) {
+      const titleCheck = validateProjectTextForUpdate(
+        title,
+        PROJECT_TITLE_MAX,
+        `Название слишком длинное (не более ${PROJECT_TITLE_MAX} символов)`,
+        "Укажите название проекта",
+      );
+      if (titleCheck.error) {
         await unlinkMulterFiles(files);
-        return res.status(400).json({ error: "Укажите название проекта" });
+        return res.status(400).json({ error: titleCheck.error });
       }
-      if (data.description !== undefined && !data.description) {
-        await unlinkMulterFiles(files);
-        return res.status(400).json({ error: "Укажите описание" });
+      if (titleCheck.value !== undefined) {
+        data.title = titleCheck.value;
       }
-      if (data.goals !== undefined && !data.goals) {
+
+      const descriptionCheck = validateProjectTextForUpdate(
+        description,
+        PROJECT_DESCRIPTION_MAX,
+        `Описание слишком длинное (не более ${PROJECT_DESCRIPTION_MAX} символов)`,
+        "Укажите описание",
+      );
+      if (descriptionCheck.error) {
         await unlinkMulterFiles(files);
-        return res.status(400).json({ error: "Укажите цели" });
+        return res.status(400).json({ error: descriptionCheck.error });
+      }
+      if (descriptionCheck.value !== undefined) {
+        data.description = descriptionCheck.value;
+      }
+
+      const goalsCheck = validateProjectTextForUpdate(
+        goals,
+        PROJECT_GOALS_MAX,
+        `Цели слишком длинные (не более ${PROJECT_GOALS_MAX} символов)`,
+        "Укажите цели",
+      );
+      if (goalsCheck.error) {
+        await unlinkMulterFiles(files);
+        return res.status(400).json({ error: goalsCheck.error });
+      }
+      if (goalsCheck.value !== undefined) {
+        data.goals = goalsCheck.value;
       }
 
       if (status !== undefined) {

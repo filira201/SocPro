@@ -82,6 +82,7 @@ res.json({ ...sanitizeUser(project), isOwner });
   if (!body.field) return res.status(400).json({ error: "Поле обязательно" });
   ```
 - Email regex: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`. Пароль: `length >= 6` (см. `_utils`).
+- Проекты и заявки: `title` / `description` / `goals` — обязательны непустые после trim, макс. **500** / **5000** / **5000**; сообщение заявки/приглашения — до **1000** символов после trim, пустое допустимо — хелперы в [backend/lib/project-field-limits.js](backend/lib/project-field-limits.js); константы на фронте — [frontend/src/features/projects/model/project-field-limits.ts](frontend/src/features/projects/model/project-field-limits.ts).
 
 ## Авторизация
 

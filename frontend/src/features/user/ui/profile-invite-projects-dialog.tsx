@@ -7,6 +7,8 @@ import {
   useGetManagedProjectsListQuery,
   useInviteUserToProjectMutation,
 } from "@/features/projects/api/projects.api";
+import { projectApplicationMessageSchema } from "@/features/projects/model/project-application-message-schema";
+import { PROJECT_APPLICATION_MESSAGE_MAX } from "@/features/projects/model/project-field-limits";
 import type { ManagedProjectListItem } from "@/features/projects/model/types";
 import { ProjectCard } from "@/features/projects/ui/project-card";
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
@@ -321,11 +323,21 @@ export function ProfileInviteProjectsDialog({
 
     setInviteError(null);
 
+    const parsed = projectApplicationMessageSchema.safeParse(inviteMessage);
+
+    if (!parsed.success) {
+      setInviteError(
+        parsed.error.issues[0]?.message ?? "Некорректное сообщение"
+      );
+
+      return;
+    }
+
     try {
       await invite({
         projectId: inviteProject.id,
         inviteeId,
-        body: { message: inviteMessage.trim() || undefined },
+        body: { message: parsed.data || undefined },
       }).unwrap();
       setInviteProject(null);
       setInviteMessage("");
@@ -423,8 +435,9 @@ export function ProfileInviteProjectsDialog({
             <DialogDescription>
               {inviteProject ? (
                 <>
-                  Проект «{inviteProject.title}». Необязательно добавьте
-                  сообщение для пользователя {inviteePublicTitle}.
+                  Проект «{inviteProject.title}». По желанию добавьте сообщение
+                  для пользователя {inviteePublicTitle} (до{" "}
+                  {PROJECT_APPLICATION_MESSAGE_MAX} символов; можно без текста).
                 </>
               ) : null}
             </DialogDescription>
@@ -435,6 +448,7 @@ export function ProfileInviteProjectsDialog({
               onChange={(e) => setInviteMessage(e.target.value)}
               placeholder="Сообщение…"
               rows={4}
+              maxLength={PROJECT_APPLICATION_MESSAGE_MAX}
               className="min-h-24 max-h-[42vh] resize-y wrap-break-word"
               disabled={inviteBusy}
             />
