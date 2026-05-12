@@ -214,6 +214,7 @@ const ApplicationController = {
         include: {
           applicant: { include: { skills: true } },
           invitedBy: true,
+          decidedBy: true,
         },
         orderBy: { createdAt: "desc" },
       });
@@ -276,7 +277,11 @@ const ApplicationController = {
       const results = await prisma.$transaction([
         prisma.projectApplication.update({
           where: { id },
-          data: { status: "ACCEPTED", decidedAt: new Date() },
+          data: {
+            status: "ACCEPTED",
+            decidedAt: new Date(),
+            decidedById: userId,
+          },
         }),
         prisma.projectMember.upsert({
           where: {
@@ -349,7 +354,11 @@ const ApplicationController = {
         const results = await prisma.$transaction([
           prisma.projectApplication.update({
             where: { id },
-            data: { status: "ACCEPTED", decidedAt: new Date() },
+            data: {
+              status: "ACCEPTED",
+              decidedAt: new Date(),
+              decidedById: userId,
+            },
           }),
           prisma.projectMember.upsert({
             where: {
@@ -371,7 +380,11 @@ const ApplicationController = {
 
       const updated = await prisma.projectApplication.update({
         where: { id },
-        data: { status: "REJECTED", decidedAt: new Date() },
+        data: {
+          status: "REJECTED",
+          decidedAt: new Date(),
+          decidedById: userId,
+        },
       });
       res.json(updated);
     } catch (error) {

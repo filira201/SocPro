@@ -1,5 +1,6 @@
 import { SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { href, Link } from "react-router";
 
 import {
   useCancelApplicationMutation,
@@ -10,6 +11,7 @@ import type { ManagedProjectListItem } from "@/features/projects/model/types";
 import { ProjectCard } from "@/features/projects/ui/project-card";
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
 import { useDebouncedValue } from "@/shared/lib/react/use-debounced-value";
+import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import {
   Dialog,
@@ -41,6 +43,7 @@ type ManagedListBlockProps = {
   onInviteProject: (project: ManagedProjectListItem) => void;
   onWithdrawProject: (project: ManagedProjectListItem) => void;
   withdrawBusyId: string | null;
+  onCloseMain: () => void;
 };
 
 function ManagedProjectsInviteListBlock({
@@ -50,6 +53,7 @@ function ManagedProjectsInviteListBlock({
   onInviteProject,
   onWithdrawProject,
   withdrawBusyId,
+  onCloseMain,
 }: ManagedListBlockProps) {
   const [cursor, setCursor] = useState<string | null>(null);
   const requestedCursors = useRef(new Set<string | null>([null]));
@@ -129,6 +133,7 @@ function ManagedProjectsInviteListBlock({
                 onInvite={() => onInviteProject(project)}
                 onWithdraw={() => onWithdrawProject(project)}
                 withdrawBusy={withdrawBusyId === project.inviteeApplication?.id}
+                onCloseMain={onCloseMain}
               />
             </li>
           ))}
@@ -180,15 +185,20 @@ function ManagedProjectInviteRow({
   onInvite,
   onWithdraw,
   withdrawBusy,
+  onCloseMain,
 }: {
   project: ManagedProjectListItem;
   onInvite: () => void;
   onWithdraw: () => void;
   withdrawBusy: boolean;
+  onCloseMain: () => void;
 }) {
   const isMember = project.inviteeIsMember === true;
   const app = project.inviteeApplication;
   const accepting = project.acceptingApplications;
+  const pendingIsOrganizerInvite = Boolean(
+    app?.status === "PENDING" && (app.invitedById ?? "").length > 0
+  );
 
   let action: ReactNode;
 
@@ -204,7 +214,7 @@ function ManagedProjectInviteRow({
         Проект не принимает заявки
       </span>
     );
-  } else if (app?.status === "PENDING") {
+  } else if (app?.status === "PENDING" && pendingIsOrganizerInvite) {
     action = (
       <Button
         type="button"
@@ -213,7 +223,21 @@ function ManagedProjectInviteRow({
         disabled={withdrawBusy}
         onClick={onWithdraw}
       >
-        {withdrawBusy ? "Отзыв…" : "Отозвать заявку"}
+        {withdrawBusy ? "Отзыв…" : "Отозвать приглашение"}
+      </Button>
+    );
+  } else if (app?.status === "PENDING") {
+    const toProjectApplications = `${href(ROUTES.PROJECT_DETAILS, { id: project.id })}?tab=applications`;
+    action = (
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-auto min-h-0 whitespace-normal px-2 py-2 text-sm font-medium underline-offset-4 hover:underline"
+        asChild
+      >
+        <Link to={toProjectApplications} onClick={() => onCloseMain()}>
+          Заявка подана от пользователя открыть проект
+        </Link>
       </Button>
     );
   } else if (app?.status === "ACCEPTED") {
@@ -345,9 +369,9 @@ export function ProfileInviteProjectsDialog({
           <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>Заявки</DialogTitle>
             <DialogDescription>
-              Проекты, где вы автор или администратор. Приглашение для{" "}
-              {inviteePublicTitle}: создаётся заявка на участие (как при подаче
-              заявки пользователем самостоятельно).
+              Проекты, где вы автор или администратор. Приглашение для
+              пользователя {inviteePublicTitle}: будет создана заявка на
+              участие.
             </DialogDescription>
           </DialogHeader>
 
@@ -376,6 +400,7 @@ export function ProfileInviteProjectsDialog({
                 onInviteProject={setInviteProject}
                 onWithdrawProject={setWithdrawProject}
                 withdrawBusyId={withdrawBusyId}
+                onCloseMain={() => handleMainOpenChange(false)}
               />
             </div>
           </div>
@@ -399,7 +424,7 @@ export function ProfileInviteProjectsDialog({
               {inviteProject ? (
                 <>
                   Проект «{inviteProject.title}». Необязательно добавьте
-                  сообщение для {inviteePublicTitle}.
+                  сообщение для пользователя {inviteePublicTitle}.
                 </>
               ) : null}
             </DialogDescription>
@@ -456,12 +481,12 @@ export function ProfileInviteProjectsDialog({
       >
         <DialogContent className="max-w-md gap-4">
           <DialogHeader>
-            <DialogTitle>Отозвать заявку?</DialogTitle>
+            <DialogTitle>Отозвать приглашение?</DialogTitle>
             <DialogDescription>
               {withdrawProject ? (
                 <>
-                  Заявка на проект «{withdrawProject.title}» для{" "}
-                  {inviteePublicTitle} будет удалена. При необходимости можно
+                  Приглашение на проект «{withdrawProject.title}» для{" "}
+                  {inviteePublicTitle} будет снято. При необходимости можно
                   отправить приглашение снова.
                 </>
               ) : null}

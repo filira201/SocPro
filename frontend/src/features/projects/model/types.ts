@@ -53,6 +53,8 @@ export type ProjectListItem = {
 export type InviteeApplicationSummary = {
   id: string;
   status: string;
+  /** Если задано — заявка создана как приглашение; иначе пользователь подал заявку сам. */
+  invitedById?: string | null;
 } | null;
 
 /** Элемент списка «мои проекты как автор/админ» с контекстом приглашения. */
@@ -121,6 +123,8 @@ export type ProjectDetail = {
     decidedAt?: string | null;
     invitedById?: string | null;
     invitedBy?: User | null;
+    decidedById?: string | null;
+    decidedBy?: User | null;
   } | null;
   applications?: ProjectApplication[];
   attachments?: ProjectAttachment[];
@@ -138,6 +142,8 @@ export type ProjectApplication = {
   status: "PENDING" | "ACCEPTED" | "REJECTED" | string;
   createdAt: string;
   decidedAt?: string | null;
+  decidedById?: string | null;
+  decidedBy?: User | null;
   applicant: User & { skills?: Skill[] };
 };
 

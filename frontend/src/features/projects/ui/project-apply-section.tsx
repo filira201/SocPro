@@ -46,6 +46,72 @@ function isInsideInteractiveTarget(target: EventTarget | null) {
   return Boolean(target.closest("a, button"));
 }
 
+function ApplyToProjectDialog({
+  open,
+  onOpenChange,
+  message,
+  onMessageChange,
+  error,
+  busy,
+  applying,
+  onApply,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  message: string;
+  onMessageChange: (value: string) => void;
+  error: string | null;
+  busy: boolean;
+  applying: boolean;
+  onApply: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md gap-4">
+        <DialogHeader>
+          <DialogTitle>Заявка на участие</DialogTitle>
+          <DialogDescription>
+            Необязательно кратко расскажите, чем можете быть полезны проекту.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="-mx-4 max-h-[50vh] overflow-y-auto overflow-x-hidden overscroll-contain px-4">
+          <Textarea
+            value={message}
+            onChange={(e) => onMessageChange(e.target.value)}
+            placeholder="Сообщение для организаторов…"
+            rows={4}
+            className="min-h-24 max-h-[42vh] resize-y wrap-break-word"
+          />
+          {error ? (
+            <p className="mt-2 text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <DialogFooter className="gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => onOpenChange(false)}
+            disabled={busy}
+          >
+            Отмена
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            disabled={busy}
+            onClick={() => onApply()}
+          >
+            {applying ? "Отправка…" : "Отправить"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type ProjectApplySectionProps = {
   project: ProjectDetail;
 };
@@ -194,6 +260,67 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
 
   if (project.isMember) {
     return null;
+  }
+
+  if (my && my.status === "REJECTED") {
+    return (
+      <>
+        <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-4 text-sm">
+          <p className="font-medium text-foreground">Заявка отклонена</p>
+          {my.decidedBy ? (
+            <p className="mt-1 text-muted-foreground">
+              <span>Отклонил(а): </span>
+              <Link
+                to={href(ROUTES.USER_DETAILS, { userId: my.decidedBy.id })}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {displayPublicName(my.decidedBy)}
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Для этой записи не сохранено, кто принял решение.
+            </p>
+          )}
+          {my.decidedAt ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatAt(my.decidedAt)}
+            </p>
+          ) : null}
+          {project.acceptingApplications ? (
+            <>
+              <p className="mt-2 text-xs text-muted-foreground">
+                При необходимости вы можете подать заявку ещё раз.
+              </p>
+              <Button
+                type="button"
+                className="mt-3"
+                onClick={() => {
+                  setError(null);
+                  setOpen(true);
+                }}
+              >
+                Подать заявку снова
+              </Button>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Проект сейчас не принимает новые заявки.
+            </p>
+          )}
+        </div>
+        <ApplyToProjectDialog
+          open={open}
+          onOpenChange={setOpen}
+          message={message}
+          onMessageChange={setMessage}
+          error={error}
+          busy={busy}
+          applying={applying}
+          onApply={() => void handleApply()}
+        />
+      </>
+    );
   }
 
   if (isPendingInvitation && my) {
@@ -460,49 +587,16 @@ export function ProjectApplySection({ project }: ProjectApplySectionProps) {
         Подать заявку
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md gap-4">
-          <DialogHeader>
-            <DialogTitle>Заявка на участие</DialogTitle>
-            <DialogDescription>
-              Необязательно кратко расскажите, чем можете быть полезны проекту.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="-mx-4 max-h-[50vh] overflow-y-auto overflow-x-hidden overscroll-contain px-4">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Сообщение для организаторов…"
-              rows={4}
-              className="min-h-24 max-h-[42vh] resize-y wrap-break-word"
-            />
-            {error ? (
-              <p className="mt-2 text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter className="gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => setOpen(false)}
-              disabled={busy}
-            >
-              Отмена
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              disabled={busy}
-              onClick={() => void handleApply()}
-            >
-              {applying ? "Отправка…" : "Отправить"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ApplyToProjectDialog
+        open={open}
+        onOpenChange={setOpen}
+        message={message}
+        onMessageChange={setMessage}
+        error={error}
+        busy={busy}
+        applying={applying}
+        onApply={() => void handleApply()}
+      />
     </div>
   );
 }

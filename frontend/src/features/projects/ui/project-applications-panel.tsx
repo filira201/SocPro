@@ -43,6 +43,42 @@ function isOrganizerInvitation(app: ProjectApplication): boolean {
   return Boolean(app.invitedById ?? app.invitedBy);
 }
 
+function DecidedBySnippet({
+  app,
+  stopLinkPropagation,
+}: {
+  app: ProjectApplication;
+  /** На карточке-`li` останавливаем всплытие клика по ссылке. */
+  stopLinkPropagation?: boolean;
+}) {
+  if (app.status === "PENDING" || !app.decidedBy) {
+    return null;
+  }
+
+  const invitation = isOrganizerInvitation(app);
+  const deciderLabel =
+    app.status === "REJECTED"
+      ? "Отклонил(а)"
+      : invitation
+        ? "Приглашение принял(а)"
+        : "Принял(а)";
+
+  return (
+    <p className="text-sm">
+      <span className="text-muted-foreground">{deciderLabel}: </span>
+      <Link
+        to={href(ROUTES.USER_DETAILS, { userId: app.decidedBy.id })}
+        className="font-medium text-foreground underline-offset-4 hover:underline"
+        {...(stopLinkPropagation
+          ? { onClick: (e) => e.stopPropagation() }
+          : {})}
+      >
+        {displayPublicName(app.decidedBy)}
+      </Link>
+    </p>
+  );
+}
+
 function formatAt(iso: string | undefined) {
   if (!iso) {
     return "—";
@@ -293,6 +329,7 @@ export function ProjectApplicationsPanel({
                         Решение {formatAt(app.decidedAt)}
                       </p>
                     ) : null}
+                    <DecidedBySnippet app={app} stopLinkPropagation />
                   </>
                 )}
 
@@ -466,6 +503,7 @@ export function ProjectApplicationsPanel({
                                 Решение {formatAt(detailApp.decidedAt)}
                               </p>
                             ) : null}
+                            <DecidedBySnippet app={detailApp} />
                           </>
                         )}
 
@@ -557,7 +595,7 @@ export function ProjectApplicationsPanel({
             <DialogDescription>
               {withdrawInviteTarget ? (
                 <>
-                  Приглашение для{" "}
+                  Приглашение для пользователя{" "}
                   {displayPublicName(withdrawInviteTarget.applicant)} будет
                   удалено. При необходимости можно отправить снова.
                 </>

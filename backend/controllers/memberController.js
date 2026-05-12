@@ -197,7 +197,11 @@ const MemberController = {
             applicantId: targetUserId,
             status: "ACCEPTED",
           },
-          data: { status: "REJECTED", decidedAt: new Date() },
+          data: {
+            status: "REJECTED",
+            decidedAt: new Date(),
+            decidedById: requesterId,
+          },
         }),
       ]);
 

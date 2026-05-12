@@ -383,6 +383,7 @@ const ProjectController = {
               projectId: { in: projectIds },
               applicantId: String(inviteeIdRaw),
             },
+            orderBy: { createdAt: "desc" },
           }),
           prisma.projectMember.findMany({
             where: {
@@ -393,10 +394,14 @@ const ProjectController = {
           }),
         ]);
         for (const a of apps) {
-          inviteeApplicationByProjectId.set(a.projectId, {
-            id: a.id,
-            status: a.status,
-          });
+          if (!inviteeApplicationByProjectId.has(a.projectId)) {
+            inviteeApplicationByProjectId.set(a.projectId, {
+              id: a.id,
+              status: a.status,
+              /** Если задано — это приглашение от вас/админа; иначе соискатель подал заявку сам. */
+              invitedById: a.invitedById ?? null,
+            });
+          }
         }
         for (const m of inviteeMemberships) {
           inviteeMemberProjectIds.add(m.projectId);
@@ -460,7 +465,7 @@ const ProjectController = {
       const myApplication = await prisma.projectApplication.findFirst({
         where: { projectId: id, applicantId: String(userId) },
         orderBy: { createdAt: "desc" },
-        include: { invitedBy: true },
+        include: { invitedBy: true, decidedBy: true },
       });
 
       let applications = undefined;
@@ -472,6 +477,7 @@ const ProjectController = {
           include: {
             applicant: { include: { skills: true } },
             invitedBy: true,
+            decidedBy: true,
           },
           orderBy: { createdAt: "desc" },
         });

@@ -50,6 +50,8 @@ model User {
   applications  ProjectApplication[] @relation("ApplicationApplicant")
   /** Заявки, созданные этим пользователем как приглашения (invitedBy). */
   sentProjectInvitations ProjectApplication[] @relation("ApplicationInvitedBy")
+  /** Заявки/приглашения, по которым этот пользователь принял решение (принял/отклонил). */
+  decidedProjectApplications ProjectApplication[] @relation("ApplicationDecidedBy")
 }
 
 model Follows {
@@ -220,12 +222,16 @@ model ProjectApplication {
   /** Если задано — заявка создана владельцем/админом как приглашение, а не самим соискателем. */
   invitedById String?           @db.ObjectId
   invitedBy   User?             @relation("ApplicationInvitedBy", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  /** Кто принял или отклонил заявку (владелец/админ); при принятии приглашения самим приглашённым — он же. */
+  decidedById String?           @db.ObjectId
+  decidedBy   User?             @relation("ApplicationDecidedBy", fields: [decidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   message     String?
   status      ApplicationStatus @default(PENDING)
   createdAt   DateTime          @default(now())
   decidedAt   DateTime?
 
-  @@unique([projectId, applicantId])
+  /** Не более одной активной PENDING/ACCEPTED на пару (projectId, applicantId) — проверка в приложении. */
+  @@index([projectId, applicantId])
 }
 
 enum ProjectStatus {
