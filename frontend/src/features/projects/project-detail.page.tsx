@@ -73,7 +73,7 @@ function ProjectDetailPage() {
         className="text-muted-foreground"
         onClick={() => navigate(-1)}
       >
-        Назад к проектам
+        Назад
       </Button>
 
       {invalidId ? (
