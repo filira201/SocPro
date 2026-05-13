@@ -1,4 +1,5 @@
 import { io, type Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 import { store } from "@/app/store";
 import { api } from "@/shared/api/api";
@@ -11,6 +12,10 @@ const INVALIDATE_TAGS = [
   { type: "Notification" as const, id: "UNREAD_COUNT" },
 ];
 
+function invalidateNotificationQueries() {
+  store.dispatch(api.util.invalidateTags(INVALIDATE_TAGS));
+}
+
 export function connectNotificationsSocket(token: string) {
   disconnectNotificationsSocket();
 
@@ -20,8 +25,16 @@ export function connectNotificationsSocket(token: string) {
     transports: ["websocket", "polling"],
   });
 
+  socket.on("notifications:new", () => {
+    toast.info("У вас новое уведомление", {
+      /** Sonner: без автозакрытия, только крестик / свайп (см. исходники sonner). */
+      duration: Number.POSITIVE_INFINITY,
+    });
+    invalidateNotificationQueries();
+  });
+
   socket.on("notifications:invalidate", () => {
-    store.dispatch(api.util.invalidateTags(INVALIDATE_TAGS));
+    invalidateNotificationQueries();
   });
 }
 

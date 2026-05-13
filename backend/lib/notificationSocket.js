@@ -59,7 +59,7 @@ function attachNotificationSocket(httpServer) {
 }
 
 /**
- * Сообщить клиенту перезапросить список уведомлений и счётчик непрочитанных.
+ * Сообщить клиенту перезапросить список уведомлений и счётчик (без тоста: прочитано и т.п.).
  * @param {string} userId
  */
 function emitNotificationsInvalidate(userId) {
@@ -69,7 +69,19 @@ function emitNotificationsInvalidate(userId) {
   io.to(`user:${userId}`).emit("notifications:invalidate");
 }
 
+/**
+ * Новое входящее уведомление: клиент показывает тост и обновляет данные.
+ * @param {string} userId
+ */
+function emitNotificationCreated(userId) {
+  if (!io || !userId) {
+    return;
+  }
+  io.to(`user:${userId}`).emit("notifications:new");
+}
+
 module.exports = {
   attachNotificationSocket,
   emitNotificationsInvalidate,
+  emitNotificationCreated,
 };
