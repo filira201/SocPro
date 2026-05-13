@@ -8,6 +8,7 @@ const {
   sanitizeUser,
   displayPublicName,
 } = require("./_utils");
+const { createNotification } = require("../lib/notifications");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_LIMIT = 10;
@@ -193,17 +194,19 @@ const CommentController = {
     try {
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true },
+        select: { id: true, authorId: true },
       });
 
       if (!post) {
         return res.status(404).json({ error: "Пост не найден" });
       }
 
+      let parentComment = null;
+
       if (parentId) {
-        const parentComment = await prisma.comment.findUnique({
+        parentComment = await prisma.comment.findUnique({
           where: { id: String(parentId) },
-          select: { id: true, postId: true },
+          select: { id: true, postId: true, userId: true },
         });
 
         if (!parentComment || parentComment.postId !== postId) {
@@ -235,6 +238,26 @@ const CommentController = {
       });
 
       const created = await getCommentForResponse(comment.id, userId);
+
+      if (!parentId) {
+        if (post.authorId !== userId) {
+          await createNotification(prisma, {
+            receiverId: post.authorId,
+            actorId: userId,
+            type: "POST_COMMENTED",
+            postId,
+            commentId: comment.id,
+          });
+        }
+      } else if (parentComment.userId !== userId) {
+        await createNotification(prisma, {
+          receiverId: parentComment.userId,
+          actorId: userId,
+          type: "COMMENT_REPLIED",
+          postId,
+          commentId: comment.id,
+        });
+      }
 
       res.json(created);
     } catch (error) {
@@ -453,6 +476,9 @@ const CommentController = {
         );
 
       await prisma.$transaction([
+        prisma.notification.deleteMany({
+          where: { commentId: { in: commentIds } },
+        }),
         prisma.commentAttachment.deleteMany({
           where: { commentId: { in: commentIds } },
         }),
@@ -482,18 +508,32 @@ const CommentController = {
     try {
       const comment = await prisma.comment.findUnique({
         where: { id },
-        select: { id: true },
+        select: { id: true, userId: true, postId: true },
       });
 
       if (!comment) {
         return res.status(404).json({ error: "Комментарий не найден" });
       }
 
+      const existingLike = await prisma.commentLike.findFirst({
+        where: { userId, commentId: id },
+      });
+
       await prisma.commentLike.upsert({
         where: { userId_commentId: { userId, commentId: id } },
         update: {},
         create: { userId, commentId: id },
       });
+
+      if (!existingLike && comment.userId !== userId) {
+        await createNotification(prisma, {
+          receiverId: comment.userId,
+          actorId: userId,
+          type: "COMMENT_LIKED",
+          postId: comment.postId,
+          commentId: id,
+        });
+      }
 
       const updated = await getCommentForResponse(id, userId);
 

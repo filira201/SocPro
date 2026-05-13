@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## Сущности
 
-- `User` — `email @unique`, `firstName` (обязательное в бизнес-логике; в ответах API — кириллица без пробелов), `lastName?`, `patronymic?`, `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Публичное отображение имени в ленте и комментариях: «Имя Фамилия» (без `@`); отчество — в карточке профиля. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`.
+- `User` — `email @unique`, `firstName` (обязательное в бизнес-логике; в ответах API — кириллица без пробелов), `lastName?`, `patronymic?`, `password` (хэш, не отдавать в API), `avatarUrl`, `bio`, `dateOfBirth`, `contacts[]` (произвольные строки контактов), `university`, `course`, `faculty`, `resumeUrl`, `resumeOriginalName`, `resumeMimeType`, `resumeSize`, `skillIds[]`. Публичное отображение имени в ленте и комментариях: «Имя Фамилия» (без `@`); отчество — в карточке профиля. Связи: `posts`, `likes`, `comments`, `followers`/`following`, `skills`, `ownedProjects`, `memberships`, `applications`, уведомления: `receivedNotifications`, `actorNotifications`, `subjectNotifications`.
 - `Skill` — `name @unique`, m2m с `User` и `Project`; дочерние `SkillAlias` — нормализованные ключи синонимов (`key @unique`) для слияния вариантов ввода и fuzzy-поиска на backend.
 - `SkillAlias` — `key` (уникальный нормализованный вариант названия), `skillId` → один канонический `Skill`.
 - `Project` — `title` (обязательное непустое после trim, до **500** символов), `description` и `goals` (обязательные непустые после trim, до **5000** каждое; лимиты в API и zod на фронте, в Mongo без жёсткого ограничения в схеме), `status: ProjectStatus` (этап проекта для отображения), `statusUpdatedAt` (когда последний раз меняли `status`; для UI «время в текущем статусе»), `acceptingApplications` (bool — принимаются ли **новые заявки**; не путать со статусом), `ownerId`, `requiredSkillIds[]`, `members`, `applications`, `attachments`. **Инвариант:** не более **10** записей `ProjectAttachment` на один проект (проверка в приложении, не в схеме БД).
@@ -22,6 +22,7 @@ alwaysApply: true
 - `Comment` — `userId`, `postId`, `content`, `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.
 - `CommentAttachment` — файл комментария: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`, `commentId`.
 - `Follows` — `id`, `followerId`, `followingId`, уникальная пара `@@unique([followerId, followingId])`. Для API списков подписчиков/подписок курсор пагинации привязан к **`Follows.id`** (поля `createdAt` у модели нет).
+- `Notification` — входящее уведомление: `receiverId` → `User`, опционально `actorId` (кто совершил действие), опционально `subjectUserId` (второй участник, напр. приглашённый в staff-событиях), `type: NotificationType`, контекстные `postId`, `commentId`, `projectId`, `applicationId`, при удалении проекта — `projectTitleSnapshot`. `readAt?`, `deleteAt?` (см. ниже), `createdAt`. Индексы: `[receiverId, createdAt]`, `[receiverId, readAt]`, `[deleteAt]`.
 
 ## Связи
 
@@ -42,6 +43,7 @@ flowchart LR
   Post -- "has files" --> PostAttachment
   Comment -- "has files" --> CommentAttachment
   User -- "follows" --> User
+  User -- "receives" --> Notification
 ```
 
 ## Enum'ы
@@ -49,6 +51,7 @@ flowchart LR
 - `ProjectStatus { OPEN | IN_PROGRESS | PAUSED | DONE | CLOSED }` — этап проекта: `DONE` — успешно завершён; `CLOSED` — заброшен, развитие не планируется (например `PAUSED` = «на паузе»). При статусах **`DONE`** и **`CLOSED`** новые заявки не принимаются; поле `acceptingApplications` через API не меняют — сервер держит его в `false`.
 - `ApplicationStatus { PENDING | ACCEPTED | REJECTED }` — жизненный цикл **заявки**, не статус проекта.
 - `MemberRole { OWNER | ADMIN | MEMBER }` — владелец; администратор (назначает только owner); участник.
+- `NotificationType` — типы уведомлений (лайк поста/комментария, комментарий/ответ, подписка, заявки/приглашения/роли/исключение/удаление проекта, события для **владельца и ADMIN** проекта: новая заявка, отзыв заявки, отправка и принятие приглашения). Полный перечень — в [backend/prisma/schema.prisma](backend/prisma/schema.prisma).
 
 ### Права на проект (backend)
 
@@ -78,3 +81,4 @@ model Skill {
 - Уникальные пары — через `@@unique([a, b])` (см. `ProjectMember` и др.); у `ProjectApplication` уникальность пары (проект, соискатель) не в схеме — см. описание модели выше.
 - Mongo не требует миграций — после изменения схемы достаточно `prisma generate`. При удалении полей старые документы Prisma игнорирует.
 - Деструктивные операции (удаление проекта/поста) — в `prisma.$transaction([...])` с `deleteMany` для связанных сущностей.
+- **Уведомления и TTL в Mongo:** при отметке «прочитано» выставляются `readAt` и `deleteAt = readAt + 7 суток`. **Непрочитанные** (`readAt` / `deleteAt` не заданы) не получают `deleteAt` и не удаляются по таймеру. TTL-индекс Prisma не создаёт — один раз вручную в MongoDB: `db.Notification.createIndex({ deleteAt: 1 }, { expireAfterSeconds: 0 })` (коллекция по умолчанию совпадает с именем модели).

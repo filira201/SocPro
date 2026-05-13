@@ -52,6 +52,13 @@ model User {
   sentProjectInvitations ProjectApplication[] @relation("ApplicationInvitedBy")
   /** Заявки/приглашения, по которым этот пользователь принял решение (принял/отклонил). */
   decidedProjectApplications ProjectApplication[] @relation("ApplicationDecidedBy")
+
+  /** Входящие уведомления (получатель). */
+  receivedNotifications Notification[] @relation("NotificationReceiver")
+  /** Исходящие действия в уведомлениях (кто лайкнул, прокомментировал и т.д.). */
+  actorNotifications Notification[] @relation("NotificationActor")
+  /** Второй участник события (например приглашённый в уведомлении для staff «A пригласил B»). */
+  subjectNotifications Notification[] @relation("NotificationSubject")
 }
 
 model Follows {
@@ -256,4 +263,93 @@ enum MemberRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+/**
+ * Входящее уведомление одному пользователю.
+ *
+ * Жизненный цикл прочитанных:
+ * - `readAt` заполняется при отметке «прочитано».
+ * - `deleteAt` = момент удаления документа; при прочтении выставляется `readAt + 7 дней`.
+ * - В Mongo вручную создать TTL-индекс: `db.Notification.createIndex({ deleteAt: 1 }, { expireAfterSeconds: 0 })`
+ *   (Prisma не создаёт TTL). Пока `deleteAt` null — документ не истекает (**непрочитанные не удаляются по времени**).
+ */
+model Notification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  receiverId String @db.ObjectId
+  receiver   User   @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  /** Кто совершил действие (лайк, комментарий, подписка, подал заявку и т.д.). Для чисто системных событий может быть null. */
+  actorId String? @db.ObjectId
+  actor   User?   @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /**
+   * Доп. пользователь в смысле события (например приглашённый в `STAFF_INVITE_SENT`:
+   * actor = кто отправил приглашение, subject = кого пригласили).
+   */
+  subjectUserId String? @db.ObjectId
+  subjectUser   User?   @relation("NotificationSubject", fields: [subjectUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  type NotificationType
+
+  /** Маршрутизация в UI (пост/ветка комментариев). */
+  postId    String? @db.ObjectId
+  commentId String? @db.ObjectId
+
+  /** Проектные события; после удаления проекта `projectId` может быть null, см. `projectTitleSnapshot`. */
+  projectId       String? @db.ObjectId
+  applicationId String? @db.ObjectId
+
+  /** Снимок названия для `PROJECT_DELETED`, когда проекта уже нет в БД. */
+  projectTitleSnapshot String?
+
+  readAt   DateTime?
+  /** Заполняется при прочтении: `readAt + 7d` — автоудаление через TTL-индекс по этому полю. */
+  deleteAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([receiverId, createdAt])
+  @@index([receiverId, readAt])
+  @@index([deleteAt])
+}
+
+enum NotificationType {
+  // Лента: лайки и комментарии
+  POST_LIKED
+  COMMENT_LIKED
+  POST_COMMENTED
+  COMMENT_REPLIED
+
+  // Подписки
+  USER_FOLLOWED
+
+  // Проект — соискатель / участник (личные события)
+  /** Пользователь подал заявку (карточка «на какой проект и когда»). */
+  PROJECT_APPLICATION_SUBMITTED_SELF
+  /** Пользователь отозвал свою заявку (аналогичная карточка). */
+  PROJECT_APPLICATION_WITHDRAWN_SELF
+  /** Пользователь отклонил входящее приглашение в проект. */
+  PROJECT_INVITE_DECLINED_SELF
+  /** Заявку приняли или приглашение принято — пользователь стал участником. */
+  PROJECT_APPLICATION_ACCEPTED
+  /** Заявку отклонили (модератор/владелец). */
+  PROJECT_APPLICATION_REJECTED
+  /** Владелец/админ прислал приглашение в проект. */
+  PROJECT_INVITE_RECEIVED
+  /** Назначили роль ADMIN. */
+  PROJECT_MEMBER_PROMOTED_ADMIN
+  /** Сняли роль ADMIN (остался участником). */
+  PROJECT_MEMBER_DEMOTED_FROM_ADMIN
+  /** Исключили из проекта. */
+  PROJECT_MEMBER_REMOVED
+  /** Проект удалён владельцем (участникам/бывшим участникам). */
+  PROJECT_DELETED
+
+  // Проект — владелец и ADMIN (сводка по команде и заявкам)
+  STAFF_NEW_APPLICATION
+  STAFF_APPLICATION_WITHDRAWN
+  STAFF_INVITE_SENT
+  STAFF_INVITE_ACCEPTED
 }

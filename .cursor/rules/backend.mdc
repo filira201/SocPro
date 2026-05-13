@@ -28,7 +28,8 @@ backend/
     projectController.js
     applicationController.js
     memberController.js
-  lib/                       # общая логика без HTTP (напр. user-directory-list.js)
+    notificationController.js
+  lib/                       # общая логика без HTTP (напр. user-directory-list.js, notifications.js)
   prisma/
     schema.prisma
     prismaClient.js
@@ -104,7 +105,8 @@ res.json({ ...sanitizeUser(project), isOwner });
 - **GET `/projects`**: курсор по `Project.id`, `sort`, `member=1` (проекты с участием текущего пользователя), **`accepting=1`** (только `acceptingApplications: true`), `skills` (CSV; **все** id должны входить в `requiredSkillIds` проекта — `hasEvery`), `q` по названию.
 - Ответ поста для frontend должен включать `author`, `attachments`, `likeCount`, `commentCount`, `likedByUser`, `isOwner`, `isEdited`.
 - Ответ комментария должен включать `user`, `attachments`, `isOwner`, `isEdited`.
-- При удалении поста транзакционно удалять связанные comments, likes, post attachments и comment attachments.
+- При удалении поста транзакционно удалять связанные comments, likes, post attachments и comment attachments, а также уведомления с `postId` / `commentId` этого поста.
+- **Уведомления** (`NotificationController`, [backend/lib/notifications.js](backend/lib/notifications.js)): **GET `/notifications/unread-count`** → `{ count }`; **GET `/notifications`** — курсор по `Notification.id`, `?cursor=&limit=` (по умолчанию 10, макс. 30), ответ `{ items, nextCursor }`, в элементе есть `type`, `isRead`, `readAt`, `deleteAt`, контекстные id и `actor` / `subjectUser` через `sanitizeUser`; **PATCH `/notifications/read-all`** — пометить все прочитанными (`readAt`, `deleteAt = readAt + 7 суток`); **PATCH `/notifications/:id/read`** — одно уведомление (чужое — 404).
 
 ## Ошибки
 

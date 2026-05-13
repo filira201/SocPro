@@ -13,6 +13,7 @@ const {
   ProjectController,
   ApplicationController,
   MemberController,
+  NotificationController,
 } = require("../controllers");
 const authenticateToken = require("../middleware/auth");
 const {
@@ -260,6 +261,24 @@ router.delete(
   "/unfollow/:id",
   authenticateToken,
   FollowController.unfollowUser,
+);
+
+// Уведомления (конкретные пути выше параметрического :id)
+router.get(
+  "/notifications/unread-count",
+  authenticateToken,
+  NotificationController.unreadCount,
+);
+router.get("/notifications", authenticateToken, NotificationController.list);
+router.patch(
+  "/notifications/read-all",
+  authenticateToken,
+  NotificationController.markAllRead,
+);
+router.patch(
+  "/notifications/:id/read",
+  authenticateToken,
+  NotificationController.markRead,
 );
 
 //Роуты для навыков

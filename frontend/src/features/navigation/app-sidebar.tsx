@@ -24,10 +24,16 @@ import {
   userInitials,
   useCurrentQuery,
 } from "@/features/auth";
+import { useGetUnreadNotificationCountQuery } from "@/features/notifications/api/notifications.api";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { useAppDispatch, useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/kit/avatar";
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarImage,
+} from "@/shared/ui/kit/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,6 +68,12 @@ export function AppSidebar() {
   const currentUser = useAppSelector(selectCurrentUser);
 
   useCurrentQuery();
+  const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
+    skip: !currentUser,
+    pollingInterval: 45_000,
+  });
+  const unreadCount = unreadData?.count ?? 0;
+  const hasUnread = unreadCount > 0;
 
   const posts = {
     title: "Посты",
@@ -177,11 +189,17 @@ export function AppSidebar() {
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <Avatar className="size-8 rounded-lg">
+                    <Avatar className="relative size-8 rounded-lg">
                       <AvatarImage src={avatarSrc} alt={publicName} />
                       <AvatarFallback className="rounded-lg text-xs">
                         {initials}
                       </AvatarFallback>
+                      {hasUnread ? (
+                        <AvatarBadge
+                          className="bg-green-600 dark:bg-green-800"
+                          title={`Непрочитанных: ${unreadCount}`}
+                        />
+                      ) : null}
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-medium">{publicName}</span>
@@ -196,11 +214,17 @@ export function AppSidebar() {
                 >
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                      <Avatar className="size-8 rounded-lg">
+                      <Avatar className="relative size-8 rounded-lg">
                         <AvatarImage src={avatarSrc} alt={publicName} />
                         <AvatarFallback className="rounded-lg text-xs">
                           {initials}
                         </AvatarFallback>
+                        {hasUnread ? (
+                          <AvatarBadge
+                            className="bg-green-600 dark:bg-green-800"
+                            title={`Непрочитанных: ${unreadCount}`}
+                          />
+                        ) : null}
                       </Avatar>
                       <span className="truncate font-medium">{publicName}</span>
                     </div>
@@ -214,9 +238,17 @@ export function AppSidebar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to={ROUTES.NOTIFICATIONS}>
+                      <Link
+                        to={ROUTES.NOTIFICATIONS}
+                        className="flex w-full items-center gap-2"
+                      >
                         <Bell />
-                        Уведомления
+                        <span className="flex-1">Уведомления</span>
+                        {hasUnread ? (
+                          <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-primary-foreground">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        ) : null}
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>

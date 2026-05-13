@@ -19,6 +19,7 @@ const {
 } = require("../lib/project-field-limits");
 const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
+const { createNotification } = require("../lib/notifications");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_PROJECT_LIST_LIMIT = 10;
@@ -717,15 +718,46 @@ const ProjectController = {
         where: { projectId: id },
         select: { url: true },
       });
+      const members = await prisma.projectMember.findMany({
+        where: { projectId: id },
+        select: { userId: true },
+      });
+      const applications = await prisma.projectApplication.findMany({
+        where: { projectId: id },
+        select: { id: true },
+      });
+      const applicationIds = applications.map((a) => a.id);
+
       for (const row of attachments) {
         unlinkUploadByPublicUrl(row.url);
       }
 
+      const notificationOr = [{ projectId: id }];
+      if (applicationIds.length) {
+        notificationOr.push({ applicationId: { in: applicationIds } });
+      }
+
       await prisma.$transaction([
+        prisma.notification.deleteMany({
+          where: { OR: notificationOr },
+        }),
         prisma.projectApplication.deleteMany({ where: { projectId: id } }),
         prisma.projectMember.deleteMany({ where: { projectId: id } }),
         prisma.project.delete({ where: { id } }),
       ]);
+
+      await Promise.all(
+        members
+          .filter((m) => m.userId !== userId)
+          .map((m) =>
+            createNotification(prisma, {
+              receiverId: m.userId,
+              actorId: userId,
+              type: "PROJECT_DELETED",
+              projectTitleSnapshot: project.title,
+            }),
+          ),
+      );
 
       res.json({ message: "Проект удалён" });
     } catch (error) {

@@ -243,7 +243,10 @@ export function CommentThreadItem({
 
   return (
     <div className="grid gap-3">
-      <article className="rounded-lg border p-3">
+      <article
+        id={`comment-${comment.id}`}
+        className="scroll-mt-24 rounded-lg border p-3"
+      >
         <div className="flex items-start gap-3">
           <Link
             to={href(ROUTES.USER_DETAILS, { userId: comment.userId })}

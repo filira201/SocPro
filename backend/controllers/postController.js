@@ -461,7 +461,15 @@ const PostController = {
           }),
         );
 
+      const notificationWhere = [{ postId: id }];
+      if (commentIds.length) {
+        notificationWhere.push({ commentId: { in: commentIds } });
+      }
+
       const transaction = await prisma.$transaction([
+        prisma.notification.deleteMany({
+          where: { OR: notificationWhere },
+        }),
         ...(commentIds.length
           ? [
               prisma.commentAttachment.deleteMany({

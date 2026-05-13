@@ -5,6 +5,10 @@ const {
 } = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
 const { normalizeApplicationMessage } = require("../lib/project-field-limits");
+const {
+  createNotification,
+  notifyProjectStaffExcept,
+} = require("../lib/notifications");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -77,6 +81,23 @@ const ApplicationController = {
           message: msg.value,
         },
       });
+
+      await Promise.all([
+        createNotification(prisma, {
+          receiverId: applicantId,
+          actorId: applicantId,
+          type: "PROJECT_APPLICATION_SUBMITTED_SELF",
+          projectId,
+          applicationId: application.id,
+        }),
+        notifyProjectStaffExcept(prisma, {
+          projectId,
+          exceptUserId: applicantId,
+          type: "STAFF_NEW_APPLICATION",
+          actorId: applicantId,
+          applicationId: application.id,
+        }),
+      ]);
 
       res.status(201).json(application);
     } catch (error) {
@@ -179,6 +200,24 @@ const ApplicationController = {
           invitedById: invitingUserId,
         },
       });
+
+      await Promise.all([
+        createNotification(prisma, {
+          receiverId: inviteeIdStr,
+          actorId: invitingUserId,
+          type: "PROJECT_INVITE_RECEIVED",
+          projectId,
+          applicationId: application.id,
+        }),
+        notifyProjectStaffExcept(prisma, {
+          projectId,
+          exceptUserId: invitingUserId,
+          type: "STAFF_INVITE_SENT",
+          actorId: invitingUserId,
+          subjectUserId: inviteeIdStr,
+          applicationId: application.id,
+        }),
+      ]);
 
       res.status(201).json(application);
     } catch (error) {
@@ -310,6 +349,23 @@ const ApplicationController = {
         }),
       ]);
 
+      await Promise.all([
+        createNotification(prisma, {
+          receiverId: userId,
+          actorId: application.invitedById,
+          type: "PROJECT_APPLICATION_ACCEPTED",
+          projectId: application.projectId,
+          applicationId: application.id,
+        }),
+        notifyProjectStaffExcept(prisma, {
+          projectId: application.projectId,
+          exceptUserId: userId,
+          type: "STAFF_INVITE_ACCEPTED",
+          actorId: userId,
+          applicationId: application.id,
+        }),
+      ]);
+
       res.json(results[0]);
     } catch (error) {
       console.error("Error in acceptAsInvitee", error);
@@ -386,6 +442,15 @@ const ApplicationController = {
             },
           }),
         ]);
+
+        await createNotification(prisma, {
+          receiverId: application.applicantId,
+          actorId: userId,
+          type: "PROJECT_APPLICATION_ACCEPTED",
+          projectId: application.projectId,
+          applicationId: application.id,
+        });
+
         return res.json(results[0]);
       }
 
@@ -397,6 +462,15 @@ const ApplicationController = {
           decidedById: userId,
         },
       });
+
+      await createNotification(prisma, {
+        receiverId: application.applicantId,
+        actorId: userId,
+        type: "PROJECT_APPLICATION_REJECTED",
+        projectId: application.projectId,
+        applicationId: application.id,
+      });
+
       res.json(updated);
     } catch (error) {
       console.error("Error in decide", error);
@@ -448,6 +522,39 @@ const ApplicationController = {
         if (application.status !== "PENDING") {
           return res.status(400).json({
             error: "Можно отозвать только ожидающую заявку",
+          });
+        }
+      }
+
+      if (isApplicant) {
+        if (application.invitedById) {
+          await createNotification(prisma, {
+            receiverId: userId,
+            type: "PROJECT_INVITE_DECLINED_SELF",
+            projectId: application.projectId,
+            applicationId: application.id,
+          });
+          await notifyProjectStaffExcept(prisma, {
+            projectId: application.projectId,
+            exceptUserId: userId,
+            type: "STAFF_APPLICATION_WITHDRAWN",
+            actorId: userId,
+            applicationId: application.id,
+          });
+        } else {
+          await createNotification(prisma, {
+            receiverId: userId,
+            actorId: userId,
+            type: "PROJECT_APPLICATION_WITHDRAWN_SELF",
+            projectId: application.projectId,
+            applicationId: application.id,
+          });
+          await notifyProjectStaffExcept(prisma, {
+            projectId: application.projectId,
+            exceptUserId: userId,
+            type: "STAFF_APPLICATION_WITHDRAWN",
+            actorId: userId,
+            applicationId: application.id,
           });
         }
       }

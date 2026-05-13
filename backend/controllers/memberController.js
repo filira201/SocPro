@@ -1,6 +1,7 @@
 const { prisma } = require("../prisma/prismaClient");
 const { canManageMembersAsOwnerOnly } = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
+const { createNotification } = require("../lib/notifications");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const ASSIGNABLE_ROLES = new Set(["MEMBER", "ADMIN"]);
@@ -136,11 +137,29 @@ const MemberController = {
         });
       }
 
+      const previousRole = membership.role;
+
       const updated = await prisma.projectMember.update({
         where: { id: membership.id },
         data: { role: String(role) },
         include: { user: { include: { skills: true } } },
       });
+
+      if (previousRole !== "ADMIN" && String(role) === "ADMIN") {
+        await createNotification(prisma, {
+          receiverId: targetUserId,
+          actorId: requesterId,
+          type: "PROJECT_MEMBER_PROMOTED_ADMIN",
+          projectId,
+        });
+      } else if (previousRole === "ADMIN" && String(role) === "MEMBER") {
+        await createNotification(prisma, {
+          receiverId: targetUserId,
+          actorId: requesterId,
+          type: "PROJECT_MEMBER_DEMOTED_FROM_ADMIN",
+          projectId,
+        });
+      }
 
       res.json(sanitizeUser(updated));
     } catch (error) {
@@ -204,6 +223,15 @@ const MemberController = {
           },
         }),
       ]);
+
+      if (!isSelf) {
+        await createNotification(prisma, {
+          receiverId: targetUserId,
+          actorId: requesterId,
+          type: "PROJECT_MEMBER_REMOVED",
+          projectId,
+        });
+      }
 
       res.json({ message: "Участник удалён" });
     } catch (error) {

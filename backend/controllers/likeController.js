@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
+const { createNotification } = require("../lib/notifications");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -32,9 +33,27 @@ const LikeController = {
         return res.status(400).json({ error: "Вы уже поставили лайк" });
       }
 
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { authorId: true },
+      });
+
+      if (!post) {
+        return res.status(404).json({ error: "Пост не найден" });
+      }
+
       const like = await prisma.like.create({
         data: { postId, userId },
       });
+
+      if (post.authorId !== userId) {
+        await createNotification(prisma, {
+          receiverId: post.authorId,
+          actorId: userId,
+          type: "POST_LIKED",
+          postId,
+        });
+      }
 
       const state = await getLikeState(postId, userId);
 

@@ -1,4 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
+const { createNotification } = require("../lib/notifications");
 const {
   MAX_USER_FIO_SEARCH_Q,
   buildUserFioSearchFilter,
@@ -172,6 +173,12 @@ const FollowController = {
           follower: { connect: { id: userId } },
           following: { connect: { id: followingId } },
         },
+      });
+
+      await createNotification(prisma, {
+        receiverId: followingId,
+        actorId: userId,
+        type: "USER_FOLLOWED",
       });
 
       res.status(201).json({ message: "Подписка успешно создана" });
