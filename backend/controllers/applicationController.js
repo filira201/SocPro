@@ -537,7 +537,7 @@ const ApplicationController = {
           await notifyProjectStaffExcept(prisma, {
             projectId: application.projectId,
             exceptUserId: userId,
-            type: "STAFF_APPLICATION_WITHDRAWN",
+            type: "STAFF_INVITE_DECLINED_BY_INVITEE",
             actorId: userId,
             applicationId: application.id,
           });

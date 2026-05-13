@@ -245,7 +245,10 @@ export function AppSidebar() {
                         <Bell />
                         <span className="flex-1">Уведомления</span>
                         {hasUnread ? (
-                          <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-primary-foreground">
+                          <span
+                            className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-green-600 px-1.5 py-0.5 text-[0.75rem] font-semibold tabular-nums leading-none text-white!"
+                            aria-label={`Непрочитанных: ${unreadCount}`}
+                          >
                             {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
                         ) : null}

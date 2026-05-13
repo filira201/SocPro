@@ -113,7 +113,9 @@ async function notifyProjectStaffExcept(prisma, opts) {
   await Promise.all(
     ids
       .filter((uid) => uid !== exceptUserId)
-      .map((receiverId) => createNotification(prisma, { ...rest, receiverId })),
+      .map((receiverId) =>
+        createNotification(prisma, { ...rest, receiverId, projectId }),
+      ),
   );
 }
 

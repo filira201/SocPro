@@ -350,6 +350,8 @@ enum NotificationType {
   // Проект — владелец и ADMIN (сводка по команде и заявкам)
   STAFF_NEW_APPLICATION
   STAFF_APPLICATION_WITHDRAWN
+  /** Приглашённый пользователь отклонил приглашение (для owner/ADMIN). */
+  STAFF_INVITE_DECLINED_BY_INVITEE
   STAFF_INVITE_SENT
   STAFF_INVITE_ACCEPTED
 }
