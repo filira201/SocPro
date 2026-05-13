@@ -7,6 +7,7 @@
 const app = require("../app");
 const debug = require("debug")("backend:server");
 const http = require("http");
+const { attachNotificationSocket } = require("../lib/notificationSocket");
 require("dotenv").config();
 
 /**
@@ -21,6 +22,8 @@ app.set("port", port);
  */
 
 const server = http.createServer(app);
+
+attachNotificationSocket(server);
 
 /**
  * Listen on provided port, on all network interfaces.

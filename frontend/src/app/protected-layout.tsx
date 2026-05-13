@@ -2,11 +2,13 @@ import { ProtectedRoute } from "./protected-route";
 
 import { AppContentHeader } from "@/features/navigation/app-content-header";
 import { AppSidebar } from "@/features/navigation/app-sidebar";
+import { NotificationsSocketBridge } from "@/features/notifications/ui/notifications-socket-bridge";
 import { SidebarInset, SidebarProvider } from "@/shared/ui/kit/sidebar";
 
 export function ProtectedLayout() {
   return (
     <div className="flex h-dvh min-h-0 w-full flex-col overflow-hidden">
+      <NotificationsSocketBridge />
       <SidebarProvider className="min-h-0 flex-1 overflow-hidden">
         <AppSidebar />
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">

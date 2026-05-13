@@ -17,9 +17,7 @@ function NotificationsPage() {
   const requestedCursors = useRef(new Set<string | null>([null]));
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
-    pollingInterval: 45_000,
-  });
+  const { data: unreadData } = useGetUnreadNotificationCountQuery();
 
   const queryArgs = useMemo(
     () => ({

@@ -4,6 +4,8 @@
 
 const READ_NOTIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+const { emitNotificationsInvalidate } = require("./notificationSocket");
+
 /** Типы, где получатель совпадает с «инициатором» осмысленно (карточка для себя). */
 const SELF_RECEIVER_TYPES = new Set([
   "PROJECT_APPLICATION_SUBMITTED_SELF",
@@ -72,6 +74,7 @@ async function createNotification(prisma, payload) {
         deleteAt: null,
       },
     });
+    emitNotificationsInvalidate(receiverId);
   } catch (e) {
     console.error("createNotification failed", e?.message || e);
   }

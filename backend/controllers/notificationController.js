@@ -1,6 +1,7 @@
 const { prisma } = require("../prisma/prismaClient");
 const { sanitizeUser } = require("./_utils");
 const { computeDeleteAtFromReadAt } = require("../lib/notifications");
+const { emitNotificationsInvalidate } = require("../lib/notificationSocket");
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_LIMIT = 10;
@@ -112,6 +113,8 @@ const NotificationController = {
         data: { readAt: now, deleteAt },
       });
 
+      emitNotificationsInvalidate(receiverId);
+
       res.json({ ok: true });
     } catch (error) {
       console.error("Error in NotificationController.markRead", error);
@@ -140,6 +143,8 @@ const NotificationController = {
         where: { id: { in: unreadIds } },
         data: { readAt: now, deleteAt },
       });
+
+      emitNotificationsInvalidate(receiverId);
 
       res.json({ ok: true, updated: result.count });
     } catch (error) {

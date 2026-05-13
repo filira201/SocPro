@@ -70,7 +70,6 @@ export function AppSidebar() {
   useCurrentQuery();
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
     skip: !currentUser,
-    pollingInterval: 45_000,
   });
   const unreadCount = unreadData?.count ?? 0;
   const hasUnread = unreadCount > 0;
