@@ -51,3 +51,10 @@ export type CommentsQuery = {
 };
 
 export type CommentsSort = "new" | "old" | "top";
+
+export type CommentFocusResponse = {
+  comment: Comment;
+  postId: string;
+  ancestorIds: string[];
+  ancestors: Comment[];
+};

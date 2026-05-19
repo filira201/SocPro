@@ -6,6 +6,63 @@ const { emitNotificationsInvalidate } = require("../lib/notificationSocket");
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
+const COMMENT_PREVIEW_MAX = 120;
+const COMMENT_PREVIEW_TYPES = new Set([
+  "POST_COMMENTED",
+  "COMMENT_REPLIED",
+  "COMMENT_LIKED",
+]);
+
+function truncateCommentPreview(content) {
+  const trimmed = String(content || "").trim();
+
+  if (trimmed.length <= COMMENT_PREVIEW_MAX) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, COMMENT_PREVIEW_MAX - 1)}…`;
+}
+
+async function attachCommentPreviews(items) {
+  const commentIds = [
+    ...new Set(
+      items
+        .filter(
+          (item) =>
+            item.commentId && COMMENT_PREVIEW_TYPES.has(String(item.type)),
+        )
+        .map((item) => String(item.commentId)),
+    ),
+  ];
+
+  if (!commentIds.length) {
+    return items;
+  }
+
+  const comments = await prisma.comment.findMany({
+    where: { id: { in: commentIds } },
+    select: { id: true, content: true, parentId: true },
+  });
+  const byId = new Map(comments.map((row) => [row.id, row]));
+
+  return items.map((item) => {
+    if (!item.commentId || !COMMENT_PREVIEW_TYPES.has(String(item.type))) {
+      return item;
+    }
+
+    const comment = byId.get(String(item.commentId));
+
+    if (!comment) {
+      return item;
+    }
+
+    return {
+      ...item,
+      commentPreview: truncateCommentPreview(comment.content),
+      commentIsReply: Boolean(comment.parentId),
+    };
+  });
+}
 
 function normalizeLimit(value) {
   const parsed = Number(value);
@@ -73,7 +130,7 @@ const NotificationController = {
 
       const hasNextPage = rows.length > limit;
       const page = hasNextPage ? rows.slice(0, limit) : rows;
-      const items = page.map(mapNotification);
+      const items = await attachCommentPreviews(page.map(mapNotification));
       const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
 
       res.json({ items, nextCursor });

@@ -544,6 +544,90 @@ const CommentController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
+  getCommentFocus: async (req, res) => {
+    const { id } = req.params;
+    const expectedPostId = req.query.postId ? String(req.query.postId) : null;
+    const userId = req.user.userId;
+
+    if (!OBJECT_ID_REGEX.test(id)) {
+      return res.status(400).json({ error: "Некорректная ссылка" });
+    }
+
+    if (expectedPostId && !OBJECT_ID_REGEX.test(expectedPostId)) {
+      return res.status(400).json({ error: "Некорректная ссылка" });
+    }
+
+    try {
+      if (expectedPostId) {
+        const post = await prisma.post.findUnique({
+          where: { id: expectedPostId },
+          select: { id: true },
+        });
+
+        if (!post) {
+          return res.status(404).json({ error: "Пост не найден" });
+        }
+      }
+
+      const comment = await getCommentForResponse(id, userId);
+
+      if (!comment) {
+        return res.status(404).json({ error: "Комментарий не найден" });
+      }
+
+      if (expectedPostId && comment.postId !== expectedPostId) {
+        return res.status(404).json({ error: "Комментарий не найден" });
+      }
+
+      const postForComment = await prisma.post.findUnique({
+        where: { id: comment.postId },
+        select: { id: true },
+      });
+
+      if (!postForComment) {
+        return res.status(404).json({ error: "Пост не найден" });
+      }
+
+      const ancestorIds = [];
+      let parentId = comment.parentId;
+
+      while (parentId) {
+        const parent = await prisma.comment.findUnique({
+          where: { id: parentId },
+          select: { id: true, parentId: true },
+        });
+
+        if (!parent) {
+          break;
+        }
+
+        ancestorIds.unshift(parent.id);
+        parentId = parent.parentId;
+      }
+
+      const ancestors = [];
+
+      for (const ancestorId of ancestorIds) {
+        const ancestor = await getCommentForResponse(ancestorId, userId);
+
+        if (ancestor) {
+          ancestors.push(ancestor);
+        }
+      }
+
+      return res.json({
+        comment,
+        postId: comment.postId,
+        ancestorIds,
+        ancestors,
+      });
+    } catch (error) {
+      console.error("Error in getCommentFocus", error);
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
   unlikeComment: async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;

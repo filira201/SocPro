@@ -7,13 +7,14 @@ import { ROUTES } from "@/shared/model/routes";
 /** Куда вести пользователя по тапу на карточку (или `null`, если только «прочитать»). */
 export function notificationTargetHref(n: Notification): string | null {
   if (n.postId) {
-    const base = href(ROUTES.POST_DETAILS, { postId: n.postId });
-
     if (n.commentId) {
-      return `${base}#comment-${n.commentId}`;
+      return href(ROUTES.POST_COMMENT, {
+        postId: n.postId,
+        commentId: n.commentId,
+      });
     }
 
-    return base;
+    return href(ROUTES.POST_DETAILS, { postId: n.postId });
   }
 
   if (n.projectId) {

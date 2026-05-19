@@ -229,6 +229,11 @@ router.post(
   handleUploadError(uploads.array("files")),
   CommentController.createComment,
 );
+router.get(
+  "/comments/:id/focus",
+  authenticateToken,
+  CommentController.getCommentFocus,
+);
 router.patch(
   "/comments/:id",
   authenticateToken,

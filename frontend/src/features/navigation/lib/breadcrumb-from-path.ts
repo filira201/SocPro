@@ -86,6 +86,24 @@ export function breadcrumbSegmentsFromPath(
     return [{ label: "Проекты", to: ROUTES.PROJECTS }, { label: "Проект" }];
   }
 
+  const postCommentMatch = matchPath(
+    { path: ROUTES.POST_COMMENT, end: true },
+    pathname
+  );
+
+  if (postCommentMatch?.params.postId) {
+    const { postId } = postCommentMatch.params;
+
+    return [
+      { label: "Посты", to: ROUTES.POSTS },
+      {
+        label: "Публикация",
+        to: href(ROUTES.POST_DETAILS, { postId }),
+      },
+      { label: "Комментарий" },
+    ];
+  }
+
   const postMatch = matchPath(
     { path: ROUTES.POST_DETAILS, end: true },
     pathname

@@ -1,7 +1,9 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { href, useLocation, useNavigate, useParams } from "react-router";
 
+import { parseCommentHash } from "@/features/post/lib/parse-comment-hash";
 import { PostCard, useGetPostByIdQuery } from "@/features/posts";
+import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
@@ -14,21 +16,16 @@ function PostPage() {
   });
 
   useEffect(() => {
-    const raw = location.hash?.replace(/^#/, "").trim();
+    const commentId = parseCommentHash(location.hash ?? "");
 
-    if (!raw || !post) {
+    if (!commentId || !postId) {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      document.getElementById(raw)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, 350);
-
-    return () => window.clearTimeout(timer);
-  }, [location.hash, post]);
+    navigate(href(ROUTES.POST_COMMENT, { postId, commentId }), {
+      replace: true,
+    });
+  }, [location.hash, navigate, postId]);
 
   return (
     <section className="w-full max-w-3xl mx-auto px-3 py-4 sm:px-4 sm:py-6 lg:py-8">

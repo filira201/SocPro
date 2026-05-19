@@ -40,6 +40,8 @@ export type Notification = {
   deleteAt: string | null;
   createdAt: string;
   isRead: boolean;
+  commentPreview?: string | null;
+  commentIsReply?: boolean;
   actor?: User | null;
   subjectUser?: User | null;
 };

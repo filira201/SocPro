@@ -1,5 +1,6 @@
 import type {
   Comment,
+  CommentFocusResponse,
   CommentsQuery,
   DeleteCommentResponse,
   PaginatedResponse,
@@ -40,6 +41,15 @@ function getCommentLikePatchQueries(query: CommentsQuery): CommentsQuery[] {
 
 export const commentsApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    getCommentFocus: builder.query<
+      CommentFocusResponse,
+      { commentId: string; postId: string }
+    >({
+      query: ({ commentId, postId }) => ({
+        url: `/comments/${commentId}/focus`,
+        params: { postId },
+      }),
+    }),
     getComments: builder.query<PaginatedResponse<Comment>, CommentsQuery>({
       query: ({ postId, parentId, sort = "new", cursor, limit = 10 }) => ({
         url: `/posts/${postId}/comments`,
@@ -281,6 +291,7 @@ export const commentsApi = api.injectEndpoints({
 export const {
   useCreateCommentMutation,
   useDeleteCommentMutation,
+  useGetCommentFocusQuery,
   useGetCommentsQuery,
   useLikeCommentMutation,
   useLazyGetCommentsQuery,
