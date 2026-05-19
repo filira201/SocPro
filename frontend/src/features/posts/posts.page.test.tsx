@@ -20,6 +20,10 @@ const PAGE_2: Post[] = [
 
 let intersectionCallback: IntersectionObserverCallback;
 
+vi.mock("@/shared/lib/react/use-debounced-value", () => ({
+  useDebouncedValue: <T,>(value: T) => value,
+}));
+
 vi.mock("./api/posts.api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api/posts.api")>();
 
@@ -111,10 +115,18 @@ class MockIntersectionObserver {
   }
 }
 
+function stubRadixDomApis() {
+  HTMLElement.prototype.hasPointerCapture = vi.fn().mockReturnValue(false);
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  HTMLElement.prototype.releasePointerCapture = vi.fn();
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 describe("PostsPage", () => {
   beforeEach(() => {
     intersectionCallback = vi.fn();
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+    stubRadixDomApis();
     mockPostsFirstPageOnly();
   });
 
@@ -149,6 +161,58 @@ describe("PostsPage", () => {
     expect(await screen.findByText("Пост страница 2")).toBeInTheDocument();
     expect(mockedUseGetPostsQuery).toHaveBeenCalledWith(
       expect.objectContaining({ cursor: NEXT_CURSOR })
+    );
+  });
+
+  test("передаёт поисковый запрос в API при вводе в поле поиска", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<PostsPage />, {
+      initialRoute: ROUTES.POSTS,
+    });
+
+    // Act
+    await user.type(screen.getByLabelText("Поиск публикаций"), "диплом");
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(mockedUseGetPostsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "диплом", limit: 10 })
+      );
+    });
+  });
+
+  test("передаёт фильтр «только мои публикации» в API", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<PostsPage />, {
+      initialRoute: ROUTES.POSTS,
+    });
+
+    // Act
+    await user.click(
+      screen.getByRole("checkbox", { name: "Только мои публикации" })
+    );
+
+    // Assert
+    expect(mockedUseGetPostsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ mine: true, limit: 10 })
+    );
+  });
+
+  test("передаёт сортировку «сначала старые» в API", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<PostsPage />, {
+      initialRoute: ROUTES.POSTS,
+    });
+
+    // Act
+    await user.click(screen.getByRole("combobox"));
+    await user.click(
+      await screen.findByRole("option", { name: "Сначала старые" })
+    );
+
+    // Assert
+    expect(mockedUseGetPostsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "old", limit: 10 })
     );
   });
 });
