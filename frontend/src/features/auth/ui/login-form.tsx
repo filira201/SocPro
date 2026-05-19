@@ -97,10 +97,13 @@ export function LoginForm({
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.email}
+              data-testid="login-email"
               {...register("email")}
             />
             {errors.email?.message ? (
-              <FieldError>{errors.email.message}</FieldError>
+              <FieldError data-testid="login-email-error">
+                {errors.email.message}
+              </FieldError>
             ) : null}
           </Field>
 
@@ -116,10 +119,13 @@ export function LoginForm({
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.password}
+              data-testid="login-password"
               {...register("password")}
             />
             {errors.password?.message ? (
-              <FieldError>{errors.password.message}</FieldError>
+              <FieldError data-testid="login-password-error">
+                {errors.password.message}
+              </FieldError>
             ) : null}
           </Field>
 
@@ -129,6 +135,7 @@ export function LoginForm({
               size="lg"
               className="h-11 w-full text-base font-medium"
               disabled={isLoading}
+              data-testid="login-submit"
             >
               {isLoading ? (
                 <>
@@ -141,7 +148,12 @@ export function LoginForm({
             </Button>
 
             {globalError ? (
-              <FieldError className="text-center">{globalError}</FieldError>
+              <FieldError
+                className="text-center"
+                data-testid="login-global-error"
+              >
+                {globalError}
+              </FieldError>
             ) : null}
           </Field>
         </FieldGroup>
