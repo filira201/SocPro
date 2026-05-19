@@ -92,10 +92,13 @@ export function RegisterForm() {
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.email}
+              data-testid="register-email"
               {...register("email")}
             />
             {errors.email?.message ? (
-              <FieldError>{errors.email.message}</FieldError>
+              <FieldError data-testid="register-email-error">
+                {errors.email.message}
+              </FieldError>
             ) : null}
           </Field>
 
@@ -110,10 +113,13 @@ export function RegisterForm() {
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.firstName}
+              data-testid="register-first-name"
               {...register("firstName")}
             />
             {errors.firstName?.message ? (
-              <FieldError>{errors.firstName.message}</FieldError>
+              <FieldError data-testid="register-first-name-error">
+                {errors.firstName.message}
+              </FieldError>
             ) : null}
           </Field>
 
@@ -162,10 +168,13 @@ export function RegisterForm() {
                 className="h-11 text-base"
                 disabled={isLoading}
                 aria-invalid={!!errors.password}
+                data-testid="register-password"
                 {...register("password")}
               />
               {errors.password?.message ? (
-                <FieldError>{errors.password.message}</FieldError>
+                <FieldError data-testid="register-password-error">
+                  {errors.password.message}
+                </FieldError>
               ) : null}
             </Field>
 
@@ -181,10 +190,13 @@ export function RegisterForm() {
                 className="h-11 text-base"
                 disabled={isLoading}
                 aria-invalid={!!errors.confirmPassword}
+                data-testid="register-confirm-password"
                 {...register("confirmPassword")}
               />
               {errors.confirmPassword?.message ? (
-                <FieldError>{errors.confirmPassword.message}</FieldError>
+                <FieldError data-testid="register-confirm-password-error">
+                  {errors.confirmPassword.message}
+                </FieldError>
               ) : null}
             </Field>
           </Field>
@@ -195,6 +207,7 @@ export function RegisterForm() {
               size="lg"
               className="h-11 w-full text-base font-medium"
               disabled={isLoading}
+              data-testid="register-submit"
             >
               {isLoading ? (
                 <>
