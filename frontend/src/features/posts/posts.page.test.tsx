@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { href } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { useGetPostsQuery } from "./api/posts.api";
@@ -30,6 +31,17 @@ vi.mock("./api/posts.api", async (importOriginal) => {
   return {
     ...actual,
     useGetPostsQuery: vi.fn(),
+  };
+});
+
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("react-router")>();
+
+  return {
+    ...mod,
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -195,6 +207,22 @@ describe("PostsPage", () => {
     // Assert
     expect(mockedUseGetPostsQuery).toHaveBeenCalledWith(
       expect.objectContaining({ mine: true, limit: 10 })
+    );
+  });
+
+  test("переходит на страницу поста по кнопке «Открыть пост»", async () => {
+    // Arrange
+    mockPostsFirstPageOnly();
+    const { user } = renderWithProviders(<PostsPage />, {
+      initialRoute: ROUTES.POSTS,
+    });
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Открыть пост" }));
+
+    // Assert
+    expect(mockNavigate).toHaveBeenCalledWith(
+      href(ROUTES.POST_DETAILS, { postId: PAGE_1[0].id })
     );
   });
 
