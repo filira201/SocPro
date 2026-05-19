@@ -6,7 +6,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter, type MemoryRouterProps } from "react-router";
 
 import "@/features/auth/api/auth.api";
-import { userReducer } from "@/features/auth/model/user.slice";
+import type { User } from "@/features/auth/lib/types";
+import { setCredentials, userReducer } from "@/features/auth/model/user.slice";
 import { api } from "@/shared/api/api";
 import { ROUTES } from "@/shared/model/routes";
 
@@ -24,6 +25,8 @@ function createTestStore() {
 type RenderWithProvidersOptions = Omit<RenderOptions, "wrapper"> & {
   initialRoute?: string;
   initialEntries?: MemoryRouterProps["initialEntries"];
+  /** Авторизованный пользователь в store до первого рендера */
+  authenticatedUser?: User;
 };
 
 export function renderWithProviders(
@@ -31,10 +34,21 @@ export function renderWithProviders(
   {
     initialRoute = ROUTES.REGISTER,
     initialEntries,
+    authenticatedUser,
     ...renderOptions
   }: RenderWithProvidersOptions = {}
 ) {
   const store = createTestStore();
+
+  if (authenticatedUser) {
+    store.dispatch(
+      setCredentials({
+        token: "test-token",
+        user: authenticatedUser,
+      })
+    );
+  }
+
   const routerEntries = initialEntries ?? [initialRoute];
 
   function Wrapper({ children }: { children: ReactNode }) {
