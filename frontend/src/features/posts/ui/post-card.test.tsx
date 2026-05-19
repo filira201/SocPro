@@ -3,12 +3,20 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   useDeletePostMutation,
+  useLikePostMutation,
+  useUnlikePostMutation,
   useUpdatePostMutation,
 } from "../api/posts.api";
 import type { Post } from "../model/types";
 
 import { PostCard } from "./post-card";
 
+import {
+  useCreateCommentMutation,
+  useGetCommentsQuery,
+  useLazyGetCommentsQuery,
+} from "@/features/comments/api/comments.api";
+import "@/features/comments/api/comments.api";
 import "@/features/posts/api/posts.api";
 import { renderWithProviders } from "@/shared/lib/test/render-with-providers";
 
@@ -16,6 +24,8 @@ const POST_ID = "6a04cae90445f0b3a1d3861a";
 
 const mockUpdatePost = vi.fn();
 const mockDeletePost = vi.fn();
+const mockLikePost = vi.fn();
+const mockUnlikePost = vi.fn();
 
 vi.mock("../api/posts.api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/posts.api")>();
@@ -24,11 +34,32 @@ vi.mock("../api/posts.api", async (importOriginal) => {
     ...actual,
     useUpdatePostMutation: vi.fn(),
     useDeletePostMutation: vi.fn(),
+    useLikePostMutation: vi.fn(),
+    useUnlikePostMutation: vi.fn(),
+  };
+});
+
+vi.mock("@/features/comments/api/comments.api", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/features/comments/api/comments.api")
+    >();
+
+  return {
+    ...actual,
+    useGetCommentsQuery: vi.fn(),
+    useLazyGetCommentsQuery: vi.fn(),
+    useCreateCommentMutation: vi.fn(),
   };
 });
 
 const mockedUseUpdatePostMutation = vi.mocked(useUpdatePostMutation);
 const mockedUseDeletePostMutation = vi.mocked(useDeletePostMutation);
+const mockedUseLikePostMutation = vi.mocked(useLikePostMutation);
+const mockedUseUnlikePostMutation = vi.mocked(useUnlikePostMutation);
+const mockedUseGetCommentsQuery = vi.mocked(useGetCommentsQuery);
+const mockedUseLazyGetCommentsQuery = vi.mocked(useLazyGetCommentsQuery);
+const mockedUseCreateCommentMutation = vi.mocked(useCreateCommentMutation);
 
 function makePost(content: string, isOwner: boolean): Post {
   return {
@@ -66,13 +97,37 @@ function mockMutationsIdle() {
     mockDeletePost,
     { isLoading: false, reset: vi.fn() },
   ] as ReturnType<typeof useDeletePostMutation>);
+  mockedUseLikePostMutation.mockReturnValue([
+    mockLikePost,
+    { isLoading: false, reset: vi.fn() },
+  ] as ReturnType<typeof useLikePostMutation>);
+  mockedUseUnlikePostMutation.mockReturnValue([
+    mockUnlikePost,
+    { isLoading: false, reset: vi.fn() },
+  ] as ReturnType<typeof useUnlikePostMutation>);
+}
+
+function mockCommentsApiEmpty() {
+  mockedUseGetCommentsQuery.mockReturnValue({
+    data: { items: [], nextCursor: null },
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  } as ReturnType<typeof useGetCommentsQuery>);
+  mockedUseLazyGetCommentsQuery.mockReturnValue([
+    vi.fn(),
+    { isFetching: false },
+  ] as unknown as ReturnType<typeof useLazyGetCommentsQuery>);
+  mockedUseCreateCommentMutation.mockReturnValue([
+    vi.fn(),
+    { isLoading: false, reset: vi.fn() },
+  ] as ReturnType<typeof useCreateCommentMutation>);
 }
 
 function mockUpdatePostSuccess() {
   mockedUseUpdatePostMutation.mockReturnValue([
     mockUpdatePost.mockReturnValue({
-      unwrap: () =>
-        Promise.resolve(makePost("Обновлённый текст", true)),
+      unwrap: () => Promise.resolve(makePost("Обновлённый текст", true)),
     }),
     { isLoading: false, reset: vi.fn() },
   ] as ReturnType<typeof useUpdatePostMutation>);
@@ -99,6 +154,7 @@ describe("PostCard", () => {
     vi.clearAllMocks();
     stubRadixDomApis();
     mockMutationsIdle();
+    mockCommentsApiEmpty();
     mockUpdatePostSuccess();
     mockDeletePostSuccess();
   });
@@ -164,6 +220,78 @@ describe("PostCard", () => {
     await vi.waitFor(() => {
       expect(mockDeletePost).toHaveBeenCalledWith(POST_ID);
     });
+  });
+
+  test("ставит лайк посту", async () => {
+    // Arrange
+    const { user } = renderWithProviders(
+      <PostCard post={makePost("Пост для лайка", false)} />
+    );
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Поставить лайк" }));
+
+    // Assert
+    expect(mockLikePost).toHaveBeenCalledWith(POST_ID);
+  });
+
+  test("убирает лайк с поста", async () => {
+    // Arrange
+    const { user } = renderWithProviders(
+      <PostCard
+        post={{
+          ...makePost("Пост с лайком", false),
+          likedByUser: true,
+          likeCount: 1,
+        }}
+      />
+    );
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Убрать лайк" }));
+
+    // Assert
+    expect(mockUnlikePost).toHaveBeenCalledWith(POST_ID);
+  });
+
+  test("показывает блок комментариев", async () => {
+    // Arrange
+    const { user } = renderWithProviders(
+      <PostCard post={makePost("Пост с комментариями", false)} />
+    );
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Показать комментарии" })
+    );
+
+    // Assert
+    expect(
+      screen.getByPlaceholderText("Напишите комментарий")
+    ).toBeInTheDocument();
+  });
+
+  test("скрывает блок комментариев", async () => {
+    // Arrange
+    const { user } = renderWithProviders(
+      <PostCard post={makePost("Пост с комментариями", false)} />
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Показать комментарии" })
+    );
+    expect(
+      screen.getByPlaceholderText("Напишите комментарий")
+    ).toBeInTheDocument();
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Скрыть комментарии" })
+    );
+
+    // Assert
+    expect(
+      screen.queryByPlaceholderText("Напишите комментарий")
+    ).not.toBeInTheDocument();
   });
 
   test("отменяет редактирование без сохранения", async () => {
