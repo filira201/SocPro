@@ -1,0 +1,109 @@
+---
+description: Unit-тесты frontend — Vitest, RTL, AAA, моки RTK Query, data-testid
+globs: frontend/**/*.{test,spec}.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend testing (Vitest + RTL)
+
+## Стек и команды
+
+- Vitest 4, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `jsdom`.
+- Конфиг: [frontend/vitest.config.ts](frontend/vitest.config.ts) — `mergeConfig` с [vite.config.ts](frontend/vite.config.ts) (React, алиасы `@/`).
+- Setup: [frontend/src/shared/lib/test/setup.ts](frontend/src/shared/lib/test/setup.ts) — `jest-dom/vitest` и **`cleanup()` в `afterEach`** (без cleanup — `Found multiple elements by testid` между тестами).
+- `npm run test` — watch; `npm run test:run` — один прогон (CI).
+
+## Размещение файлов
+
+- Тест страницы/фичи — рядом с компонентом: `features/<name>/<name>.page.test.tsx`.
+- Общие хелперы — только [frontend/src/shared/lib/test/](frontend/src/shared/lib/test/) (`setup.ts`, `render-with-providers.tsx`).
+
+## Паттерн AAA
+
+Каждый `test` — три блока с комментариями `// Arrange`, `// Act`, `// Assert`. Названия на русском, от лица пользователя.
+
+```ts
+test("показывает ошибки обязательных полей при пустой отправке", async () => {
+  // Arrange
+  const { user } = renderWithProviders(<RegisterPage />);
+
+  // Act
+  await user.click(screen.getByTestId("register-submit"));
+
+  // Assert
+  expect(screen.getByTestId("register-email-error")).toHaveTextContent("Введите почту");
+  expect(mockRegister).not.toHaveBeenCalled();
+});
+```
+
+## Рендер (Redux + Router)
+
+Использовать [render-with-providers.tsx](frontend/src/shared/lib/test/render-with-providers.tsx):
+
+- `Provider` + `MemoryRouter`, store как в [app/store](frontend/src/app/store/index.ts) (`api` + `user`).
+- Side-effect импорт API фичи (напр. `@/features/auth/api/auth.api`), чтобы `injectEndpoints` зарегистрировал мутации.
+- Публичные auth-страницы: **без токена** в store — иначе `AuthLayout` редиректит на `ROUTES.HOME`.
+- Хелпер возвращает `{ user, store, ...renderResult }` — `user` из `userEvent.setup()`, не создавать отдельно.
+
+## Что тестировать
+
+- **Страница** (`*.page.tsx`), если нужен page-level; логика форм — в `ui/*-form.tsx`.
+- Клиентская валидация — zod из `features/<name>/model/schemas.ts`; тексты assert **буквально из схемы** (см. [forms-ux.mdc](forms-ux.mdc)).
+- Серверные ошибки — `FetchBaseQueryError`: `{ status: number, data: { error: string } }` ([getApiErrorMessage](frontend/src/shared/lib/api-error.ts)).
+- Сценарии только zod — `expect(mockMutation).not.toHaveBeenCalled()`.
+- MSW не добавлять, пока хватает мока RTK-хука. Не тестировать тривиальные pure-функции без логики.
+
+## Моки
+
+```ts
+const mockRegister = vi.fn();
+const mockNavigate = vi.fn();
+
+vi.mock("./api/auth.api", () => ({ useRegisterMutation: vi.fn() }));
+
+vi.mock("react-router", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("react-router")>();
+  return { ...mod, useNavigate: () => mockNavigate };
+});
+
+// Успех
+mockedUseRegisterMutation.mockReturnValue([
+  mockRegister.mockReturnValue({
+    unwrap: () => Promise.resolve({ id: "...", email: "..." }),
+  }),
+  { isLoading: false, reset: vi.fn() },
+] as ReturnType<typeof useRegisterMutation>);
+
+// Ошибка API (текст как с backend)
+mockRegister.mockReturnValue({
+  unwrap: () =>
+    Promise.reject({
+      status: 400,
+      data: { error: "Пользователь с такой почтой уже существует" },
+    }),
+});
+```
+
+`beforeEach`: `vi.clearAllMocks()` + сброс дефолтного mock mutation.
+
+## data-testid
+
+- На поля, `FieldError` и submit при нескольких `role="alert"` или для стабильных assert.
+- Имена: `<feature>-<field>`, `<feature>-<field>-error`, `<feature>-submit` (`register-email`, `register-submit`).
+- На `Input` ставить `data-testid` **до** `{...register("field")}`.
+
+## Запросы в DOM
+
+- `getByTestId` / `getByRole` / `getByLabelText`.
+- `CardTitle` в kit — `div`, не heading: auth-заголовок — `getByText("Регистрация")`, не `getByRole("heading")`.
+- После async submit/navigate — `await vi.waitFor(() => expect(...))` или `findBy*`.
+
+## Эталон
+
+Полный образец: [register.page.test.tsx](frontend/src/features/auth/register.page.test.tsx) — пустая форма, пароли, занятая почта, успех + redirect.
+
+## Запреты
+
+- Реальный backend / `fetch` в unit-тестах.
+- Дублировать zod-схему в тестах.
+- Демо-тесты в корне `frontend/` без привязки к фиче.
