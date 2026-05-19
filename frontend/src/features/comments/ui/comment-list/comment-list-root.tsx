@@ -9,7 +9,7 @@ import type { Comment, CommentsSort } from "../../model/types";
 import { CommentComposer } from "../comment-composer";
 
 import { CommentThreadItem } from "./comment-thread-item";
-import { PAGE_LIMIT, ROOT_INITIAL_LIMIT } from "./constants";
+import { PAGE_LIMIT } from "./constants";
 import { LoadMoreTrigger } from "./load-more-trigger";
 
 import {
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/kit/select";
+import { Spinner } from "@/shared/ui/kit/spinner";
 
 type CommentListRootProps = {
   postId: string;
@@ -38,10 +39,13 @@ export function CommentListRoot({ postId }: CommentListRootProps) {
     postId,
     sort,
     parentId: null,
-    limit: ROOT_INITIAL_LIMIT,
+    limit: PAGE_LIMIT,
   };
-  const { data: firstPage, isFetching: isFirstPageFetching } =
-    useGetCommentsQuery(rootQuery);
+  const {
+    data: firstPage,
+    isLoading: isFirstPageLoading,
+    isFetching: isFirstPageFetching,
+  } = useGetCommentsQuery(rootQuery);
   const [loadComments, { isFetching }] = useLazyGetCommentsQuery();
 
   const comments = dedupeComments([
@@ -73,6 +77,23 @@ export function CommentListRoot({ postId }: CommentListRootProps) {
 
     setExtraComments((current) => insertBySort(current, created, sort));
   };
+
+  const isInitialLoad =
+    isFirstPageLoading || (isFirstPageFetching && firstPage === undefined);
+
+  if (isInitialLoad) {
+    return (
+      <div
+        className="flex justify-center border-t py-8 text-muted-foreground"
+        onClick={stopBubble}
+        onKeyDown={stopBubble}
+        aria-busy
+        aria-label="Загрузка комментариев"
+      >
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div

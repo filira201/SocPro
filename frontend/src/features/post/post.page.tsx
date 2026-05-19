@@ -45,13 +45,7 @@ function PostPage() {
           </div>
         ) : null}
 
-        {post ? (
-          <PostCard
-            post={post}
-            showCommentsInitially
-            showOpenPostButton={false}
-          />
-        ) : null}
+        {post ? <PostCard post={post} showOpenPostButton={false} /> : null}
 
         {!isLoading && !post ? (
           <p className="rounded-xl border bg-card p-4 text-center text-muted-foreground">

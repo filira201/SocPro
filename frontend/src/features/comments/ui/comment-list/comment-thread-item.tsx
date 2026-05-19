@@ -26,7 +26,7 @@ import { CommentComposer } from "../comment-composer";
 import { CommentThreadActions } from "./comment-thread-actions";
 import { CommentThreadBody } from "./comment-thread-body";
 import { CommentThreadEditor } from "./comment-thread-editor";
-import { PAGE_LIMIT, ROOT_INITIAL_LIMIT } from "./constants";
+import { PAGE_LIMIT } from "./constants";
 import { LoadMoreTrigger } from "./load-more-trigger";
 
 import { displayPublicName, userInitials } from "@/features/auth";
@@ -85,10 +85,13 @@ export function CommentThreadItem({
     sort,
     limit: PAGE_LIMIT,
   };
-  const { data: firstReplies, isFetching: isRepliesFetching } =
-    useGetCommentsQuery(repliesQuery, {
-      skip: !showReplies,
-    });
+  const {
+    data: firstReplies,
+    isLoading: isRepliesLoading,
+    isFetching: isRepliesFetching,
+  } = useGetCommentsQuery(repliesQuery, {
+    skip: !showReplies,
+  });
   const [loadReplies, { isFetching: isLoadingMoreReplies }] =
     useLazyGetCommentsQuery();
   const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
@@ -104,6 +107,9 @@ export function CommentThreadItem({
   const composerRef = useRef<HTMLDivElement | null>(null);
   const replyCursorToLoad =
     nextReplyCursor === undefined ? firstReplies?.nextCursor : nextReplyCursor;
+  const isInitialRepliesLoad =
+    showReplies &&
+    (isRepliesLoading || (isRepliesFetching && firstReplies === undefined));
   const displayDate = comment.isEdited ? comment.updatedAt : comment.createdAt;
   const authorPublicName = displayPublicName(comment.user);
   const authorAvatarInitials = userInitials(comment.user);
@@ -185,7 +191,7 @@ export function CommentThreadItem({
       postId,
       parentId: comment.parentId ?? null,
       sort,
-      limit: comment.parentId ? PAGE_LIMIT : ROOT_INITIAL_LIMIT,
+      limit: PAGE_LIMIT,
     };
 
     const wasLiked = likedByUserDisplay;
@@ -417,43 +423,55 @@ export function CommentThreadItem({
       </article>
 
       {showReplies ? (
-        <div className="ml-4 grid gap-3 border-l pl-3 sm:ml-8 sm:pl-4">
-          {mergedReplies.map((reply) => (
-            <CommentThreadItem
-              key={reply.id}
-              postId={postId}
-              comment={reply}
-              sort={sort}
-              onRemoved={(deleted) => {
-                setExtraReplies((current) =>
-                  current.filter((item) => item.id !== deleted.id)
-                );
-              }}
-            />
-          ))}
-          {replyCursorToLoad ? (
-            <LoadMoreTrigger
-              text="Показать следующие комментарии"
-              isLoading={isRepliesFetching || isLoadingMoreReplies}
-              onActivate={() => {
-                if (!isRepliesFetching && !isLoadingMoreReplies) {
-                  void loadMoreReplies();
-                }
-              }}
-            />
-          ) : null}
-          {isReplying ? (
-            <div ref={composerRef}>
-              <CommentComposer
-                postId={postId}
-                parentId={comment.id}
-                replyToUserId={comment.user.id}
-                replyToDisplayName={authorPublicName}
-                onCreated={handleReplyCreated}
-                onCancelReply={() => setIsReplying(false)}
-              />
+        <div className="ml-4 border-l pl-3 sm:ml-8 sm:pl-4">
+          {isInitialRepliesLoad ? (
+            <div
+              className="flex justify-center py-4 text-muted-foreground"
+              aria-busy
+              aria-label="Загрузка ответов"
+            >
+              <Spinner />
             </div>
-          ) : null}
+          ) : (
+            <div className="grid gap-3">
+              {mergedReplies.map((reply) => (
+                <CommentThreadItem
+                  key={reply.id}
+                  postId={postId}
+                  comment={reply}
+                  sort={sort}
+                  onRemoved={(deleted) => {
+                    setExtraReplies((current) =>
+                      current.filter((item) => item.id !== deleted.id)
+                    );
+                  }}
+                />
+              ))}
+              {replyCursorToLoad ? (
+                <LoadMoreTrigger
+                  text="Показать следующие комментарии"
+                  isLoading={isRepliesFetching || isLoadingMoreReplies}
+                  onActivate={() => {
+                    if (!isRepliesFetching && !isLoadingMoreReplies) {
+                      void loadMoreReplies();
+                    }
+                  }}
+                />
+              ) : null}
+              {isReplying ? (
+                <div ref={composerRef}>
+                  <CommentComposer
+                    postId={postId}
+                    parentId={comment.id}
+                    replyToUserId={comment.user.id}
+                    replyToDisplayName={authorPublicName}
+                    onCreated={handleReplyCreated}
+                    onCancelReply={() => setIsReplying(false)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       ) : isReplying ? (
         <div ref={composerRef} className="ml-4 border-l pl-3 sm:ml-8 sm:pl-4">

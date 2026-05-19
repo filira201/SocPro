@@ -13,8 +13,7 @@ import {
 } from "@/features/posts/api/posts.api";
 import { api } from "@/shared/api/api";
 
-const ROOT_INITIAL_COMMENT_LIMIT = 3;
-const ROOT_PAGE_COMMENT_LIMIT = 10;
+const ROOT_COMMENTS_PAGE_LIMIT = 10;
 
 function getCommentLikePatchQueries(query: CommentsQuery): CommentsQuery[] {
   if (query.parentId) {
@@ -28,13 +27,7 @@ function getCommentLikePatchQueries(query: CommentsQuery): CommentsQuery[] {
       postId: query.postId,
       parentId: null,
       sort,
-      limit: ROOT_INITIAL_COMMENT_LIMIT,
-    },
-    {
-      postId: query.postId,
-      parentId: null,
-      sort,
-      limit: ROOT_PAGE_COMMENT_LIMIT,
+      limit: ROOT_COMMENTS_PAGE_LIMIT,
     },
   ];
 }

@@ -42,7 +42,7 @@ type PostCardProps = {
 
 export function PostCard({
   post,
-  showCommentsInitially = true,
+  showCommentsInitially = false,
   showOpenPostButton = true,
 }: PostCardProps) {
   const navigate = useNavigate();
