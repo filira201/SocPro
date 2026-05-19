@@ -1,8 +1,10 @@
 import { SearchIcon } from "lucide-react";
 import { useParams } from "react-router";
 
+import { selectCurrentUser } from "@/features/auth";
 import { useFollowListSearchUrl } from "@/features/follow/lib/use-follow-list-url";
 import { FollowUsersInfiniteList } from "@/features/follow/ui/follow-users-infinite-list";
+import { useAppSelector } from "@/shared/lib/redux";
 import { Input } from "@/shared/ui/kit/input";
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -11,8 +13,12 @@ function FollowersPage() {
   const { userId } = useParams();
   const { qFromUrl, queryInput, setQueryInput, listResetKey } =
     useFollowListSearchUrl();
+  const currentUser = useAppSelector(selectCurrentUser);
 
   const skip = !userId || !OBJECT_ID_REGEX.test(userId);
+  const isOwnList = Boolean(
+    userId && currentUser?.id && currentUser.id === userId
+  );
 
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-4">
@@ -45,7 +51,9 @@ function FollowersPage() {
             emptyMessage={
               qFromUrl
                 ? "Никого не найдено по заданному запросу"
-                : "У этого пользователя пока нет подписчиков"
+                : isOwnList
+                  ? "У вас пока нет подписчиков"
+                  : "У этого пользователя пока нет подписчиков"
             }
           />
         </>
