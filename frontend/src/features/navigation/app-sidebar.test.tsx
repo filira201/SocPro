@@ -9,6 +9,7 @@ import { useCurrentQuery } from "@/features/auth/api/auth.api";
 import type { User } from "@/features/auth/lib/types";
 import "@/features/notifications/api/notifications.api";
 import { useGetUnreadNotificationCountQuery } from "@/features/notifications/api/notifications.api";
+import { mockMatchMedia } from "@/shared/lib/test/mock-match-media";
 import { renderWithProviders } from "@/shared/lib/test/render-with-providers";
 import { ROUTES } from "@/shared/model/routes";
 import { SidebarProvider } from "@/shared/ui/kit/sidebar";
@@ -80,27 +81,11 @@ async function openUserMenu(user: UserEvent) {
   await user.click(screen.getByRole("button", { name: /Иван Иванов/i }));
 }
 
-function mockMatchMedia() {
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-}
-
 describe("AppSidebar — переходы по роутам", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    mockMatchMedia();
+    mockMatchMedia({ matches: false });
 
     mockedUseCurrentQuery.mockReturnValue({
       data: CURRENT_USER,
