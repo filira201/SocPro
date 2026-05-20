@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useController, useForm, useWatch } from "react-hook-form";
 
 import { useUpdateProjectMutation } from "../api/projects.api";
@@ -76,7 +76,12 @@ function toEditDefaults(project: ProjectDetail): ProjectEditFormValues {
   };
 }
 
-export function ProjectEditForm({ project }: ProjectEditFormProps) {
+/** Версия проекта с сервера: при изменении синхронизируем поля формы через `reset`. */
+function projectServerSyncToken(project: ProjectDetail) {
+  return `${project.id}:${project.updatedAt ?? ""}`;
+}
+
+function ProjectEditFormBody({ project }: ProjectEditFormProps) {
   const [updateProject, { isLoading }] = useUpdateProjectMutation();
   const [formError, setFormError] = useState<string | null>(null);
   const [savedHint, setSavedHint] = useState<string | null>(null);
@@ -105,9 +110,19 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
     name: "acceptingApplications",
   });
 
-  useEffect(() => {
+  const syncToken = projectServerSyncToken(project);
+  const didMountSyncRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!didMountSyncRef.current) {
+      didMountSyncRef.current = true;
+
+      return;
+    }
+
     reset(toEditDefaults(project));
-  }, [project, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- синхронизация только при новой версии с сервера (`syncToken`).
+  }, [syncToken, reset]);
 
   useEffect(() => {
     if (isTerminalProjectStatus(status)) {
@@ -451,4 +466,8 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
       </FieldSet>
     </form>
   );
+}
+
+export function ProjectEditForm({ project }: ProjectEditFormProps) {
+  return <ProjectEditFormBody key={project.id} project={project} />;
 }
