@@ -65,4 +65,55 @@ describe("notificationTargetHref", () => {
     );
     expect(liked).toBe(commented);
   });
+
+  test("ведёт на проект при projectId без postId", () => {
+    const href = notificationTargetHref(
+      baseNotification({
+        type: "PROJECT_INVITE_RECEIVED",
+        postId: null,
+        projectId: "6a0c96bf4dbfb0b7a7569ff1",
+      })
+    );
+
+    expect(href).toBe("/projects/6a0c96bf4dbfb0b7a7569ff1");
+  });
+
+  test("ведёт на список проектов при PROJECT_DELETED", () => {
+    const href = notificationTargetHref(
+      baseNotification({
+        type: "PROJECT_DELETED",
+        postId: null,
+        projectId: null,
+      })
+    );
+
+    expect(href).toBe("/projects");
+  });
+
+  test("возвращает null для USER_FOLLOWED без postId и projectId", () => {
+    const href = notificationTargetHref(
+      baseNotification({
+        type: "USER_FOLLOWED",
+        postId: null,
+        projectId: null,
+      })
+    );
+
+    expect(href).toBeNull();
+  });
+
+  test.each([
+    "PROJECT_APPLICATION_SUBMITTED_SELF",
+    "PROJECT_APPLICATION_WITHDRAWN_SELF",
+  ] as const)("self-тип %s с projectId ведёт на проект", (type) => {
+    const href = notificationTargetHref(
+      baseNotification({
+        type,
+        postId: null,
+        projectId: "6a0c96bf4dbfb0b7a7569ff1",
+      })
+    );
+
+    expect(href).toBe("/projects/6a0c96bf4dbfb0b7a7569ff1");
+  });
 });

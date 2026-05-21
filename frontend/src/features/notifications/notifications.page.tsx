@@ -72,13 +72,19 @@ function NotificationsPage() {
           <h1 className="text-xl font-semibold sm:text-2xl">Уведомления</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Непрочитанных:{" "}
-            <span className="font-medium text-foreground">{unreadTotal}</span>
+            <span
+              data-testid="notifications-unread-total"
+              className="font-medium text-foreground"
+            >
+              {unreadTotal}
+            </span>
           </p>
         </div>
         <Button
           type="button"
           variant="secondary"
           size="sm"
+          data-testid="notifications-mark-all"
           className="shrink-0 self-start sm:self-auto"
           disabled={unreadTotal === 0 || isMarkingAll}
           onClick={() => markAllRead()}

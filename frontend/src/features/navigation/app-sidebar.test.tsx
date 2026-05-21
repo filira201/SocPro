@@ -172,4 +172,59 @@ describe("AppSidebar — переходы по роутам", () => {
       ROUTES.NOTIFICATIONS
     );
   });
+
+  test("не показывает бейдж и счётчик при нуле непрочитанных", async () => {
+    // Arrange
+    mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
+      data: { count: 0 },
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    } as ReturnType<typeof useGetUnreadNotificationCountQuery>);
+    const { user } = renderAppSidebar(ROUTES.POSTS);
+
+    // Act
+    await openUserMenu(user);
+
+    // Assert
+    expect(screen.queryAllByTitle(/Непрочитанных:/)).toHaveLength(0);
+    expect(screen.queryByLabelText(/Непрочитанных:/)).not.toBeInTheDocument();
+  });
+
+  test("показывает бейдж на аватаре и счётчик непрочитанных в меню", async () => {
+    // Arrange
+    mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
+      data: { count: 3 },
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    } as ReturnType<typeof useGetUnreadNotificationCountQuery>);
+    const { user } = renderAppSidebar(ROUTES.POSTS);
+
+    // Act
+    await openUserMenu(user);
+
+    // Assert
+    expect(screen.getAllByTitle("Непрочитанных: 3")).toHaveLength(2);
+    expect(screen.getByLabelText("Непрочитанных: 3")).toHaveTextContent("3");
+  });
+
+  test("показывает 99+ при более чем 99 непрочитанных", async () => {
+    // Arrange
+    mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
+      data: { count: 150 },
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    } as ReturnType<typeof useGetUnreadNotificationCountQuery>);
+    const { user } = renderAppSidebar(ROUTES.POSTS);
+
+    // Act
+    await openUserMenu(user);
+
+    // Assert
+    expect(screen.getByLabelText("Непрочитанных: 150")).toHaveTextContent(
+      "99+"
+    );
+  });
 });
