@@ -11,12 +11,30 @@ import { useGetUserByIdQuery } from "@/features/auth/api/auth.api";
 import type { User } from "@/features/auth/lib/types";
 import "@/features/auth/api/auth.api";
 import "@/features/user/api/user-profile-projects.api";
-import type { ProjectListItem } from "@/features/projects/model/types";
+import {
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+} from "@/features/follow/api/follow.api";
+import {
+  useCancelApplicationMutation,
+  useGetManagedProjectsListQuery,
+  useInviteUserToProjectMutation,
+} from "@/features/projects/api/projects.api";
+import type {
+  ManagedProjectListItem,
+  ManagedProjectsListQuery,
+  ProjectListItem,
+} from "@/features/projects/model/types";
+import "@/features/follow/api/follow.api";
+import "@/features/projects/api/projects.api";
 import { renderWithProviders } from "@/shared/lib/test/render-with-providers";
 import { ROUTES } from "@/shared/model/routes";
 
 const CURRENT_USER_ID = "507f1f77bcf86cd799439099";
+const OTHER_USER_ID = "507f1f77bcf86cd7994390aa";
 const PROJECT_ID = "6a04cae90445f0b3a1d38699";
+const APPLICATION_ID = "6a04cae90445f0b3a1d38601";
+const MANAGED_PROJECT_TITLE = "Дипломный проект для приглашения";
 
 const FOLLOWERS_STUB_TEXT = "Страница подписчиков (тест)";
 const FOLLOWING_STUB_TEXT = "Страница подписок (тест)";
@@ -49,10 +67,51 @@ vi.mock("./api/user-profile-projects.api", async (importOriginal) => {
   };
 });
 
+vi.mock("@/features/projects/api/projects.api", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/features/projects/api/projects.api")
+    >();
+
+  return {
+    ...actual,
+    useGetManagedProjectsListQuery: vi.fn(),
+    useInviteUserToProjectMutation: vi.fn(),
+    useCancelApplicationMutation: vi.fn(),
+  };
+});
+
+vi.mock("@/features/follow/api/follow.api", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/features/follow/api/follow.api")>();
+
+  return {
+    ...actual,
+    useFollowUserMutation: vi.fn(),
+    useUnfollowUserMutation: vi.fn(),
+  };
+});
+
 const mockedUseGetUserByIdQuery = vi.mocked(useGetUserByIdQuery);
 const mockedUseGetUserProfileProjectsQuery = vi.mocked(
   useGetUserProfileProjectsQuery
 );
+const mockedUseGetManagedProjectsListQuery = vi.mocked(
+  useGetManagedProjectsListQuery
+);
+const mockedUseInviteUserToProjectMutation = vi.mocked(
+  useInviteUserToProjectMutation
+);
+const mockedUseCancelApplicationMutation = vi.mocked(
+  useCancelApplicationMutation
+);
+const mockedUseFollowUserMutation = vi.mocked(useFollowUserMutation);
+const mockedUseUnfollowUserMutation = vi.mocked(useUnfollowUserMutation);
+
+const mockFollowUser = vi.fn();
+const mockUnfollowUser = vi.fn();
+const mockInviteUser = vi.fn();
+const mockCancelApplication = vi.fn();
 
 class MockIntersectionObserver {
   observe = vi.fn();
@@ -85,6 +144,24 @@ function makeAuthenticatedUser(): User {
   };
 }
 
+function makeOtherProfileUser(): User {
+  return {
+    id: OTHER_USER_ID,
+    email: "petr@example.com",
+    firstName: "Пётр",
+    lastName: "Петров",
+    patronymic: null,
+    avatarUrl: null,
+    bio: "Ищу проект для стажировки.",
+    dateOfBirth: null,
+    createdAt: "2026-02-01T00:00:00.000Z",
+    isFollowing: false,
+    followersCount: 3,
+    followingCount: 5,
+    skills: [{ id: "507f1f77bcf86cd799439013", name: "Python" }],
+  };
+}
+
 function makeProfileUser(): User {
   return {
     ...makeAuthenticatedUser(),
@@ -101,6 +178,22 @@ function makeProfileUser(): User {
       { id: "507f1f77bcf86cd799439011", name: "React" },
       { id: "507f1f77bcf86cd799439012", name: "TypeScript" },
     ],
+  };
+}
+
+function makeManagedProjectListItem(
+  overrides: Partial<ManagedProjectListItem> &
+    Pick<ManagedProjectListItem, "title">
+): ManagedProjectListItem {
+  return {
+    ...makeProjectListItem({
+      id: PROJECT_ID,
+      title: overrides.title ?? MANAGED_PROJECT_TITLE,
+      ...overrides,
+    }),
+    inviteeApplication: null,
+    inviteeIsMember: false,
+    ...overrides,
   };
 }
 
@@ -158,6 +251,88 @@ function mockProfileUserLoaded() {
   );
 }
 
+function mockOtherAndOwnProfileUsersLoaded() {
+  mockedUseGetUserByIdQuery.mockImplementation((userId: string) => {
+    if (userId === CURRENT_USER_ID) {
+      return makeGetUserByIdQueryResult(makeProfileUser());
+    }
+
+    if (userId === OTHER_USER_ID) {
+      return makeGetUserByIdQueryResult(makeOtherProfileUser());
+    }
+
+    return makeGetUserByIdQueryResult(undefined);
+  });
+}
+
+function makeGetManagedProjectsListQueryResult(data: {
+  items: ManagedProjectListItem[];
+  nextCursor: string | null;
+}): ReturnType<typeof useGetManagedProjectsListQuery> {
+  return {
+    data,
+    currentData: data,
+    isLoading: false,
+    isFetching: false,
+    error: undefined,
+    refetch: vi.fn(),
+  } as ReturnType<typeof useGetManagedProjectsListQuery>;
+}
+
+function mockManagedProjectsEmpty() {
+  mockedUseGetManagedProjectsListQuery.mockImplementation(() =>
+    makeGetManagedProjectsListQueryResult({ items: [], nextCursor: null })
+  );
+}
+
+function mockManagedProjectsWith(items: ManagedProjectListItem[]) {
+  mockedUseGetManagedProjectsListQuery.mockImplementation(
+    (args: ManagedProjectsListQuery) => {
+      if (args.inviteeId !== OTHER_USER_ID) {
+        return makeGetManagedProjectsListQueryResult({
+          items: [],
+          nextCursor: null,
+        });
+      }
+
+      return makeGetManagedProjectsListQueryResult({
+        items,
+        nextCursor: null,
+      });
+    }
+  );
+}
+
+function setupFollowMutationMocks() {
+  mockedUseFollowUserMutation.mockReturnValue([
+    mockFollowUser,
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useFollowUserMutation>);
+
+  mockedUseUnfollowUserMutation.mockReturnValue([
+    mockUnfollowUser,
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useUnfollowUserMutation>);
+}
+
+function setupInviteMutationMock() {
+  mockedUseInviteUserToProjectMutation.mockReturnValue([
+    mockInviteUser.mockReturnValue({
+      unwrap: () => Promise.resolve({ id: APPLICATION_ID }),
+    }),
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useInviteUserToProjectMutation>);
+}
+
+function setupCancelApplicationMutationMock() {
+  mockedUseCancelApplicationMutation.mockReturnValue([
+    mockCancelApplication.mockReturnValue({
+      unwrap: () => Promise.resolve({ message: "Заявка отозвана" }),
+    }),
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useCancelApplicationMutation>);
+}
+
 function mockProfileProjects(items: ProjectListItem[]) {
   mockedUseGetUserProfileProjectsQuery.mockImplementation(() =>
     makeGetUserProfileProjectsQueryResult({ items, nextCursor: null })
@@ -169,9 +344,11 @@ function mockProfileProjectsEmpty() {
 }
 
 const ownProfileRoute = href(ROUTES.USER_DETAILS, { userId: CURRENT_USER_ID });
+const otherProfileRoute = href(ROUTES.USER_DETAILS, { userId: OTHER_USER_ID });
 
-function renderOwnProfilePage(
-  initialEntries: string | string[] = ownProfileRoute
+function renderUserProfileRoutes(
+  initialEntries: string | string[],
+  authenticatedUser: User
 ) {
   const entries = Array.isArray(initialEntries)
     ? initialEntries
@@ -195,9 +372,29 @@ function renderOwnProfilePage(
     </Routes>,
     {
       initialEntries: entries,
-      authenticatedUser: makeAuthenticatedUser(),
+      authenticatedUser,
     }
   );
+}
+
+function renderOwnProfilePage(
+  initialEntries: string | string[] = ownProfileRoute
+) {
+  const entries = Array.isArray(initialEntries)
+    ? initialEntries
+    : [initialEntries];
+
+  return renderUserProfileRoutes(entries, makeAuthenticatedUser());
+}
+
+function renderOtherProfilePage(
+  initialEntries: string | string[] = otherProfileRoute
+) {
+  const entries = Array.isArray(initialEntries)
+    ? initialEntries
+    : [initialEntries];
+
+  return renderUserProfileRoutes(entries, makeAuthenticatedUser());
 }
 
 async function expandProfileProjects(
@@ -409,5 +606,130 @@ describe("UserPage (свой профиль)", () => {
 
     // Assert
     expect(screen.getByText(PROJECT_DETAILS_STUB_TEXT)).toBeInTheDocument();
+  });
+});
+
+describe("UserPage (чужой профиль)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+    vi.clearAllMocks();
+    stubRadixDomApis();
+    mockOtherAndOwnProfileUsersLoaded();
+    mockProfileProjectsEmpty();
+    mockManagedProjectsEmpty();
+    setupFollowMutationMocks();
+    setupInviteMutationMock();
+    setupCancelApplicationMutationMock();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  test("не показывает редактирование, показывает подписку и скрывает заявки без управляемых проектов", () => {
+    // Arrange
+    const otherProfile = makeOtherProfileUser();
+
+    // Act
+    renderOtherProfilePage();
+
+    // Assert
+    expect(
+      screen.getByRole("heading", { name: displayPublicName(otherProfile) })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Редактировать профиль" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Подписаться" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Заявки" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("показывает кнопку заявок при управляемых проектах автора или администратора", () => {
+    // Arrange
+    mockManagedProjectsWith([
+      makeManagedProjectListItem({
+        title: MANAGED_PROJECT_TITLE,
+        inviteeApplication: null,
+        inviteeIsMember: false,
+        acceptingApplications: true,
+      }),
+    ]);
+
+    // Act
+    renderOtherProfilePage();
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Заявки" })).toBeInTheDocument();
+  });
+
+  test("отправляет приглашение в проект пользователю", async () => {
+    // Arrange
+    mockManagedProjectsWith([
+      makeManagedProjectListItem({
+        title: MANAGED_PROJECT_TITLE,
+        inviteeApplication: null,
+        inviteeIsMember: false,
+        acceptingApplications: true,
+      }),
+    ]);
+    const { user } = renderOtherProfilePage();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Заявки" }));
+    await user.click(await screen.findByRole("button", { name: "Пригласить" }));
+    await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(mockInviteUser).toHaveBeenCalledWith({
+        projectId: PROJECT_ID,
+        inviteeId: OTHER_USER_ID,
+        body: { message: undefined },
+      });
+    });
+    expect(
+      screen.queryByRole("button", { name: "Отправить" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("отзывает отправленное приглашение в проект", async () => {
+    // Arrange
+    mockManagedProjectsWith([
+      makeManagedProjectListItem({
+        title: MANAGED_PROJECT_TITLE,
+        inviteeApplication: {
+          id: APPLICATION_ID,
+          status: "PENDING",
+          invitedById: CURRENT_USER_ID,
+        },
+        inviteeIsMember: false,
+        acceptingApplications: true,
+      }),
+    ]);
+    const { user } = renderOtherProfilePage();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Заявки" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Отозвать приглашение" })
+    );
+    await user.click(screen.getByRole("button", { name: "Да, отозвать" }));
+
+    // Assert
+    await vi.waitFor(() => {
+      expect(mockCancelApplication).toHaveBeenCalledWith({
+        applicationId: APPLICATION_ID,
+        projectId: PROJECT_ID,
+        managedInviteeId: OTHER_USER_ID,
+      });
+    });
+    expect(
+      screen.queryByRole("button", { name: "Да, отозвать" })
+    ).not.toBeInTheDocument();
   });
 });
