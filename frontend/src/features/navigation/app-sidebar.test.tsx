@@ -81,27 +81,30 @@ async function openUserMenu(user: UserEvent) {
   await user.click(screen.getByRole("button", { name: /Иван Иванов/i }));
 }
 
+function setupSidebarMocks() {
+  mockedUseCurrentQuery.mockReturnValue({
+    data: CURRENT_USER,
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  } as ReturnType<typeof useCurrentQuery>);
+
+  mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
+    data: { count: 0 },
+    isLoading: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  } as ReturnType<typeof useGetUnreadNotificationCountQuery>);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  localStorage.clear();
+  mockMatchMedia({ matches: false });
+  setupSidebarMocks();
+});
+
 describe("AppSidebar — переходы по роутам", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    mockMatchMedia({ matches: false });
-
-    mockedUseCurrentQuery.mockReturnValue({
-      data: CURRENT_USER,
-      isLoading: false,
-      isFetching: false,
-      refetch: vi.fn(),
-    } as ReturnType<typeof useCurrentQuery>);
-
-    mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
-      data: { count: 0 },
-      isLoading: false,
-      isFetching: false,
-      refetch: vi.fn(),
-    } as ReturnType<typeof useGetUnreadNotificationCountQuery>);
-  });
-
   test.each([
     {
       linkName: "Посты",
@@ -226,5 +229,25 @@ describe("AppSidebar — переходы по роутам", () => {
     expect(screen.getByLabelText("Непрочитанных: 150")).toHaveTextContent(
       "99+"
     );
+  });
+});
+
+describe("AppSidebar — выход из аккаунта", () => {
+  test("выходит из аккаунта и переходит на страницу входа", async () => {
+    // Arrange
+    const { user, store } = renderAppSidebar(ROUTES.POSTS);
+    expect(localStorage.getItem("token")).toBe("test-token");
+
+    // Act
+    await openUserMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Выйти" }));
+
+    // Assert
+    expect(screen.getByTestId("nav-current-path")).toHaveTextContent(
+      ROUTES.LOGIN
+    );
+    expect(store.getState().user.token).toBeNull();
+    expect(store.getState().user.user).toBeNull();
+    expect(localStorage.getItem("token")).toBeNull();
   });
 });
