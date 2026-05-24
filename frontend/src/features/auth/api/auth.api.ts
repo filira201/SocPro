@@ -14,6 +14,7 @@ type RegisterPayload = {
   lastName?: string | null;
   patronymic?: string | null;
   password: string;
+  personalDataConsent: boolean;
 };
 
 export const authApi = api.injectEndpoints({

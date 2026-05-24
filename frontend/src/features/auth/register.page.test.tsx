@@ -63,7 +63,12 @@ function mockRegisterIdle() {
   ] as ReturnType<typeof useRegisterMutation>);
 }
 
-async function fillValidForm(user: UserEvent) {
+async function fillValidForm(
+  user: UserEvent,
+  options?: { withConsent?: boolean }
+) {
+  const withConsent = options?.withConsent ?? true;
+
   await user.type(screen.getByTestId("register-email"), VALID_EMAIL);
   await user.type(screen.getByTestId("register-first-name"), "Иван");
   await user.type(screen.getByTestId("register-password"), VALID_PASSWORD);
@@ -71,6 +76,10 @@ async function fillValidForm(user: UserEvent) {
     screen.getByTestId("register-confirm-password"),
     VALID_PASSWORD
   );
+
+  if (withConsent) {
+    await user.click(screen.getByTestId("register-personal-data-consent"));
+  }
 }
 
 describe("RegisterPage", () => {
@@ -100,6 +109,24 @@ describe("RegisterPage", () => {
     expect(
       screen.getByTestId("register-confirm-password-error")
     ).toHaveTextContent("Минимум 6 символов");
+    expect(
+      screen.getByTestId("register-personal-data-consent-error")
+    ).toHaveTextContent("Необходимо согласие на обработку персональных данных");
+    expect(mockRegister).not.toHaveBeenCalled();
+  });
+
+  test("показывает ошибку если не отмечено согласие на обработку персональных данных", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<RegisterPage />);
+    await fillValidForm(user, { withConsent: false });
+
+    // Act
+    await user.click(screen.getByTestId("register-submit"));
+
+    // Assert
+    expect(
+      screen.getByTestId("register-personal-data-consent-error")
+    ).toHaveTextContent("Необходимо согласие на обработку персональных данных");
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
@@ -139,6 +166,7 @@ describe("RegisterPage", () => {
       lastName: undefined,
       patronymic: undefined,
       password: VALID_PASSWORD,
+      personalDataConsent: true,
     });
   });
 

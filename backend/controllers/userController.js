@@ -94,7 +94,14 @@ function normalizeOptionalName(value) {
 
 const UserController = {
   register: async (req, res) => {
-    const { email, password, firstName, lastName, patronymic } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      patronymic,
+      personalDataConsent,
+    } = req.body;
 
     const fn = String(firstName ?? "").trim();
     const ln = normalizeOptionalName(lastName);
@@ -106,6 +113,7 @@ const UserController = {
       firstName: fn,
       lastName: ln,
       patronymic: pt,
+      personalDataConsent,
     });
     if (validationError) {
       return res.status(400).json({ error: validationError });

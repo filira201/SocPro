@@ -52,13 +52,24 @@ function displayPublicName(user) {
   return joined || fn || "";
 }
 
-function validateRegister({ email, password, firstName, lastName, patronymic }) {
+function validateRegister({
+  email,
+  password,
+  firstName,
+  lastName,
+  patronymic,
+  personalDataConsent,
+}) {
   if (!email || !EMAIL_REGEX.test(String(email))) {
     return "Некорректная почта";
   }
 
   if (!password || String(password).length < 6) {
     return "Пароль минимум 6 символов";
+  }
+
+  if (personalDataConsent !== true) {
+    return "Необходимо согласие на обработку персональных данных";
   }
 
   const e1 = validateFioPart(firstName, { optional: false, label: "Имя" });

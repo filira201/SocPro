@@ -32,6 +32,9 @@ export const registerSchema = z
     patronymic: fioPartOptionalSchema,
     password: z.string().min(6, "Минимум 6 символов"),
     confirmPassword: z.string().min(6, "Минимум 6 символов"),
+    personalDataConsent: z.boolean().refine((v) => v === true, {
+      message: "Необходимо согласие на обработку персональных данных",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Пароли не совпадают",
