@@ -143,4 +143,36 @@ describe("notifications-socket", () => {
       expect.any(Function)
     );
   });
+
+  test("повторный connect с тем же токеном не пересоздаёт сокет", () => {
+    // Arrange
+    connectNotificationsSocket("same-token");
+    mockIo.mockClear();
+    mockDisconnect.mockClear();
+
+    // Act — повторный вызов (например, второй mount useEffect в StrictMode dev)
+    connectNotificationsSocket("same-token");
+
+    // Assert
+    expect(mockIo).not.toHaveBeenCalled();
+    expect(mockDisconnect).not.toHaveBeenCalled();
+  });
+
+  test("connect c новым токеном закрывает предыдущий сокет", () => {
+    // Arrange
+    connectNotificationsSocket("first-token");
+    mockIo.mockClear();
+    mockDisconnect.mockClear();
+
+    // Act
+    connectNotificationsSocket("second-token");
+
+    // Assert
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+    expect(mockIo).toHaveBeenCalledTimes(1);
+    expect(mockIo).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({ auth: { token: "second-token" } })
+    );
+  });
 });
