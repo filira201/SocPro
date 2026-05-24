@@ -24,14 +24,14 @@ model User {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bio         String?
-  contacts    String[]  @default([])
   university  String?
   course      String?
   faculty     String?
-  resumeUrl   String?
-  resumeOriginalName String?
-  resumeMimeType     String?
-  resumeSize  Int?
+
+  /** Резюме (PDF/Word), 1:1 — отдельная таблица UserResume. */
+  resume UserResume?
+  /** Контакты (произвольные строки), 1:N — таблица UserContact с полем position. */
+  contactList UserContact[]
 
   posts        Post[]
   likes        Like[]
@@ -57,6 +57,31 @@ model User {
   actorNotifications Notification[] @relation("NotificationActor")
   /** Второй участник события (например приглашённый в уведомлении для staff «A пригласил B»). */
   subjectNotifications Notification[] @relation("NotificationSubject")
+}
+
+/** Резюме пользователя (PDF/Word), не более одного на пользователя. */
+model UserResume {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url          String
+  originalName String?
+  mimeType     String
+  size         Int
+  uploadedAt   DateTime @default(now())
+}
+
+/** Контакт пользователя (произвольная строка: tg, tel, email и т.д.). */
+model UserContact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value     String
+  /** Порядок отображения (0-based), совпадает с порядком ввода в форме. */
+  position  Int
+  createdAt DateTime @default(now())
+
+  @@index([userId, position])
 }
 
 model Follows {

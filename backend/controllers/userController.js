@@ -29,6 +29,7 @@ const {
   flattenUserSkills,
   flattenSkillsDeep,
 } = require("../lib/skill-mapping");
+const { flattenUserProfile } = require("../lib/user-flatten");
 const { ID_REGEX } = require("../lib/id");
 
 const OBJECT_ID_REGEX = ID_REGEX;
@@ -201,6 +202,8 @@ const UserController = {
         where: { id },
         include: {
           skills: { include: { skill: true } },
+          resume: true,
+          contactList: true,
           _count: {
             select: {
               followers: true,
@@ -215,6 +218,7 @@ const UserController = {
       }
 
       flattenUserSkills(user);
+      flattenUserProfile(user);
 
       const isFollowing = await prisma.follows.findFirst({
         where: { AND: [{ followerId: userId }, { followingId: id }] },
@@ -255,7 +259,10 @@ const UserController = {
     }
 
     try {
-      const existing = await prisma.user.findUnique({ where: { id } });
+      const existing = await prisma.user.findUnique({
+        where: { id },
+        include: { resume: true },
+      });
 
       if (!existing) {
         return res.status(404).json({ error: "Пользователь не найден" });
@@ -358,10 +365,6 @@ const UserController = {
         data.dateOfBirth = dateOfBirthUpdate;
       }
 
-      if (contactsUpdate !== undefined) {
-        data.contacts = { set: contactsUpdate };
-      }
-
       if (avatarFile) {
         try {
           await optimizeImageFile(avatarFile);
@@ -375,24 +378,22 @@ const UserController = {
         data.avatarUrl = `/uploads/${avatarFile.filename}`;
       }
 
+      let resumePayload;
       if (resumeFile) {
-        unlinkUploadByPublicUrl(existing.resumeUrl);
-        data.resumeUrl = `/uploads/${resumeFile.filename}`;
-        data.resumeOriginalName = decodeUploadOriginalName(
-          resumeFile.originalname,
-        );
-        data.resumeMimeType = resumeFile.mimetype;
-        data.resumeSize = resumeFile.size;
+        unlinkUploadByPublicUrl(existing.resume?.url);
+        resumePayload = {
+          url: `/uploads/${resumeFile.filename}`,
+          originalName: decodeUploadOriginalName(resumeFile.originalname),
+          mimeType: resumeFile.mimetype,
+          size: resumeFile.size,
+        };
       } else if (removeResume) {
-        unlinkUploadByPublicUrl(existing.resumeUrl);
-        data.resumeUrl = null;
-        data.resumeOriginalName = null;
-        data.resumeMimeType = null;
-        data.resumeSize = null;
+        unlinkUploadByPublicUrl(existing.resume?.url);
+        resumePayload = null;
       }
 
       const user = await prisma.$transaction(async (tx) => {
-        const updated = await tx.user.update({ where: { id }, data });
+        await tx.user.update({ where: { id }, data });
 
         if (skillIds !== undefined) {
           /** Полная пересинхронизация набора навыков пользователя (delete-then-insert). */
@@ -409,13 +410,44 @@ const UserController = {
           }
         }
 
+        if (contactsUpdate !== undefined) {
+          await tx.userContact.deleteMany({ where: { userId: id } });
+
+          if (contactsUpdate.length) {
+            await tx.userContact.createMany({
+              data: contactsUpdate.map((value, position) => ({
+                userId: id,
+                value,
+                position,
+              })),
+            });
+          }
+        }
+
+        if (resumePayload !== undefined) {
+          if (resumePayload === null) {
+            await tx.userResume.deleteMany({ where: { userId: id } });
+          } else {
+            await tx.userResume.upsert({
+              where: { userId: id },
+              create: { userId: id, ...resumePayload },
+              update: resumePayload,
+            });
+          }
+        }
+
         return tx.user.findUnique({
-          where: { id: updated.id },
-          include: { skills: { include: { skill: true } } },
+          where: { id },
+          include: {
+            skills: { include: { skill: true } },
+            resume: true,
+            contactList: true,
+          },
         });
       });
 
       flattenUserSkills(user);
+      flattenUserProfile(user);
       res.json(sanitizeUser(user));
     } catch (error) {
       console.error("Error in updateUser", error);
@@ -439,6 +471,8 @@ const UserController = {
             },
           },
           skills: { include: { skill: true } },
+          resume: true,
+          contactList: true,
           _count: {
             select: {
               followers: true,
@@ -453,6 +487,7 @@ const UserController = {
       }
 
       flattenUserSkills(user);
+      flattenUserProfile(user);
 
       const { _count, ...userWithoutCount } = user;
 
@@ -560,10 +595,15 @@ const UserController = {
           : {}),
         take: limit + 1,
         orderBy: { createdAt: "desc" },
+        include: {
+          resume: true,
+          contactList: true,
+        },
       });
 
       const hasNextPage = users.length > limit;
       const pageUsers = hasNextPage ? users.slice(0, limit) : users;
+      pageUsers.forEach(flattenUserProfile);
       const items = await mapUsersWithFollowingFlag(viewerId, pageUsers);
       const nextCursor = hasNextPage
         ? pageUsers[pageUsers.length - 1]?.id

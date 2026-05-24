@@ -654,7 +654,6 @@ async function main() {
         university: d.university,
         faculty: d.faculty,
         course: d.course,
-        contacts: d.contacts,
       },
       select: { id: true },
     });
@@ -666,6 +665,16 @@ async function main() {
           skillId,
         })),
         skipDuplicates: true,
+      });
+    }
+
+    if (d.contacts && d.contacts.length) {
+      await prisma.userContact.createMany({
+        data: d.contacts.map((value, position) => ({
+          userId: created.id,
+          value,
+          position,
+        })),
       });
     }
   }
