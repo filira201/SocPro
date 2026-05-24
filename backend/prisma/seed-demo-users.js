@@ -641,7 +641,7 @@ async function main() {
   }
 
   for (const d of usersData) {
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         email: d.email,
         firstName: d.firstName,
@@ -655,9 +655,19 @@ async function main() {
         faculty: d.faculty,
         course: d.course,
         contacts: d.contacts,
-        skillIds: d.skillIds,
       },
+      select: { id: true },
     });
+
+    if (d.skillIds && d.skillIds.length) {
+      await prisma.userSkill.createMany({
+        data: [...new Set(d.skillIds)].map((skillId) => ({
+          userId: created.id,
+          skillId,
+        })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   const userList = await prisma.user.findMany({
@@ -770,14 +780,19 @@ async function main() {
   }
 
   async function createProject(owner, extraMembers, requiredSkillIds) {
+    const unique = [...new Set(requiredSkillIds || [])];
     return prisma.project.create({
       data: {
         title: `Проект ${owner.firstName}`,
         description: "Краткое описание проекта.",
         goals: "Основные цели проекта.",
         ownerId: owner.id,
-        ...(requiredSkillIds.length
-          ? { requiredSkillIds: { set: requiredSkillIds } }
+        ...(unique.length
+          ? {
+              requiredSkills: {
+                create: unique.map((skillId) => ({ skillId })),
+              },
+            }
           : {}),
         members: {
           create: [
@@ -792,6 +807,10 @@ async function main() {
     });
   }
 
+  /**
+   * userList — объекты, у которых поле skillIds уже выставлено вызывающим кодом
+   * (см. блок «проектные пользователи»: туда мы кладём skillIds руками).
+   */
   function unionSkillIds(...userList) {
     const s = new Set();
     for (const u of userList) {
@@ -868,15 +887,26 @@ async function main() {
       chunk.push(skillPack[(sp + k) % skillPack.length]);
     }
     sp += 3;
-    await prisma.user.update({
-      where: { id: uid },
-      data: { skillIds: [...new Set(chunk)] },
-    });
+    const unique = [...new Set(chunk)];
+
+    /** Полная пересинхронизация UserSkill для проектных пользователей. */
+    await prisma.userSkill.deleteMany({ where: { userId: uid } });
+    if (unique.length) {
+      await prisma.userSkill.createMany({
+        data: unique.map((skillId) => ({ userId: uid, skillId })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   const uWithSkills = await prisma.user.findMany({
     where: { id: { in: [...projectUserIds] } },
+    include: { skills: { select: { skillId: true } } },
   });
+  /** unionSkillIds() в коде ниже читает u.skillIds — кладём массив id руками. */
+  for (const u of uWithSkills) {
+    u.skillIds = u.skills.map((s) => s.skillId);
+  }
   const byId = new Map(uWithSkills.map((u) => [u.id, u]));
   const reload = (u) => byId.get(u.id);
 

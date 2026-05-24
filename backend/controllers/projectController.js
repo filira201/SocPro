@@ -20,8 +20,10 @@ const {
 const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 const { createNotification } = require("../lib/notifications");
+const { flattenSkillsDeep } = require("../lib/skill-mapping");
+const { ID_REGEX } = require("../lib/id");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_PROJECT_LIST_LIMIT = 10;
 const MAX_PROJECT_LIST_LIMIT = 100;
 const MAX_PROJECT_LIST_Q = 200;
@@ -164,14 +166,20 @@ const ProjectController = {
     );
 
     try {
+      const uniqueSkillIds = [...new Set(requiredSkillIds)];
+
       const project = await prisma.project.create({
         data: {
           title,
           description,
           goals,
           ownerId,
-          ...(requiredSkillIds.length
-            ? { requiredSkillIds: { set: requiredSkillIds } }
+          ...(uniqueSkillIds.length
+            ? {
+                requiredSkills: {
+                  create: uniqueSkillIds.map((skillId) => ({ skillId })),
+                },
+              }
             : {}),
           members: {
             create: { userId: ownerId, role: "OWNER" },
@@ -186,12 +194,13 @@ const ProjectController = {
         },
         include: {
           owner: true,
-          requiredSkills: true,
+          requiredSkills: { include: { skill: true } },
           members: { include: { user: true } },
           attachments: { orderBy: { createdAt: "asc" } },
         },
       });
 
+      flattenSkillsDeep(project);
       res.status(201).json(sanitizeUser(normalizeProjectForApi(project)));
     } catch (error) {
       await unlinkMulterFiles(files);
@@ -237,10 +246,15 @@ const ProjectController = {
       }
 
       if (skillIds.length) {
-        /** Все выбранные в фильтре id должны входить в `requiredSkillIds` проекта (логическое И). */
-        where.AND.push({
-          requiredSkillIds: { hasEvery: skillIds },
-        });
+        /**
+         * Все выбранные в фильтре id должны входить в требуемые навыки проекта (логическое И).
+         * На реляционной модели — AND из нескольких `some` по join-таблице ProjectRequiredSkill.
+         */
+        for (const sid of skillIds) {
+          where.AND.push({
+            requiredSkills: { some: { skillId: sid } },
+          });
+        }
       }
 
       if (status && PROJECT_STATUSES.has(String(status))) {
@@ -274,7 +288,7 @@ const ProjectController = {
         take: limit + 1,
         include: {
           owner: true,
-          requiredSkills: true,
+          requiredSkills: { include: { skill: true } },
           _count: {
             select: {
               members: true,
@@ -292,6 +306,7 @@ const ProjectController = {
       const items = (hasNextPage ? projects.slice(0, limit) : projects).map(
         (p) => normalizeProjectForApi(p),
       );
+      flattenSkillsDeep(items);
       const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
 
       res.json({
@@ -361,7 +376,7 @@ const ProjectController = {
         take: limit + 1,
         include: {
           owner: true,
-          requiredSkills: true,
+          requiredSkills: { include: { skill: true } },
           _count: {
             select: {
               members: true,
@@ -375,6 +390,7 @@ const ProjectController = {
 
       const hasNextPage = projects.length > limit;
       const page = hasNextPage ? projects.slice(0, limit) : projects;
+      flattenSkillsDeep(page);
 
       /** Заявки приглашённого пользователя по проектам страницы (для «Пригласить» / «Отозвать»). */
       let inviteeApplicationByProjectId = new Map();
@@ -449,7 +465,7 @@ const ProjectController = {
         where: { id },
         include: {
           owner: true,
-          requiredSkills: true,
+          requiredSkills: { include: { skill: true } },
           members: { include: { user: true } },
           attachments: { orderBy: { createdAt: "asc" } },
         },
@@ -458,6 +474,8 @@ const ProjectController = {
       if (!project) {
         return res.status(404).json({ error: "Проект не найден" });
       }
+
+      flattenSkillsDeep(project);
 
       const isOwner = project.ownerId === userId;
       const requesterMembership = project.members.find(
@@ -479,12 +497,15 @@ const ProjectController = {
         applications = await prisma.projectApplication.findMany({
           where: { projectId: id },
           include: {
-            applicant: { include: { skills: true } },
+            applicant: {
+              include: { skills: { include: { skill: true } } },
+            },
             invitedBy: true,
             decidedBy: true,
           },
           orderBy: { createdAt: "desc" },
         });
+        flattenSkillsDeep(applications);
       }
 
       const normalized = normalizeProjectForApi(project);
@@ -651,9 +672,11 @@ const ProjectController = {
         }
       }
 
+      let nextRequiredSkillIds;
       if (req.body.requiredSkillIds !== undefined) {
-        const arr = parseRequiredSkillIdsFromBody(req.body.requiredSkillIds);
-        data.requiredSkillIds = { set: arr };
+        nextRequiredSkillIds = [
+          ...new Set(parseRequiredSkillIdsFromBody(req.body.requiredSkillIds)),
+        ];
       }
 
       const attachmentUpdate = {
@@ -671,19 +694,44 @@ const ProjectController = {
 
       const hasAttachmentOps = uniqueRemoveIds.length > 0 || files.length > 0;
 
-      const updated = await prisma.project.update({
-        where: { id },
-        data: {
-          ...data,
-          ...(hasAttachmentOps ? { attachments: attachmentUpdate } : {}),
-        },
-        include: {
-          owner: true,
-          requiredSkills: true,
-          members: { include: { user: true } },
-          attachments: { orderBy: { createdAt: "asc" } },
-        },
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.project.update({
+          where: { id },
+          data: {
+            ...data,
+            ...(hasAttachmentOps ? { attachments: attachmentUpdate } : {}),
+          },
+        });
+
+        if (nextRequiredSkillIds !== undefined) {
+          /** Полная пересинхронизация требуемых навыков (delete-then-insert). */
+          await tx.projectRequiredSkill.deleteMany({
+            where: { projectId: id },
+          });
+
+          if (nextRequiredSkillIds.length) {
+            await tx.projectRequiredSkill.createMany({
+              data: nextRequiredSkillIds.map((skillId) => ({
+                projectId: id,
+                skillId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
+        return tx.project.findUnique({
+          where: { id },
+          include: {
+            owner: true,
+            requiredSkills: { include: { skill: true } },
+            members: { include: { user: true } },
+            attachments: { orderBy: { createdAt: "asc" } },
+          },
+        });
       });
+
+      flattenSkillsDeep(updated);
 
       for (const row of existingToRemove) {
         unlinkUploadByPublicUrl(row.url);
@@ -737,12 +785,14 @@ const ProjectController = {
         notificationOr.push({ applicationId: { in: applicationIds } });
       }
 
+      /**
+       * Уведомления — без FK на проект, нужно чистить руками. Применения, members
+       * и attachments снесёт ON DELETE CASCADE из FK Project.
+       */
       await prisma.$transaction([
         prisma.notification.deleteMany({
           where: { OR: notificationOr },
         }),
-        prisma.projectApplication.deleteMany({ where: { projectId: id } }),
-        prisma.projectMember.deleteMany({ where: { projectId: id } }),
         prisma.project.delete({ where: { id } }),
       ]);
 

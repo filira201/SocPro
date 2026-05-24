@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema — PostgreSQL.
+// Миграция с MongoDB выполнена: ObjectId → cuid, парные m2m-массивы → явные join-таблицы,
+// каскады реализованы через нативные FK ON DELETE.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,12 +8,12 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(cuid())
   email       String    @unique
   firstName   String
   lastName    String?
@@ -35,15 +33,15 @@ model User {
   resumeMimeType     String?
   resumeSize  Int?
 
-  posts     Post[]
-  likes     Like[]
-  comments  Comment[]
+  posts        Post[]
+  likes        Like[]
+  comments     Comment[]
   commentLikes CommentLike[]
-  followers Follows[] @relation("following")
-  following Follows[] @relation("follower")
+  followers    Follows[]     @relation("following")
+  following    Follows[]     @relation("follower")
 
-  skillIds String[] @db.ObjectId
-  skills   Skill[]  @relation(fields: [skillIds], references: [id])
+  /** Явная join-таблица User↔Skill (заменила парные массивы skillIds/userIds). */
+  skills UserSkill[]
 
   ownedProjects Project[]            @relation("ProjectOwner")
   memberships   ProjectMember[]
@@ -62,68 +60,78 @@ model User {
 }
 
 model Follows {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
-  follower    User   @relation("follower", fields: [followerId], references: [id])
-  followerId  String @db.ObjectId
-  following   User   @relation("following", fields: [followingId], references: [id])
-  followingId String @db.ObjectId
+  id          String @id @default(cuid())
+  follower    User   @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followerId  String
+  following   User   @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  followingId String
 
   @@unique([followerId, followingId])
+  @@index([followingId, followerId])
 }
 
 model Post {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  id          String           @id @default(cuid())
   content     String
-  author      User             @relation(fields: [authorId], references: [id])
-  authorId    String           @db.ObjectId
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
   likes       Like[]
   comments    Comment[]
   attachments PostAttachment[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model Like {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  user   User   @relation(fields: [userId], references: [id])
-  userId String @db.ObjectId
-  post   Post   @relation(fields: [postId], references: [id])
-  postId String @db.ObjectId
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
 
   @@unique([userId, postId])
+  @@index([postId])
 }
 
 model Comment {
-  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  id          String              @id @default(cuid())
   content     String
-  user        User                @relation(fields: [userId], references: [id])
-  userId      String              @db.ObjectId
-  post        Post                @relation(fields: [postId], references: [id])
-  postId      String              @db.ObjectId
-  parentId    String?             @db.ObjectId
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  /** Self-reference; на удалении родителя ставим NULL (приложение само сносит дерево). */
+  parentId    String?
   parent      Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies     Comment[]           @relation("CommentReplies")
   likes       CommentLike[]
   attachments CommentAttachment[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  @@index([postId])
+  @@index([parentId])
 }
 
 model CommentLike {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @db.ObjectId
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  commentId String   @db.ObjectId
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String
   createdAt DateTime @default(now())
 
   @@unique([userId, commentId])
+  @@index([commentId])
 }
 
 model PostAttachment {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  post         Post     @relation(fields: [postId], references: [id])
-  postId       String   @db.ObjectId
+  id           String   @id @default(cuid())
+  post         Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String
   url          String
   filename     String
   originalName String?
@@ -131,12 +139,14 @@ model PostAttachment {
   size         Int
   kind         String
   createdAt    DateTime @default(now())
+
+  @@index([postId])
 }
 
 model CommentAttachment {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  comment      Comment  @relation(fields: [commentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  commentId    String   @db.ObjectId
+  id           String   @id @default(cuid())
+  comment      Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId    String
   url          String
   filename     String
   originalName String?
@@ -144,17 +154,17 @@ model CommentAttachment {
   size         Int
   kind         String
   createdAt    DateTime @default(now())
+
+  @@index([commentId])
 }
 
 model Skill {
-  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  id   String @id @default(cuid())
   name String @unique
 
-  userIds String[] @db.ObjectId
-  users   User[]   @relation(fields: [userIds], references: [id])
-
-  projectIds String[]  @db.ObjectId
-  projects   Project[] @relation(fields: [projectIds], references: [id])
+  /** Явные join-таблицы вместо парных массивов. */
+  users    UserSkill[]
+  projects ProjectRequiredSkill[]
 
   /** Нормализованные ключи и синонимы для точного маппинга + индекса Fuse */
   aliases SkillAlias[]
@@ -162,15 +172,37 @@ model Skill {
 
 /** Один канонический навык — много ключей после clean() (синонимы + опечатки через Fuse по haystack). */
 model SkillAlias {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  id      String @id @default(cuid())
   /** Уникальный нормализованный ключ: lower, trim, без точек, один пробел между словами */
   key     String @unique
-  skillId String @db.ObjectId
+  skillId String
   skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 }
 
+/** Явная join-таблица User↔Skill. */
+model UserSkill {
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId String
+
+  @@id([userId, skillId])
+  @@index([skillId])
+}
+
+/** Явная join-таблица Project↔Skill (требуемые навыки проекта). */
+model ProjectRequiredSkill {
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId   String
+
+  @@id([projectId, skillId])
+  @@index([skillId])
+}
+
 model Project {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  id          String        @id @default(cuid())
   /// Обязательно непустое после trim, до 500 символов — проверка в API.
   title       String
   /// Обязательно непустое после trim, до 5000 символов — проверка в API.
@@ -183,11 +215,10 @@ model Project {
   /** Рубильник приёма новых заявок (не путать с ProjectStatus). */
   acceptingApplications Boolean @default(true)
 
-  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
-  ownerId String @db.ObjectId
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
 
-  requiredSkillIds String[] @db.ObjectId
-  requiredSkills   Skill[]  @relation(fields: [requiredSkillIds], references: [id])
+  requiredSkills ProjectRequiredSkill[]
 
   members      ProjectMember[]
   applications ProjectApplication[]
@@ -195,13 +226,16 @@ model Project {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([createdAt])
 }
 
 /** Вложения проекта (PDF/Word); не более 10 на проект — инвариант в приложении. */
 model ProjectAttachment {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(cuid())
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId    String   @db.ObjectId
+  projectId    String
   url          String
   filename     String
   originalName String?
@@ -209,32 +243,35 @@ model ProjectAttachment {
   size         Int
   kind         String
   createdAt    DateTime @default(now())
+
+  @@index([projectId])
 }
 
 model ProjectMember {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  project   Project    @relation(fields: [projectId], references: [id])
-  projectId String     @db.ObjectId
-  user      User       @relation(fields: [userId], references: [id])
-  userId    String     @db.ObjectId
+  id        String     @id @default(cuid())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   role      MemberRole @default(MEMBER)
   joinedAt  DateTime   @default(now())
 
   @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model ProjectApplication {
-  id          String            @id @default(auto()) @map("_id") @db.ObjectId
-  project     Project           @relation(fields: [projectId], references: [id])
-  projectId   String            @db.ObjectId
-  applicant   User              @relation("ApplicationApplicant", fields: [applicantId], references: [id])
-  applicantId String            @db.ObjectId
+  id          String            @id @default(cuid())
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  applicant   User              @relation("ApplicationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  applicantId String
   /** Если задано — заявка создана владельцем/админом как приглашение, а не самим соискателем. */
-  invitedById String?           @db.ObjectId
-  invitedBy   User?             @relation("ApplicationInvitedBy", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  invitedById String?
+  invitedBy   User?             @relation("ApplicationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   /** Кто принял или отклонил заявку (владелец/админ); при принятии приглашения самим приглашённым — он же. */
-  decidedById String?           @db.ObjectId
-  decidedBy   User?             @relation("ApplicationDecidedBy", fields: [decidedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  decidedById String?
+  decidedBy   User?             @relation("ApplicationDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   /// До 1000 символов после trim; пустое не сохраняется (undefined) — проверка в API.
   message     String?
   status      ApplicationStatus @default(PENDING)
@@ -243,6 +280,7 @@ model ProjectApplication {
 
   /** Не более одной активной PENDING/ACCEPTED на пару (projectId, applicantId) — проверка в приложении. */
   @@index([projectId, applicantId])
+  @@index([applicantId])
 }
 
 enum ProjectStatus {
@@ -271,41 +309,42 @@ enum MemberRole {
  * Жизненный цикл прочитанных:
  * - `readAt` заполняется при отметке «прочитано».
  * - `deleteAt` = момент удаления документа; при прочтении выставляется `readAt + 7 дней`.
- * - В Mongo вручную создать TTL-индекс: `db.Notification.createIndex({ deleteAt: 1 }, { expireAfterSeconds: 0 })`
- *   (Prisma не создаёт TTL). Пока `deleteAt` null — документ не истекает (**непрочитанные не удаляются по времени**).
+ * - Удаление по таймеру в PostgreSQL делается сервисом приложения
+ *   (`backend/lib/notifications-ttl.js`): периодический `deleteMany` по `deleteAt <= now`.
+ *   Пока `deleteAt` IS NULL — уведомление не истекает (непрочитанные не удаляются по времени).
  */
 model Notification {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  receiverId String @db.ObjectId
+  receiverId String
   receiver   User   @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   /** Кто совершил действие (лайк, комментарий, подписка, подал заявку и т.д.). Для чисто системных событий может быть null. */
-  actorId String? @db.ObjectId
+  actorId String?
   actor   User?   @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   /**
    * Доп. пользователь в смысле события (например приглашённый в `STAFF_INVITE_SENT`:
    * actor = кто отправил приглашение, subject = кого пригласили).
    */
-  subjectUserId String? @db.ObjectId
+  subjectUserId String?
   subjectUser   User?   @relation("NotificationSubject", fields: [subjectUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   type NotificationType
 
   /** Маршрутизация в UI (пост/ветка комментариев). */
-  postId    String? @db.ObjectId
-  commentId String? @db.ObjectId
+  postId    String?
+  commentId String?
 
   /** Проектные события; после удаления проекта `projectId` может быть null, см. `projectTitleSnapshot`. */
-  projectId       String? @db.ObjectId
-  applicationId String? @db.ObjectId
+  projectId       String?
+  applicationId String?
 
   /** Снимок названия для `PROJECT_DELETED`, когда проекта уже нет в БД. */
   projectTitleSnapshot String?
 
   readAt   DateTime?
-  /** Заполняется при прочтении: `readAt + 7d` — автоудаление через TTL-индекс по этому полю. */
+  /** Заполняется при прочтении: `readAt + 7d` — автоудаление сервисом TTL по этому полю. */
   deleteAt DateTime?
 
   createdAt DateTime @default(now())

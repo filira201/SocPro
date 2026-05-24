@@ -3,7 +3,9 @@ const { canManageMembersAsOwnerOnly } = require("../lib/project-access");
 const { sanitizeUser } = require("./_utils");
 const { createNotification } = require("../lib/notifications");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const { ID_REGEX } = require("../lib/id");
+const { flattenSkillsDeep } = require("../lib/skill-mapping");
+const OBJECT_ID_REGEX = ID_REGEX;
 const ASSIGNABLE_ROLES = new Set(["MEMBER", "ADMIN"]);
 
 const MemberController = {
@@ -63,7 +65,9 @@ const MemberController = {
       const [members, total] = await Promise.all([
         prisma.projectMember.findMany({
           where,
-          include: { user: { include: { skills: true } } },
+          include: {
+            user: { include: { skills: { include: { skill: true } } } },
+          },
           orderBy: { joinedAt: "asc" },
           take,
           skip,
@@ -71,6 +75,7 @@ const MemberController = {
         prisma.projectMember.count({ where }),
       ]);
 
+      flattenSkillsDeep(members);
       res.json(
         sanitizeUser({
           items: members,
@@ -142,8 +147,12 @@ const MemberController = {
       const updated = await prisma.projectMember.update({
         where: { id: membership.id },
         data: { role: String(role) },
-        include: { user: { include: { skills: true } } },
+        include: {
+          user: { include: { skills: { include: { skill: true } } } },
+        },
       });
+
+      flattenSkillsDeep(updated);
 
       if (previousRole !== "ADMIN" && String(role) === "ADMIN") {
         await createNotification(prisma, {

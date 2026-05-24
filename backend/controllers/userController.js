@@ -25,8 +25,13 @@ const {
   unlinkMulterFiles,
 } = require("../lib/image-optimize");
 const { normalizeProjectForApi } = require("../lib/project-access");
+const {
+  flattenUserSkills,
+  flattenSkillsDeep,
+} = require("../lib/skill-mapping");
+const { ID_REGEX } = require("../lib/id");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_USER_DIRECTORY_LIMIT = 10;
 const MAX_USER_DIRECTORY_LIMIT = 50;
 const MAX_USER_DIRECTORY_FILTER_SKILLS = 20;
@@ -195,7 +200,7 @@ const UserController = {
       const user = await prisma.user.findUnique({
         where: { id },
         include: {
-          skills: true,
+          skills: { include: { skill: true } },
           _count: {
             select: {
               followers: true,
@@ -208,6 +213,8 @@ const UserController = {
       if (!user) {
         return res.status(404).json({ error: "Пользователь не найден" });
       }
+
+      flattenUserSkills(user);
 
       const isFollowing = await prisma.follows.findFirst({
         where: { AND: [{ followerId: userId }, { followingId: id }] },
@@ -355,10 +362,6 @@ const UserController = {
         data.contacts = { set: contactsUpdate };
       }
 
-      if (skillIds !== undefined) {
-        data.skillIds = { set: skillIds };
-      }
-
       if (avatarFile) {
         try {
           await optimizeImageFile(avatarFile);
@@ -388,12 +391,31 @@ const UserController = {
         data.resumeSize = null;
       }
 
-      const user = await prisma.user.update({
-        where: { id },
-        data,
-        include: { skills: true },
+      const user = await prisma.$transaction(async (tx) => {
+        const updated = await tx.user.update({ where: { id }, data });
+
+        if (skillIds !== undefined) {
+          /** Полная пересинхронизация набора навыков пользователя (delete-then-insert). */
+          await tx.userSkill.deleteMany({ where: { userId: id } });
+
+          if (skillIds.length) {
+            await tx.userSkill.createMany({
+              data: [...new Set(skillIds)].map((skillId) => ({
+                userId: id,
+                skillId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
+        return tx.user.findUnique({
+          where: { id: updated.id },
+          include: { skills: { include: { skill: true } } },
+        });
       });
 
+      flattenUserSkills(user);
       res.json(sanitizeUser(user));
     } catch (error) {
       console.error("Error in updateUser", error);
@@ -416,7 +438,7 @@ const UserController = {
               following: true,
             },
           },
-          skills: true,
+          skills: { include: { skill: true } },
           _count: {
             select: {
               followers: true,
@@ -429,6 +451,8 @@ const UserController = {
       if (!user) {
         return res.status(400).json({ error: "Не удалось найти пользователя" });
       }
+
+      flattenUserSkills(user);
 
       const { _count, ...userWithoutCount } = user;
 
@@ -513,10 +537,15 @@ const UserController = {
       }
 
       if (resolvedSkillIds.length) {
-        /** Как у списка проектов: у пользователя в профиле должны быть все выбранные навыки. */
-        where.AND.push({
-          skillIds: { hasEvery: resolvedSkillIds },
-        });
+        /**
+         * У пользователя в профиле должны быть ВСЕ выбранные навыки (логическое И).
+         * На реляционной модели это `AND` из нескольких `some` по join-таблице UserSkill.
+         */
+        for (const sid of resolvedSkillIds) {
+          where.AND.push({
+            skills: { some: { skillId: sid } },
+          });
+        }
       }
 
       const finalWhere = where.AND.length ? where : {};
@@ -605,7 +634,7 @@ const UserController = {
         take: limit + 1,
         include: {
           owner: true,
-          requiredSkills: true,
+          requiredSkills: { include: { skill: true } },
           _count: {
             select: {
               members: true,
@@ -620,6 +649,7 @@ const UserController = {
       const hasNextPage = projects.length > limit;
       const page = hasNextPage ? projects.slice(0, limit) : projects;
       const items = page.map((p) => normalizeProjectForApi(p));
+      flattenSkillsDeep(items);
       const nextCursor = hasNextPage ? items[items.length - 1]?.id : null;
 
       res.json({

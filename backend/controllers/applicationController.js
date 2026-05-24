@@ -10,7 +10,9 @@ const {
   notifyProjectStaffExcept,
 } = require("../lib/notifications");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const { ID_REGEX } = require("../lib/id");
+const { flattenSkillsDeep } = require("../lib/skill-mapping");
+const OBJECT_ID_REGEX = ID_REGEX;
 
 const ApplicationController = {
   apply: async (req, res) => {
@@ -262,13 +264,14 @@ const ApplicationController = {
       const applications = await prisma.projectApplication.findMany({
         where,
         include: {
-          applicant: { include: { skills: true } },
+          applicant: { include: { skills: { include: { skill: true } } } },
           invitedBy: true,
           decidedBy: true,
         },
         orderBy: { createdAt: "desc" },
       });
 
+      flattenSkillsDeep(applications);
       res.json(sanitizeUser(applications));
     } catch (error) {
       console.error("Error in listApplications", error);

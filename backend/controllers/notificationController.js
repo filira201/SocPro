@@ -3,7 +3,8 @@ const { sanitizeUser } = require("./_utils");
 const { computeDeleteAtFromReadAt } = require("../lib/notifications");
 const { emitNotificationsInvalidate } = require("../lib/notificationSocket");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const { ID_REGEX } = require("../lib/id");
+const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
 const COMMENT_PREVIEW_MAX = 120;

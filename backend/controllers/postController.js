@@ -9,7 +9,8 @@ const {
 } = require("../lib/post-attachments");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const { ID_REGEX } = require("../lib/id");
+const OBJECT_ID_REGEX = ID_REGEX;
 
 function parseRemoveAttachmentIds(value) {
   if (!value) {

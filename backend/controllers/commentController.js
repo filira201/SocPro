@@ -10,7 +10,8 @@ const {
 } = require("./_utils");
 const { createNotification } = require("../lib/notifications");
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const { ID_REGEX } = require("../lib/id");
+const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
 const COMMENT_SORT = {
