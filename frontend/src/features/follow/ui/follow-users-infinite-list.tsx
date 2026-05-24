@@ -9,9 +9,8 @@ import {
 import { FollowUserCard } from "./follow-user-card";
 
 import { getApiErrorMessage } from "@/shared/lib/api-error";
+import { ID_REGEX } from "@/shared/lib/id";
 import { Spinner } from "@/shared/ui/kit/spinner";
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 type FollowUsersInfiniteListProps = {
   userId: string;
@@ -40,7 +39,7 @@ export function FollowUsersInfiniteList({
     [userId, cursor, qFromUrl]
   );
 
-  const skipBase = !OBJECT_ID_REGEX.test(userId);
+  const skipBase = !ID_REGEX.test(userId);
 
   const followersResult = useGetUserFollowersQuery(queryArgs, {
     skip: skipBase || kind !== "followers",

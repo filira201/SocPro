@@ -4,10 +4,9 @@ import { useParams } from "react-router";
 import { selectCurrentUser } from "@/features/auth";
 import { useFollowListSearchUrl } from "@/features/follow/lib/use-follow-list-url";
 import { FollowUsersInfiniteList } from "@/features/follow/ui/follow-users-infinite-list";
+import { ID_REGEX } from "@/shared/lib/id";
 import { useAppSelector } from "@/shared/lib/redux";
 import { Input } from "@/shared/ui/kit/input";
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 function FollowingPage() {
   const { userId } = useParams();
@@ -15,7 +14,7 @@ function FollowingPage() {
     useFollowListSearchUrl();
   const currentUser = useAppSelector(selectCurrentUser);
 
-  const skip = !userId || !OBJECT_ID_REGEX.test(userId);
+  const skip = !userId || !ID_REGEX.test(userId);
   const isOwnList = Boolean(
     userId && currentUser?.id && currentUser.id === userId
   );

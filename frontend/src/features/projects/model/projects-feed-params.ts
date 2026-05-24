@@ -2,7 +2,8 @@ import { z } from "zod";
 
 import { PROJECTS_LIST_SORT_VALUES, type ProjectsListQuery } from "./types";
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+import { ID_REGEX } from "@/shared/lib/id";
+
 export const MAX_PROJECT_FEED_SKILL_IDS = 20;
 
 const projectsFeedUrlSchema = z.object({
@@ -28,7 +29,7 @@ export function parseSkillIdsFromSearchParams(
   const ids = raw
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => OBJECT_ID_REGEX.test(s));
+    .filter((s) => ID_REGEX.test(s));
 
   return ids.slice(0, MAX_PROJECT_FEED_SKILL_IDS);
 }

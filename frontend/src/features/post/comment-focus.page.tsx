@@ -4,11 +4,10 @@ import { CommentFocusCard } from "./ui/comment-focus-card";
 
 import { useGetCommentFocusQuery } from "@/features/comments";
 import { getApiErrorMessage } from "@/shared/lib/api-error";
+import { ID_REGEX } from "@/shared/lib/id";
 import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 function mapFocusErrorMessage(apiMessage: string) {
   if (apiMessage === "Пост не найден") {
@@ -29,8 +28,7 @@ function mapFocusErrorMessage(apiMessage: string) {
 function CommentFocusPage() {
   const navigate = useNavigate();
   const { postId = "", commentId = "" } = useParams();
-  const idsValid =
-    OBJECT_ID_REGEX.test(postId) && OBJECT_ID_REGEX.test(commentId);
+  const idsValid = ID_REGEX.test(postId) && ID_REGEX.test(commentId);
 
   const {
     data: focus,

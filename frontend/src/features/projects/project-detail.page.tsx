@@ -23,13 +23,12 @@ import { ProjectMembersPanel } from "./ui/project-members-panel";
 import { displayPublicName, selectCurrentUser } from "@/features/auth";
 import { toAbsoluteUploadUrl } from "@/features/posts/lib/format";
 import { getApiErrorMessage, type ApiError } from "@/shared/lib/api-error";
+import { ID_REGEX } from "@/shared/lib/id";
 import { useAppSelector } from "@/shared/lib/redux";
 import { ROUTES } from "@/shared/model/routes";
 import { Badge } from "@/shared/ui/kit/badge";
 import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 type DetailTab = "overview" | "applications" | "members" | "settings";
 
@@ -280,7 +279,7 @@ function ProjectDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const invalidId = !id || !OBJECT_ID_REGEX.test(id);
+  const invalidId = !id || !ID_REGEX.test(id);
   const currentUser = useAppSelector(selectCurrentUser);
 
   const {
