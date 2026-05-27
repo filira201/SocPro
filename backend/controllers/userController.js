@@ -11,6 +11,7 @@ const {
   validateRegister,
   validateLogin,
   sanitizeUser,
+  sanitizeOwnUser,
   decodeUploadOriginalName,
   validateFioPart,
 } = require("./_utils");
@@ -159,7 +160,7 @@ const UserController = {
         },
       });
 
-      res.json(sanitizeUser(user));
+      res.json(sanitizeOwnUser(user));
     } catch (error) {
       console.error("Error in register", error);
       res.status(500).json({ error: "Internal server error" });
@@ -232,9 +233,10 @@ const UserController = {
       });
 
       const { _count, ...userWithoutCount } = user;
+      const sanitizeProfile = id === userId ? sanitizeOwnUser : sanitizeUser;
 
       res.json({
-        ...sanitizeUser(userWithoutCount),
+        ...sanitizeProfile(userWithoutCount),
         followersCount: _count.followers,
         followingCount: _count.following,
         isFollowing: Boolean(isFollowing),
@@ -497,7 +499,7 @@ const UserController = {
 
       flattenUserSkills(user);
       flattenUserProfile(user);
-      res.json(sanitizeUser(user));
+      res.json(sanitizeOwnUser(user));
     } catch (error) {
       console.error("Error in updateUser", error);
       res.status(500).json({ error: "Internal server error" });
@@ -541,7 +543,7 @@ const UserController = {
       const { _count, ...userWithoutCount } = user;
 
       res.json({
-        ...sanitizeUser(userWithoutCount),
+        ...sanitizeOwnUser(userWithoutCount),
         followersCount: _count.followers,
         followingCount: _count.following,
       });

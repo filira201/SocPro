@@ -179,6 +179,10 @@ function sanitizeUser(value) {
     delete result.password;
   }
 
+  if ("email" in result) {
+    delete result.email;
+  }
+
   for (const key of Object.keys(result)) {
     const v = result[key];
 
@@ -190,6 +194,16 @@ function sanitizeUser(value) {
   return result;
 }
 
+function sanitizeOwnUser(user) {
+  const sanitized = sanitizeUser(user);
+
+  if (user?.email) {
+    sanitized.email = user.email;
+  }
+
+  return sanitized;
+}
+
 module.exports = {
   EMAIL_REGEX,
   CYRILLIC_NAME_REGEX,
@@ -199,4 +213,5 @@ module.exports = {
   validateFioPart,
   displayPublicName,
   sanitizeUser,
+  sanitizeOwnUser,
 };

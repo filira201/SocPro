@@ -65,11 +65,14 @@ module.exports = FooController;
 
 ## Sanitize — обязательно
 
-Любой ответ, в котором может встретиться объект `User` (включая вложенные `author`, `members.user`, `applicant`, `followers.follower`, `following.following`, `comments.user`), оборачивай в `sanitizeUser(...)` из [backend/controllers/_utils.js](backend/controllers/_utils.js). Это удалит `password` рекурсивно.
+Любой ответ, в котором может встретиться объект `User` (включая вложенные `author`, `members.user`, `applicant`, `followers.follower`, `following.following`, `comments.user`), оборачивай в `sanitizeUser(...)` из [backend/controllers/_utils.js](backend/controllers/_utils.js). Это рекурсивно удалит `password` и `email` (почта — приватное поле, не показывается другим пользователям).
+
+Для ответов **своего** пользователя (`GET /current`, `PUT /users/:id`, `POST /register`, `GET /users/:id` когда `id === req.user.userId`) используй `sanitizeOwnUser(...)` — он вернёт `email` на корневом объекте; вложенные пользователи останутся без почты.
 
 ```js
 res.json(sanitizeUser(items));
 res.json({ ...sanitizeUser(project), isOwner });
+res.json(sanitizeOwnUser(currentUser));
 ```
 
 Никогда не возвращай `password` напрямую — даже хэш.

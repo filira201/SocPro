@@ -6,7 +6,7 @@ export type Skill = {
 
 export type User = {
   id: string;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string | null;
   patronymic: string | null;
