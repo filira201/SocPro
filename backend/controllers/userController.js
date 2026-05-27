@@ -30,6 +30,13 @@ const {
   flattenSkillsDeep,
 } = require("../lib/skill-mapping");
 const { flattenUserProfile } = require("../lib/user-flatten");
+const {
+  USER_BIO_MAX,
+  USER_EDUCATION_FIELD_MAX,
+  USER_CONTACT_VALUE_MAX,
+  assertMaxLength,
+  assertOptionalMaxLength,
+} = require("../lib/field-limits");
 const { ID_REGEX } = require("../lib/id");
 
 const OBJECT_ID_REGEX = ID_REGEX;
@@ -285,6 +292,16 @@ const UserController = {
           }
 
           contactsUpdate = parsed.map((x) => String(x).trim()).filter(Boolean);
+          for (const contactValue of contactsUpdate) {
+            const contactErr = assertMaxLength(
+              contactValue,
+              USER_CONTACT_VALUE_MAX,
+              `Контакт слишком длинный (не более ${USER_CONTACT_VALUE_MAX} символов)`,
+            );
+            if (contactErr) {
+              return res.status(400).json(contactErr);
+            }
+          }
         } catch {
           return res.status(400).json({ error: "Некорректные контакты" });
         }
@@ -347,18 +364,50 @@ const UserController = {
 
       if (req.body.bio !== undefined) {
         data.bio = optionalTrimmedString(req.body, "bio");
+        const bioErr = assertOptionalMaxLength(
+          data.bio,
+          USER_BIO_MAX,
+          `О себе слишком длинное (не более ${USER_BIO_MAX} символов)`,
+        );
+        if (bioErr) {
+          return res.status(400).json(bioErr);
+        }
       }
 
       if (req.body.university !== undefined) {
         data.university = optionalTrimmedString(req.body, "university");
+        const universityErr = assertOptionalMaxLength(
+          data.university,
+          USER_EDUCATION_FIELD_MAX,
+          `Университет слишком длинный (не более ${USER_EDUCATION_FIELD_MAX} символов)`,
+        );
+        if (universityErr) {
+          return res.status(400).json(universityErr);
+        }
       }
 
       if (req.body.course !== undefined) {
         data.course = optionalTrimmedString(req.body, "course");
+        const courseErr = assertOptionalMaxLength(
+          data.course,
+          USER_EDUCATION_FIELD_MAX,
+          `Курс слишком длинный (не более ${USER_EDUCATION_FIELD_MAX} символов)`,
+        );
+        if (courseErr) {
+          return res.status(400).json(courseErr);
+        }
       }
 
       if (req.body.faculty !== undefined) {
         data.faculty = optionalTrimmedString(req.body, "faculty");
+        const facultyErr = assertOptionalMaxLength(
+          data.faculty,
+          USER_EDUCATION_FIELD_MAX,
+          `Факультет слишком длинный (не более ${USER_EDUCATION_FIELD_MAX} символов)`,
+        );
+        if (facultyErr) {
+          return res.status(400).json(facultyErr);
+        }
       }
 
       if (dateOfBirthUpdate !== undefined) {

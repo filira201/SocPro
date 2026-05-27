@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { href, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -354,7 +354,7 @@ describe("UserProfileEditForm — валидация", () => {
     // Act
     const bio = document.getElementById("profile-bio") as HTMLTextAreaElement;
     await user.clear(bio);
-    await user.type(bio, "а".repeat(2001));
+    fireEvent.change(bio, { target: { value: "а".repeat(2001) } });
     await submitForm(user);
 
     // Assert
@@ -362,7 +362,7 @@ describe("UserProfileEditForm — валидация", () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  test("показывает ошибку если вуз длиннее 200 символов", async () => {
+  test("показывает ошибку если вуз длиннее 500 символов", async () => {
     // Arrange
     const { user } = renderEditForm();
 
@@ -371,15 +371,15 @@ describe("UserProfileEditForm — валидация", () => {
       "profile-university"
     ) as HTMLInputElement;
     await user.clear(university);
-    await user.type(university, "а".repeat(201));
+    fireEvent.change(university, { target: { value: "а".repeat(501) } });
     await submitForm(user);
 
     // Assert
-    expect(screen.getByText("Не более 200 символов")).toBeInTheDocument();
+    expect(screen.getByText("Не более 500 символов")).toBeInTheDocument();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  test("показывает ошибку если факультет длиннее 200 символов", async () => {
+  test("показывает ошибку если факультет длиннее 500 символов", async () => {
     // Arrange
     const { user } = renderEditForm();
 
@@ -388,15 +388,15 @@ describe("UserProfileEditForm — валидация", () => {
       "profile-faculty"
     ) as HTMLInputElement;
     await user.clear(faculty);
-    await user.type(faculty, "а".repeat(201));
+    fireEvent.change(faculty, { target: { value: "а".repeat(501) } });
     await submitForm(user);
 
     // Assert
-    expect(screen.getByText("Не более 200 символов")).toBeInTheDocument();
+    expect(screen.getByText("Не более 500 символов")).toBeInTheDocument();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  test("показывает ошибку если курс длиннее 200 символов", async () => {
+  test("показывает ошибку если курс длиннее 500 символов", async () => {
     // Arrange
     const { user } = renderEditForm();
 
@@ -405,11 +405,11 @@ describe("UserProfileEditForm — валидация", () => {
       "profile-course"
     ) as HTMLInputElement;
     await user.clear(course);
-    await user.type(course, "а".repeat(201));
+    fireEvent.change(course, { target: { value: "а".repeat(501) } });
     await submitForm(user);
 
     // Assert
-    expect(screen.getByText("Не более 200 символов")).toBeInTheDocument();
+    expect(screen.getByText("Не более 500 символов")).toBeInTheDocument();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
@@ -420,7 +420,7 @@ describe("UserProfileEditForm — валидация", () => {
     // Act
     const contact = screen.getByLabelText("Контакт 1") as HTMLInputElement;
     await user.clear(contact);
-    await user.type(contact, "а".repeat(501));
+    fireEvent.change(contact, { target: { value: "а".repeat(501) } });
     await submitForm(user);
 
     // Assert

@@ -8,6 +8,9 @@ import {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Синхронно с backend/lib/field-limits.js (USER_EDUCATION_FIELD_MAX) */
+export const USER_EDUCATION_FIELD_MAX = 500;
+
 const shortText = (max: number) =>
   z.string().max(max, `Не более ${max} символов`);
 
@@ -16,9 +19,9 @@ export const profileEditSchema = z.object({
   lastName: fioPartOptionalSchema,
   patronymic: fioPartOptionalSchema,
   bio: shortText(2000),
-  university: shortText(200),
-  course: shortText(200),
-  faculty: shortText(200),
+  university: shortText(USER_EDUCATION_FIELD_MAX),
+  course: shortText(USER_EDUCATION_FIELD_MAX),
+  faculty: shortText(USER_EDUCATION_FIELD_MAX),
   dateOfBirth: z.string().superRefine((val, ctx) => {
     const s = val.trim();
 

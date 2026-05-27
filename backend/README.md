@@ -84,6 +84,9 @@ npm install
 > новую миграцию. `migrate dev` создаёт shadow database, сравнивает с текущей,
 > сочиняет свежий `migration.sql`, применяет его и зовёт `prisma generate`.
 > Для чистого деплоя или поднятия dev-окружения — всегда `deploy`.
+>
+> После `git pull`, если в репозитории появилась новая папка в `prisma/migrations/`,
+> выполни `./node_modules/.bin/prisma migrate deploy` (и при необходимости `prisma generate`).
 
 ## 5. Заполнить базу демо-данными
 

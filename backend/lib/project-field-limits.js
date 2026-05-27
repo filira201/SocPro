@@ -1,9 +1,12 @@
 /** Лимиты полей проекта и заявки — синхронно с frontend/src/features/projects/model/project-field-limits.ts */
 
-const PROJECT_TITLE_MAX = 500;
-const PROJECT_DESCRIPTION_MAX = 5000;
-const PROJECT_GOALS_MAX = 5000;
-const PROJECT_APPLICATION_MESSAGE_MAX = 1000;
+const {
+  PROJECT_TITLE_MAX,
+  PROJECT_DESCRIPTION_MAX,
+  PROJECT_GOALS_MAX,
+  PROJECT_APPLICATION_MESSAGE_MAX,
+  assertMaxLength,
+} = require("./field-limits");
 
 function normalizeProjectText(value) {
   return String(value ?? "").trim();
@@ -17,20 +20,29 @@ function validateProjectTextsForCreate(body) {
   const description = normalizeProjectText(body?.description);
   const goals = normalizeProjectText(body?.goals);
 
-  if (title.length > PROJECT_TITLE_MAX) {
-    return {
-      error: `Название слишком длинное (не более ${PROJECT_TITLE_MAX} символов)`,
-    };
+  const titleErr = assertMaxLength(
+    title,
+    PROJECT_TITLE_MAX,
+    `Название слишком длинное (не более ${PROJECT_TITLE_MAX} символов)`,
+  );
+  if (titleErr) {
+    return titleErr;
   }
-  if (description.length > PROJECT_DESCRIPTION_MAX) {
-    return {
-      error: `Описание слишком длинное (не более ${PROJECT_DESCRIPTION_MAX} символов)`,
-    };
+  const descErr = assertMaxLength(
+    description,
+    PROJECT_DESCRIPTION_MAX,
+    `Описание слишком длинное (не более ${PROJECT_DESCRIPTION_MAX} символов)`,
+  );
+  if (descErr) {
+    return descErr;
   }
-  if (goals.length > PROJECT_GOALS_MAX) {
-    return {
-      error: `Цели слишком длинные (не более ${PROJECT_GOALS_MAX} символов)`,
-    };
+  const goalsErr = assertMaxLength(
+    goals,
+    PROJECT_GOALS_MAX,
+    `Цели слишком длинные (не более ${PROJECT_GOALS_MAX} символов)`,
+  );
+  if (goalsErr) {
+    return goalsErr;
   }
 
   if (!title || !description || !goals) {
@@ -55,8 +67,9 @@ function validateProjectTextForUpdate(raw, max, tooLongMessage, emptyMessage) {
   if (emptyMessage && s.length === 0) {
     return { error: emptyMessage, value: null };
   }
-  if (s.length > max) {
-    return { error: tooLongMessage, value: null };
+  const lenErr = assertMaxLength(s, max, tooLongMessage);
+  if (lenErr) {
+    return { error: lenErr.error, value: null };
   }
   return { error: null, value: s };
 }
@@ -69,10 +82,13 @@ function normalizeApplicationMessage(raw) {
     return { error: null, value: undefined };
   }
   const s = String(raw).trim();
-  if (s.length > PROJECT_APPLICATION_MESSAGE_MAX) {
-    return {
-      error: `Сообщение слишком длинное (не более ${PROJECT_APPLICATION_MESSAGE_MAX} символов)`,
-    };
+  const lenErr = assertMaxLength(
+    s,
+    PROJECT_APPLICATION_MESSAGE_MAX,
+    `Сообщение слишком длинное (не более ${PROJECT_APPLICATION_MESSAGE_MAX} символов)`,
+  );
+  if (lenErr) {
+    return lenErr;
   }
   return { error: null, value: s || undefined };
 }

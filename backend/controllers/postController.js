@@ -7,6 +7,7 @@ const {
   MAX_POST_ATTACHMENTS,
   POST_ATTACHMENTS_LIMIT_ERROR,
 } = require("../lib/post-attachments");
+const { POST_CONTENT_MAX, assertMaxLength } = require("../lib/field-limits");
 const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
 
 const { ID_REGEX } = require("../lib/id");
@@ -186,8 +187,19 @@ const PostController = {
     const authorId = req.user.userId;
     const files = req.files || [];
 
-    if (!String(content || "").trim() && files.length === 0) {
+    const contentTrimmed = String(content || "").trim();
+
+    if (!contentTrimmed && files.length === 0) {
       return res.status(400).json({ error: "Все поля обязательны" });
+    }
+
+    const contentLenErr = assertMaxLength(
+      contentTrimmed,
+      POST_CONTENT_MAX,
+      `Текст поста слишком длинный (не более ${POST_CONTENT_MAX} символов)`,
+    );
+    if (contentLenErr) {
+      return res.status(400).json(contentLenErr);
     }
 
     if (files.length > MAX_POST_ATTACHMENTS) {
@@ -207,7 +219,7 @@ const PostController = {
     try {
       const post = await prisma.post.create({
         data: {
-          content: String(content || "").trim(),
+          content: contentTrimmed,
           authorId,
           attachments: {
             create: files.map(attachmentData),
@@ -386,6 +398,20 @@ const PostController = {
         return res.status(400).json({ error: POST_ATTACHMENTS_LIMIT_ERROR });
       }
 
+      let contentTrimmed;
+      if (content !== undefined) {
+        contentTrimmed = String(content).trim();
+        const contentLenErr = assertMaxLength(
+          contentTrimmed,
+          POST_CONTENT_MAX,
+          `Текст поста слишком длинный (не более ${POST_CONTENT_MAX} символов)`,
+        );
+        if (contentLenErr) {
+          await unlinkMulterFiles(files);
+          return res.status(400).json(contentLenErr);
+        }
+      }
+
       if (
         !String(content || "").trim() &&
         files.length === 0 &&
@@ -407,7 +433,7 @@ const PostController = {
       await prisma.post.update({
         where: { id },
         data: {
-          ...(content !== undefined ? { content: String(content).trim() } : {}),
+          ...(content !== undefined ? { content: contentTrimmed } : {}),
           attachments: {
             ...(uniqueRemoveIds.length
               ? {

@@ -9,6 +9,7 @@ const {
   displayPublicName,
 } = require("./_utils");
 const { createNotification } = require("../lib/notifications");
+const { COMMENT_CONTENT_MAX, assertMaxLength } = require("../lib/field-limits");
 
 const { ID_REGEX } = require("../lib/id");
 const OBJECT_ID_REGEX = ID_REGEX;
@@ -183,13 +184,24 @@ const CommentController = {
     const userId = req.user.userId;
     const files = req.files || [];
 
+    const contentTrimmed = String(content || "").trim();
+
     if (
       !postId ||
-      (!String(content || "").trim() && files.length === 0) ||
+      (!contentTrimmed && files.length === 0) ||
       !OBJECT_ID_REGEX.test(postId) ||
       (parentId && !OBJECT_ID_REGEX.test(parentId))
     ) {
       return res.status(400).json({ error: "Все поля обязательны" });
+    }
+
+    const contentLenErr = assertMaxLength(
+      contentTrimmed,
+      COMMENT_CONTENT_MAX,
+      `Текст комментария слишком длинный (не более ${COMMENT_CONTENT_MAX} символов)`,
+    );
+    if (contentLenErr) {
+      return res.status(400).json(contentLenErr);
     }
 
     try {
@@ -230,7 +242,7 @@ const CommentController = {
         data: {
           postId,
           userId,
-          content: String(content || "").trim(),
+          content: contentTrimmed,
           parentId: parentId ? String(parentId) : null,
           attachments: {
             create: files.map(attachmentData),
@@ -404,6 +416,20 @@ const CommentController = {
         (comment._count?.attachments ?? 0) - removeAttachmentIds.length,
       );
 
+      let contentTrimmed;
+      if (content !== undefined) {
+        contentTrimmed = String(content).trim();
+        const contentLenErr = assertMaxLength(
+          contentTrimmed,
+          COMMENT_CONTENT_MAX,
+          `Текст комментария слишком длинный (не более ${COMMENT_CONTENT_MAX} символов)`,
+        );
+        if (contentLenErr) {
+          await unlinkMulterFiles(files);
+          return res.status(400).json(contentLenErr);
+        }
+      }
+
       if (
         !String(content || "").trim() &&
         files.length === 0 &&
@@ -424,7 +450,7 @@ const CommentController = {
       await prisma.comment.update({
         where: { id },
         data: {
-          ...(content !== undefined ? { content: String(content).trim() } : {}),
+          ...(content !== undefined ? { content: contentTrimmed } : {}),
           attachments: {
             ...(removeAttachmentIds.length
               ? {

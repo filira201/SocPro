@@ -23,10 +23,12 @@ model User {
   dateOfBirth DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  bio         String?
-  university  String?
-  course      String?
-  faculty     String?
+  /// До 2000 символов — API + VARCHAR в БД.
+  bio        String? @db.VarChar(2000)
+  /// До 500 символов каждое — API + VARCHAR в БД.
+  university String? @db.VarChar(500)
+  course     String? @db.VarChar(500)
+  faculty    String? @db.VarChar(500)
 
   /** Резюме (PDF/Word), 1:1 — отдельная таблица UserResume. */
   resume UserResume?
@@ -76,7 +78,8 @@ model UserContact {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  value     String
+  /// До 500 символов — API + VARCHAR в БД.
+  value     String @db.VarChar(500)
   /** Порядок отображения (0-based), совпадает с порядком ввода в форме. */
   position  Int
   createdAt DateTime @default(now())
@@ -97,7 +100,8 @@ model Follows {
 
 model Post {
   id          String           @id @default(cuid())
-  content     String
+  /// До 5000 символов — API + VARCHAR в БД.
+  content     String           @db.VarChar(5000)
   author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId    String
   likes       Like[]
@@ -123,7 +127,8 @@ model Like {
 
 model Comment {
   id          String              @id @default(cuid())
-  content     String
+  /// До 2000 символов — API + VARCHAR в БД.
+  content     String              @db.VarChar(2000)
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
   post        Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -228,12 +233,12 @@ model ProjectRequiredSkill {
 
 model Project {
   id          String        @id @default(cuid())
-  /// Обязательно непустое после trim, до 500 символов — проверка в API.
-  title       String
-  /// Обязательно непустое после trim, до 5000 символов — проверка в API.
-  description String
-  /// Обязательно непустое после trim, до 5000 символов — проверка в API.
-  goals       String
+  /// Обязательно непустое после trim, до 500 символов — API + VARCHAR в БД.
+  title       String        @db.VarChar(500)
+  /// Обязательно непустое после trim, до 5000 символов — API + VARCHAR в БД.
+  description String        @db.VarChar(5000)
+  /// Обязательно непустое после trim, до 5000 символов — API + VARCHAR в БД.
+  goals       String        @db.VarChar(5000)
   status      ProjectStatus @default(OPEN)
   /** Последнее изменение поля status (для UI «время в текущем статусе»). */
   statusUpdatedAt DateTime @default(now())
@@ -297,8 +302,8 @@ model ProjectApplication {
   /** Кто принял или отклонил заявку (владелец/админ); при принятии приглашения самим приглашённым — он же. */
   decidedById String?
   decidedBy   User?             @relation("ApplicationDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  /// До 1000 символов после trim; пустое не сохраняется (undefined) — проверка в API.
-  message     String?
+  /// До 1000 символов после trim; пустое не сохраняется — API + VARCHAR в БД.
+  message     String?           @db.VarChar(1000)
   status      ApplicationStatus @default(PENDING)
   createdAt   DateTime          @default(now())
   decidedAt   DateTime?

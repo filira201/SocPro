@@ -11,6 +11,7 @@ import { mapProfileApiErrorToFormFields } from "../lib/map-profile-api-error";
 import {
   defaultContactsFieldArray,
   profileEditSchema,
+  USER_EDUCATION_FIELD_MAX,
   type ProfileEditFormValues,
 } from "../model/profile-edit-schema";
 
@@ -387,6 +388,7 @@ export function UserProfileEditForm({
             <Input
               id="profile-university"
               aria-invalid={Boolean(errors.university)}
+              maxLength={USER_EDUCATION_FIELD_MAX}
               {...register("university")}
             />
             {errors.university?.message ? (
@@ -398,6 +400,7 @@ export function UserProfileEditForm({
             <Input
               id="profile-faculty"
               aria-invalid={Boolean(errors.faculty)}
+              maxLength={USER_EDUCATION_FIELD_MAX}
               {...register("faculty")}
             />
             {errors.faculty?.message ? (
@@ -409,6 +412,7 @@ export function UserProfileEditForm({
             <Input
               id="profile-course"
               aria-invalid={Boolean(errors.course)}
+              maxLength={USER_EDUCATION_FIELD_MAX}
               {...register("course")}
             />
             {errors.course?.message ? (
