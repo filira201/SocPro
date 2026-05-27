@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 
 import { useLoginMutation } from "../api/auth.api";
+import { USER_EMAIL_MAX, USER_PASSWORD_MAX } from "../model/auth-field-limits";
 import { loginSchema, type LoginFormValues } from "../model/schemas";
 
 import { getApiErrorMessage } from "@/shared/lib/api-error";
@@ -98,6 +99,7 @@ export function LoginForm({
               disabled={isLoading}
               aria-invalid={!!errors.email}
               data-testid="login-email"
+              maxLength={USER_EMAIL_MAX}
               {...register("email")}
             />
             {errors.email?.message ? (
@@ -120,6 +122,7 @@ export function LoginForm({
               disabled={isLoading}
               aria-invalid={!!errors.password}
               data-testid="login-password"
+              maxLength={USER_PASSWORD_MAX}
               {...register("password")}
             />
             {errors.password?.message ? (

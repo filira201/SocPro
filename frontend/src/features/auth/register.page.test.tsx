@@ -1,8 +1,13 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { useRegisterMutation } from "./api/auth.api";
+import {
+  USER_EMAIL_MAX,
+  USER_FIO_PART_MAX,
+  USER_PASSWORD_MAX,
+} from "./model/auth-field-limits";
 import { Component as RegisterPage } from "./register.page";
 
 import { renderWithProviders } from "@/shared/lib/test/render-with-providers";
@@ -127,6 +132,65 @@ describe("RegisterPage", () => {
     expect(
       screen.getByTestId("register-personal-data-consent-error")
     ).toHaveTextContent("Необходимо согласие на обработку персональных данных");
+    expect(mockRegister).not.toHaveBeenCalled();
+  });
+
+  test("показывает ошибку если почта длиннее лимита", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<RegisterPage />);
+    await fillValidForm(user);
+    const longEmail = `${"a".repeat(USER_EMAIL_MAX - 11)}@example.com`;
+
+    // Act
+    fireEvent.change(screen.getByTestId("register-email"), {
+      target: { value: longEmail },
+    });
+    await user.click(screen.getByTestId("register-submit"));
+
+    // Assert
+    expect(screen.getByTestId("register-email-error")).toHaveTextContent(
+      `Не более ${USER_EMAIL_MAX} символов`
+    );
+    expect(mockRegister).not.toHaveBeenCalled();
+  });
+
+  test("показывает ошибку если имя длиннее лимита", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<RegisterPage />);
+    await fillValidForm(user);
+
+    // Act
+    fireEvent.change(screen.getByTestId("register-first-name"), {
+      target: { value: "а".repeat(USER_FIO_PART_MAX + 1) },
+    });
+    await user.click(screen.getByTestId("register-submit"));
+
+    // Assert
+    expect(screen.getByTestId("register-first-name-error")).toHaveTextContent(
+      `Не более ${USER_FIO_PART_MAX} символов`
+    );
+    expect(mockRegister).not.toHaveBeenCalled();
+  });
+
+  test("показывает ошибку если пароль длиннее лимита", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<RegisterPage />);
+    await fillValidForm(user);
+    const longPassword = "a".repeat(USER_PASSWORD_MAX + 1);
+
+    // Act
+    fireEvent.change(screen.getByTestId("register-password"), {
+      target: { value: longPassword },
+    });
+    fireEvent.change(screen.getByTestId("register-confirm-password"), {
+      target: { value: longPassword },
+    });
+    await user.click(screen.getByTestId("register-submit"));
+
+    // Assert
+    expect(screen.getByTestId("register-password-error")).toHaveTextContent(
+      `Не более ${USER_PASSWORD_MAX} символов`
+    );
     expect(mockRegister).not.toHaveBeenCalled();
   });
 

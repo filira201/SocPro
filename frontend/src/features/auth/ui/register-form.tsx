@@ -4,6 +4,11 @@ import { useController, useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 
 import { useRegisterMutation } from "../api/auth.api";
+import {
+  USER_EMAIL_MAX,
+  USER_FIO_PART_MAX,
+  USER_PASSWORD_MAX,
+} from "../model/auth-field-limits";
 import { registerSchema, type RegisterFormValues } from "../model/schemas";
 
 import { getApiErrorMessage } from "@/shared/lib/api-error";
@@ -107,6 +112,7 @@ export function RegisterForm() {
               disabled={isLoading}
               aria-invalid={!!errors.email}
               data-testid="register-email"
+              maxLength={USER_EMAIL_MAX}
               {...register("email")}
             />
             {errors.email?.message ? (
@@ -128,6 +134,7 @@ export function RegisterForm() {
               disabled={isLoading}
               aria-invalid={!!errors.firstName}
               data-testid="register-first-name"
+              maxLength={USER_FIO_PART_MAX}
               {...register("firstName")}
             />
             {errors.firstName?.message ? (
@@ -146,6 +153,7 @@ export function RegisterForm() {
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.lastName}
+              maxLength={USER_FIO_PART_MAX}
               {...register("lastName")}
             />
             {errors.lastName?.message ? (
@@ -162,6 +170,7 @@ export function RegisterForm() {
               className="h-11 text-base"
               disabled={isLoading}
               aria-invalid={!!errors.patronymic}
+              maxLength={USER_FIO_PART_MAX}
               {...register("patronymic")}
             />
             {errors.patronymic?.message ? (
@@ -183,6 +192,7 @@ export function RegisterForm() {
                 disabled={isLoading}
                 aria-invalid={!!errors.password}
                 data-testid="register-password"
+                maxLength={USER_PASSWORD_MAX}
                 {...register("password")}
               />
               {errors.password?.message ? (
@@ -205,6 +215,7 @@ export function RegisterForm() {
                 disabled={isLoading}
                 aria-invalid={!!errors.confirmPassword}
                 data-testid="register-confirm-password"
+                maxLength={USER_PASSWORD_MAX}
                 {...register("confirmPassword")}
               />
               {errors.confirmPassword?.message ? (

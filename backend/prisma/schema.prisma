@@ -14,11 +14,14 @@ datasource db {
 
 model User {
   id          String    @id @default(cuid())
-  email       String    @unique
-  firstName   String
-  lastName    String?
-  patronymic  String?
-  password    String
+  /// До 260 символов — API + VARCHAR в БД.
+  email       String    @unique @db.VarChar(260)
+  /// До 100 символов — API + VARCHAR в БД.
+  firstName   String    @db.VarChar(100)
+  lastName    String?   @db.VarChar(100)
+  patronymic  String?   @db.VarChar(100)
+  /// bcrypt-хэш (60 символов), VARCHAR(255) в БД; plaintext при вводе — до 128.
+  password    String    @db.VarChar(255)
   avatarUrl   String?
   dateOfBirth DateTime?
   createdAt   DateTime  @default(now())

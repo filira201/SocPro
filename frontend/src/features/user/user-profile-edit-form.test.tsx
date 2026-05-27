@@ -296,6 +296,23 @@ describe("UserProfileEditForm — валидация", () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
+  test("показывает ошибку если имя длиннее 100 символов", async () => {
+    // Arrange
+    const { user } = renderEditForm();
+
+    // Act
+    const firstName = document.getElementById(
+      "profile-firstName"
+    ) as HTMLInputElement;
+    await user.clear(firstName);
+    fireEvent.change(firstName, { target: { value: "а".repeat(101) } });
+    await submitForm(user);
+
+    // Assert
+    expect(screen.getByText("Не более 100 символов")).toBeInTheDocument();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
   test("показывает ошибку если имя не на кириллице", async () => {
     // Arrange
     const { user } = renderEditForm();

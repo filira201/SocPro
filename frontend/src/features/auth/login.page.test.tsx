@@ -1,9 +1,10 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { useLoginMutation } from "./api/auth.api";
 import { Component as LoginPage } from "./login.page";
+import { USER_PASSWORD_MAX } from "./model/auth-field-limits";
 
 import { renderWithProviders } from "@/shared/lib/test/render-with-providers";
 import { ROUTES } from "@/shared/model/routes";
@@ -85,6 +86,26 @@ describe("LoginPage", () => {
     );
     expect(screen.getByTestId("login-password-error")).toHaveTextContent(
       "Минимум 6 символов"
+    );
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  test("показывает ошибку если пароль длиннее лимита", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<LoginPage />, {
+      initialRoute: ROUTES.LOGIN,
+    });
+    await fillValidForm(user);
+
+    // Act
+    fireEvent.change(screen.getByTestId("login-password"), {
+      target: { value: "a".repeat(USER_PASSWORD_MAX + 1) },
+    });
+    await user.click(screen.getByTestId("login-submit"));
+
+    // Assert
+    expect(screen.getByTestId("login-password-error")).toHaveTextContent(
+      `Не более ${USER_PASSWORD_MAX} символов`
     );
     expect(mockLogin).not.toHaveBeenCalled();
   });

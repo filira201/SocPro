@@ -1,3 +1,10 @@
+const {
+  USER_EMAIL_MAX,
+  USER_FIO_PART_MAX,
+  USER_PASSWORD_MAX,
+  assertMaxLength,
+} = require("../lib/field-limits");
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Только буквы кириллицы, без пробелов и прочих символов */
@@ -36,6 +43,21 @@ function validateFioPart(value, { optional, label }) {
     return `${label}: только кириллица, без пробелов и других символов`;
   }
 
+  const tooLongMessages = {
+    Имя: `Имя слишком длинное (не более ${USER_FIO_PART_MAX} символов)`,
+    Фамилия: `Фамилия слишком длинная (не более ${USER_FIO_PART_MAX} символов)`,
+    Отчество: `Отчество слишком длинное (не более ${USER_FIO_PART_MAX} символов)`,
+  };
+  const lenErr = assertMaxLength(
+    s,
+    USER_FIO_PART_MAX,
+    tooLongMessages[label] ??
+      `${label} слишком длинное (не более ${USER_FIO_PART_MAX} символов)`,
+  );
+  if (lenErr) {
+    return lenErr.error;
+  }
+
   return null;
 }
 
@@ -60,12 +82,30 @@ function validateRegister({
   patronymic,
   personalDataConsent,
 }) {
-  if (!email || !EMAIL_REGEX.test(String(email))) {
+  const emailStr = email ? String(email) : "";
+  if (!emailStr || !EMAIL_REGEX.test(emailStr)) {
     return "Некорректная почта";
   }
+  const emailLenErr = assertMaxLength(
+    emailStr,
+    USER_EMAIL_MAX,
+    `Почта слишком длинная (не более ${USER_EMAIL_MAX} символов)`,
+  );
+  if (emailLenErr) {
+    return emailLenErr.error;
+  }
 
-  if (!password || String(password).length < 6) {
+  const passwordStr = password ? String(password) : "";
+  if (!passwordStr || passwordStr.length < 6) {
     return "Пароль минимум 6 символов";
+  }
+  const passwordLenErr = assertMaxLength(
+    passwordStr,
+    USER_PASSWORD_MAX,
+    `Пароль слишком длинный (не более ${USER_PASSWORD_MAX} символов)`,
+  );
+  if (passwordLenErr) {
+    return passwordLenErr.error;
   }
 
   if (personalDataConsent !== true) {
@@ -91,12 +131,30 @@ function validateRegister({
 }
 
 function validateLogin({ email, password }) {
-  if (!email || !EMAIL_REGEX.test(String(email))) {
+  const emailStr = email ? String(email) : "";
+  if (!emailStr || !EMAIL_REGEX.test(emailStr)) {
     return "Некорректная почта";
   }
+  const emailLenErr = assertMaxLength(
+    emailStr,
+    USER_EMAIL_MAX,
+    `Почта слишком длинная (не более ${USER_EMAIL_MAX} символов)`,
+  );
+  if (emailLenErr) {
+    return emailLenErr.error;
+  }
 
-  if (!password) {
+  const passwordStr = password ? String(password) : "";
+  if (!passwordStr) {
     return "Введите пароль";
+  }
+  const passwordLenErr = assertMaxLength(
+    passwordStr,
+    USER_PASSWORD_MAX,
+    `Пароль слишком длинный (не более ${USER_PASSWORD_MAX} символов)`,
+  );
+  if (passwordLenErr) {
+    return passwordLenErr.error;
   }
 
   return null;

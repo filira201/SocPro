@@ -19,6 +19,7 @@ import { ProfileSkillsField } from "./profile-skills";
 
 import type { User } from "@/features/auth";
 import { useUpdateUserMutation } from "@/features/auth";
+import { USER_FIO_PART_MAX } from "@/features/auth/model/auth-field-limits";
 import { cn } from "@/shared/lib/css";
 import { Button } from "@/shared/ui/kit/button";
 import { Calendar } from "@/shared/ui/kit/calendar";
@@ -198,6 +199,7 @@ export function UserProfileEditForm({
               id="profile-firstName"
               autoComplete="given-name"
               aria-invalid={Boolean(errors.firstName)}
+              maxLength={USER_FIO_PART_MAX}
               {...register("firstName")}
             />
             {errors.firstName?.message ? (
@@ -210,6 +212,7 @@ export function UserProfileEditForm({
               id="profile-lastName"
               autoComplete="family-name"
               aria-invalid={Boolean(errors.lastName)}
+              maxLength={USER_FIO_PART_MAX}
               {...register("lastName")}
             />
             {errors.lastName?.message ? (
@@ -222,6 +225,7 @@ export function UserProfileEditForm({
               id="profile-patronymic"
               autoComplete="additional-name"
               aria-invalid={Boolean(errors.patronymic)}
+              maxLength={USER_FIO_PART_MAX}
               {...register("patronymic")}
             />
             {errors.patronymic?.message ? (
