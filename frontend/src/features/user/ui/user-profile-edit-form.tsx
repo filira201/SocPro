@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, isAfter, isValid, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Info, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 
@@ -33,6 +33,12 @@ import {
   FieldSet,
 } from "@/shared/ui/kit/field";
 import { Input } from "@/shared/ui/kit/input";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+} from "@/shared/ui/kit/item";
 import {
   Popover,
   PopoverContent,
@@ -168,6 +174,21 @@ export function UserProfileEditForm({
           </Button>
         </div>
       </div>
+
+      <Item
+        role="status"
+        variant="outline"
+        className="border-border bg-muted/40 text-muted-foreground"
+      >
+        <ItemMedia variant="icon">
+          <Info aria-hidden className="size-4" />
+        </ItemMedia>
+        <ItemContent>
+          <ItemDescription className="line-clamp-none text-muted-foreground">
+            Ваши данные будут видны другим пользователям (кроме email)
+          </ItemDescription>
+        </ItemContent>
+      </Item>
 
       {formError ? (
         <p className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
