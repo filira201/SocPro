@@ -15,7 +15,10 @@ const {
   parseSortOldestFirst,
   parseRemoveAttachmentIds,
 } = require("../lib/http-query");
-const { buildPostSearchFilter } = require("../lib/search-filters");
+const {
+  MAX_POST_SEARCH_Q,
+  buildPostSearchFilter,
+} = require("../lib/search-filters");
 const { buildUploadAttachmentData } = require("../lib/attachment-meta");
 const { mapPost, collectCommentLevelsByPost } = require("../lib/feed-mappers");
 
