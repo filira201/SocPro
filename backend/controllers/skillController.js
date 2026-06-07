@@ -2,20 +2,11 @@ const { prisma } = require("../prisma/prismaClient");
 const { cleanSkillKey } = require("../lib/skill-normalize");
 const { resolveOrCreateSkill } = require("../lib/skill-resolve");
 
-const { ID_REGEX } = require("../lib/id");
+const { ID_REGEX, parseCsvIds } = require("../lib/id");
+
 const OBJECT_ID_REGEX = ID_REGEX;
 const MAX_SKILL_RESOLVE_IDS = 30;
-
-function parseSkillIdsParam(value) {
-  if (!value) {
-    return [];
-  }
-
-  return String(value)
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => OBJECT_ID_REGEX.test(s));
-}
+const parseSkillIdsParam = parseCsvIds;
 
 const SkillController = {
   list: async (req, res) => {

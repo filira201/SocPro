@@ -38,7 +38,13 @@ const {
   assertMaxLength,
   assertOptionalMaxLength,
 } = require("../lib/field-limits");
-const { ID_REGEX } = require("../lib/id");
+const { ID_REGEX, parseCsvIds } = require("../lib/id");
+const {
+  normalizeListLimit,
+  parseTruthyQueryFlag,
+  optionalTrimmedString,
+  normalizeOptionalName,
+} = require("../lib/http-query");
 
 const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_USER_DIRECTORY_LIMIT = 10;
@@ -48,63 +54,19 @@ const DEFAULT_USER_PROFILE_PROJECTS_LIMIT = 10;
 const MAX_USER_PROFILE_PROJECTS_LIMIT = 50;
 const MAX_USER_PROFILE_PROJECTS_Q = 200;
 
-function normalizeUserDirectoryLimit(value) {
-  const parsed = Number(value);
+const normalizeUserDirectoryLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_USER_DIRECTORY_LIMIT,
+    maxLimit: MAX_USER_DIRECTORY_LIMIT,
+  });
 
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_USER_DIRECTORY_LIMIT;
-  }
+const normalizeUserProfileProjectsLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_USER_PROFILE_PROJECTS_LIMIT,
+    maxLimit: MAX_USER_PROFILE_PROJECTS_LIMIT,
+  });
 
-  return Math.min(parsed, MAX_USER_DIRECTORY_LIMIT);
-}
-
-function normalizeUserProfileProjectsLimit(value) {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_USER_PROFILE_PROJECTS_LIMIT;
-  }
-
-  return Math.min(parsed, MAX_USER_PROFILE_PROJECTS_LIMIT);
-}
-
-function parseAuthorOnlyProjectsFilter(value) {
-  const v = String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-  return v === "1" || v === "true" || v === "yes";
-}
-
-function optionalTrimmedString(body, key) {
-  if (body[key] === undefined) {
-    return undefined;
-  }
-
-  const s = String(body[key]).trim();
-  return s === "" ? null : s;
-}
-
-const parseCsvIds = (value) => {
-  if (!value) {
-    return [];
-  }
-
-  return String(value)
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => OBJECT_ID_REGEX.test(s));
-};
-
-function normalizeOptionalName(value) {
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  const s = String(value).trim();
-
-  return s === "" ? null : s;
-}
+const parseAuthorOnlyProjectsFilter = parseTruthyQueryFlag;
 
 const UserController = {
   register: async (req, res) => {

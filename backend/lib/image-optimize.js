@@ -122,6 +122,8 @@ async function optimizeUploadedImages(files) {
 }
 
 module.exports = {
+  isSvg,
+  isGif,
   optimizeImageFile,
   optimizeUploadedImages,
   unlinkMulterFiles,

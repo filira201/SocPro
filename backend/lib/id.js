@@ -9,4 +9,57 @@
  */
 const ID_REGEX = /^[a-z0-9]{24,32}$/i;
 
-module.exports = { ID_REGEX };
+const VALID_ID = "507f1f77bcf86cd799439011";
+
+function isValidId(id) {
+  return ID_REGEX.test(String(id));
+}
+
+/** CSV id из query (skills, requiredSkillIds и т.п.). */
+function parseCsvIds(value) {
+  if (!value) {
+    return [];
+  }
+
+  return String(value)
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => ID_REGEX.test(s));
+}
+
+/** Массив или одиночное значение → только валидные id. */
+function filterValidIds(value) {
+  if (value === undefined || value === null || value === "") {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(String).filter((id) => ID_REGEX.test(id));
+  }
+
+  const s = String(value).trim();
+
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).filter((id) => ID_REGEX.test(id));
+      }
+    } catch {
+      return [];
+    }
+
+    return [];
+  }
+
+  return parseCsvIds(s);
+}
+
+module.exports = {
+  ID_REGEX,
+  VALID_ID,
+  isValidId,
+  parseCsvIds,
+  filterValidIds,
+};

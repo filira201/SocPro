@@ -3,25 +3,20 @@ const { sanitizeUser } = require("./_utils");
 const { emitNotificationsInvalidate } = require("../lib/notificationSocket");
 
 const { ID_REGEX } = require("../lib/id");
+const { normalizeListLimit } = require("../lib/http-query");
+const {
+  COMMENT_PREVIEW_MAX,
+  truncateCommentPreview,
+} = require("../lib/notification-preview");
+
 const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
-const COMMENT_PREVIEW_MAX = 120;
 const COMMENT_PREVIEW_TYPES = new Set([
   "POST_COMMENTED",
   "COMMENT_REPLIED",
   "COMMENT_LIKED",
 ]);
-
-function truncateCommentPreview(content) {
-  const trimmed = String(content || "").trim();
-
-  if (trimmed.length <= COMMENT_PREVIEW_MAX) {
-    return trimmed;
-  }
-
-  return `${trimmed.slice(0, COMMENT_PREVIEW_MAX - 1)}…`;
-}
 
 async function attachCommentPreviews(items) {
   const commentIds = [
@@ -64,13 +59,11 @@ async function attachCommentPreviews(items) {
   });
 }
 
-function normalizeLimit(value) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_LIMIT;
-  }
-  return Math.min(parsed, MAX_LIMIT);
-}
+const normalizeLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_LIMIT,
+    maxLimit: MAX_LIMIT,
+  });
 
 function mapNotification(row) {
   return sanitizeUser(row);

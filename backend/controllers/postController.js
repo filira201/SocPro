@@ -8,164 +8,29 @@ const {
   POST_ATTACHMENTS_LIMIT_ERROR,
 } = require("../lib/post-attachments");
 const { POST_CONTENT_MAX, assertMaxLength } = require("../lib/field-limits");
-const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
-
 const { ID_REGEX } = require("../lib/id");
+const {
+  normalizeListLimit,
+  parseTruthyQueryFlag,
+  parseSortOldestFirst,
+  parseRemoveAttachmentIds,
+} = require("../lib/http-query");
+const { buildPostSearchFilter } = require("../lib/search-filters");
+const { buildUploadAttachmentData } = require("../lib/attachment-meta");
+const { mapPost, collectCommentLevelsByPost } = require("../lib/feed-mappers");
+
 const OBJECT_ID_REGEX = ID_REGEX;
-
-function parseRemoveAttachmentIds(value) {
-  if (!value) {
-    return [];
-  }
-
-  const list = Array.isArray(value) ? value : [value];
-
-  return list
-    .map((item) => String(item))
-    .filter((item) => OBJECT_ID_REGEX.test(item));
-}
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
-const MAX_POST_SEARCH_Q = 200;
 
-function normalizeLimit(value) {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_LIMIT;
-  }
-
-  return Math.min(parsed, MAX_LIMIT);
-}
-
-function parseMineOnly(value) {
-  const v = String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-  return v === "1" || v === "true" || v === "yes";
-}
-
-function parseSortOldestFirst(value) {
-  return (
-    String(value ?? "")
-      .trim()
-      .toLowerCase() === "old"
-  );
-}
-
-function buildPostSearchFilter(qRaw) {
-  const q = String(qRaw ?? "").trim();
-
-  if (!q) {
-    return null;
-  }
-
-  const tokens = q.split(/\s+/).filter(Boolean);
-
-  if (!tokens.length) {
-    return null;
-  }
-
-  const tokenClause = (t) => ({
-    OR: [
-      { content: { contains: t, mode: "insensitive" } },
-      { author: { firstName: { contains: t, mode: "insensitive" } } },
-      { author: { lastName: { contains: t, mode: "insensitive" } } },
-      { author: { patronymic: { contains: t, mode: "insensitive" } } },
-    ],
+const normalizeLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_LIMIT,
+    maxLimit: MAX_LIMIT,
   });
 
-  if (tokens.length === 1) {
-    return tokenClause(tokens[0]);
-  }
-
-  return {
-    AND: tokens.map(tokenClause),
-  };
-}
-
-function attachmentData(file) {
-  return {
-    url: `/uploads/${file.filename}`,
-    filename: file.filename,
-    originalName: decodeUploadOriginalName(file.originalname),
-    mimeType: file.mimetype,
-    size: file.size,
-    kind: file.mimetype.startsWith("image/") ? "image" : "document",
-  };
-}
-
-function collectCommentLevelsByPost(comments) {
-  if (!comments.length) {
-    return [];
-  }
-
-  const ids = new Set(comments.map((comment) => comment.id));
-  const childrenByParent = new Map();
-
-  comments.forEach((comment) => {
-    const parentId =
-      comment.parentId && ids.has(comment.parentId) ? comment.parentId : null;
-    const bucket = childrenByParent.get(parentId) || [];
-    bucket.push(comment.id);
-    childrenByParent.set(parentId, bucket);
-  });
-
-  const levels = [];
-  const visited = new Set();
-  let currentLevel = childrenByParent.get(null) || [];
-
-  while (currentLevel.length) {
-    const nextLevel = [];
-    const normalizedLevel = [];
-
-    currentLevel.forEach((id) => {
-      if (visited.has(id)) {
-        return;
-      }
-
-      visited.add(id);
-      normalizedLevel.push(id);
-      nextLevel.push(...(childrenByParent.get(id) || []));
-    });
-
-    if (normalizedLevel.length) {
-      levels.push(normalizedLevel);
-    }
-
-    currentLevel = nextLevel;
-  }
-
-  const remaining = comments
-    .map((comment) => comment.id)
-    .filter((id) => !visited.has(id));
-
-  if (remaining.length) {
-    levels.push(remaining);
-  }
-
-  return levels;
-}
-
-function mapPost(post, userId) {
-  const sanitized = sanitizeUser(post);
-  const likeCount = post.likes?.length ?? 0;
-  const commentCount = post.comments?.length ?? 0;
-  const isEdited =
-    post.updatedAt &&
-    post.createdAt &&
-    new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime();
-
-  return {
-    ...sanitized,
-    likeCount,
-    commentCount,
-    likedByUser: post.likes?.some((like) => like.userId === userId) ?? false,
-    isOwner: post.authorId === userId,
-    isEdited,
-  };
-}
+const parseMineOnly = parseTruthyQueryFlag;
+const attachmentData = buildUploadAttachmentData;
 
 async function getPostForResponse(id, userId) {
   const post = await prisma.post.findUnique({

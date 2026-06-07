@@ -3,87 +3,34 @@ const {
   optimizeUploadedImages,
   unlinkMulterFiles,
 } = require("../lib/image-optimize");
-const {
-  decodeUploadOriginalName,
-  sanitizeUser,
-  displayPublicName,
-} = require("./_utils");
 const { createNotification } = require("../lib/notifications");
 const { COMMENT_CONTENT_MAX, assertMaxLength } = require("../lib/field-limits");
-
 const { ID_REGEX } = require("../lib/id");
+const {
+  normalizeListLimit,
+  parseRemoveAttachmentIds,
+} = require("../lib/http-query");
+const { buildUploadAttachmentData } = require("../lib/attachment-meta");
+const {
+  COMMENT_SORT,
+  normalizeCommentSort,
+  getCommentOrderBy,
+  compareTopComments,
+  mapComment,
+} = require("../lib/feed-mappers");
+
 const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
-const COMMENT_SORT = {
-  NEW: "new",
-  OLD: "old",
-  TOP: "top",
-};
 
-function normalizeLimit(value) {
-  const parsed = Number(value);
+const normalizeLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_LIMIT,
+    maxLimit: MAX_LIMIT,
+  });
 
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_LIMIT;
-  }
-
-  return Math.min(parsed, MAX_LIMIT);
-}
-
-function normalizeSort(value) {
-  if (value === COMMENT_SORT.OLD || value === COMMENT_SORT.TOP) {
-    return value;
-  }
-
-  return COMMENT_SORT.NEW;
-}
-
-function parseRemoveAttachmentIds(value) {
-  if (!value) {
-    return [];
-  }
-
-  const list = Array.isArray(value) ? value : [value];
-
-  return list
-    .map((item) => String(item))
-    .filter((item) => OBJECT_ID_REGEX.test(item));
-}
-
-function attachmentData(file) {
-  return {
-    url: `/uploads/${file.filename}`,
-    filename: file.filename,
-    originalName: decodeUploadOriginalName(file.originalname),
-    mimeType: file.mimetype,
-    size: file.size,
-    kind: file.mimetype.startsWith("image/") ? "image" : "document",
-  };
-}
-
-function mapComment(comment, userId) {
-  const sanitized = sanitizeUser(comment);
-  const isEdited =
-    comment.updatedAt &&
-    comment.createdAt &&
-    new Date(comment.updatedAt).getTime() !==
-      new Date(comment.createdAt).getTime();
-
-  return {
-    ...sanitized,
-    likeCount: comment._count?.likes ?? 0,
-    replyCount: comment._count?.replies ?? 0,
-    likedByUser: (comment.likes?.length ?? 0) > 0,
-    replyToUserId: comment.parent?.userId ?? null,
-    replyToDisplayName: comment.parent?.user
-      ? displayPublicName(comment.parent.user) || null
-      : null,
-    isReply: Boolean(comment.parentId),
-    isOwner: comment.userId === userId,
-    isEdited,
-  };
-}
+const normalizeSort = normalizeCommentSort;
+const attachmentData = buildUploadAttachmentData;
 
 async function getCommentForResponse(id, userId) {
   const comment = await prisma.comment.findUnique({
@@ -143,40 +90,7 @@ async function collectDescendantCommentIdsByLevel(rootId) {
   return levels;
 }
 
-function getOrderBy(sort) {
-  if (sort === COMMENT_SORT.OLD) {
-    return [{ createdAt: "asc" }];
-  }
-
-  if (sort === COMMENT_SORT.TOP) {
-    return [
-      { likes: { _count: "desc" } },
-      { replies: { _count: "desc" } },
-      { createdAt: "desc" },
-    ];
-  }
-
-  return [{ createdAt: "desc" }];
-}
-
-function compareTopComments(a, b) {
-  const aLikes = a._count?.likes ?? 0;
-  const bLikes = b._count?.likes ?? 0;
-  const aReplies = a._count?.replies ?? 0;
-  const bReplies = b._count?.replies ?? 0;
-  const aScore = aLikes + aReplies;
-  const bScore = bLikes + bReplies;
-
-  if (aScore !== bScore) {
-    return bScore - aScore;
-  }
-
-  if (aLikes !== bLikes) {
-    return bLikes - aLikes;
-  }
-
-  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-}
+const getOrderBy = getCommentOrderBy;
 
 const CommentController = {
   createComment: async (req, res) => {

@@ -7,19 +7,17 @@ const {
 } = require("../lib/user-directory-list");
 
 const { ID_REGEX } = require("../lib/id");
+const { normalizeListLimit } = require("../lib/http-query");
+
 const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_FOLLOW_LIST_LIMIT = 10;
 const MAX_FOLLOW_LIST_LIMIT = 50;
 
-function normalizeFollowListLimit(value) {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_FOLLOW_LIST_LIMIT;
-  }
-
-  return Math.min(parsed, MAX_FOLLOW_LIST_LIMIT);
-}
+const normalizeFollowListLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_FOLLOW_LIST_LIMIT,
+    maxLimit: MAX_FOLLOW_LIST_LIMIT,
+  });
 
 const FollowController = {
   listFollowers: async (req, res) => {

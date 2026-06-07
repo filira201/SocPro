@@ -18,10 +18,21 @@ const {
   PROJECT_GOALS_MAX,
 } = require("../lib/project-field-limits");
 const { unlinkUploadByPublicUrl } = require("../lib/upload-unlink");
-const { decodeUploadOriginalName, sanitizeUser } = require("./_utils");
+const { sanitizeUser } = require("./_utils");
 const { createNotification } = require("../lib/notifications");
 const { flattenSkillsDeep } = require("../lib/skill-mapping");
-const { ID_REGEX } = require("../lib/id");
+const { ID_REGEX, parseCsvIds } = require("../lib/id");
+const {
+  normalizeListLimit,
+  parseTruthyQueryFlag,
+  parseSortOldestFirst,
+  parseRequiredSkillIdsFromBody,
+  parseRemoveAttachmentIds,
+  parseAcceptingApplicationsBody,
+} = require("../lib/http-query");
+const {
+  buildProjectDocumentAttachmentData,
+} = require("../lib/attachment-meta");
 
 const OBJECT_ID_REGEX = ID_REGEX;
 const DEFAULT_PROJECT_LIST_LIMIT = 10;
@@ -36,113 +47,16 @@ const PROJECT_STATUSES = new Set([
   "CLOSED",
 ]);
 
-const parseCsvIds = (value) => {
-  if (!value) return [];
-  return String(value)
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => OBJECT_ID_REGEX.test(s));
-};
+const normalizeProjectListLimit = (value) =>
+  normalizeListLimit(value, {
+    defaultLimit: DEFAULT_PROJECT_LIST_LIMIT,
+    maxLimit: MAX_PROJECT_LIST_LIMIT,
+  });
 
-function normalizeProjectListLimit(value) {
-  const parsed = Number(value);
+const parseMemberProjectsFilter = parseTruthyQueryFlag;
+const parseProjectsSortOldestFirst = parseSortOldestFirst;
 
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_PROJECT_LIST_LIMIT;
-  }
-
-  return Math.min(parsed, MAX_PROJECT_LIST_LIMIT);
-}
-
-function parseMemberProjectsFilter(value) {
-  const v = String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-  return v === "1" || v === "true" || v === "yes";
-}
-
-function parseProjectsSortOldestFirst(value) {
-  return (
-    String(value ?? "")
-      .trim()
-      .toLowerCase() === "old"
-  );
-}
-
-function parseRequiredSkillIdsFromBody(raw) {
-  if (raw === undefined || raw === null || raw === "") {
-    return [];
-  }
-  if (Array.isArray(raw)) {
-    return raw.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
-  }
-  const str = String(raw).trim();
-  if (!str) {
-    return [];
-  }
-  if (str.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(str);
-      if (Array.isArray(parsed)) {
-        return parsed.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
-      }
-    } catch {
-      return [];
-    }
-    return [];
-  }
-  return parseCsvIds(str);
-}
-
-function parseRemoveAttachmentIds(value) {
-  if (value === undefined || value === null || value === "") {
-    return [];
-  }
-  if (Array.isArray(value)) {
-    return value.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
-  }
-  const s = String(value).trim();
-  if (s.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(s);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.map(String).filter((id) => OBJECT_ID_REGEX.test(id));
-    } catch {
-      return [];
-    }
-  }
-  return parseCsvIds(s);
-}
-
-function parseAcceptingApplicationsBody(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value === "boolean") {
-    return value;
-  }
-  if (value === "true") {
-    return true;
-  }
-  if (value === "false") {
-    return false;
-  }
-  return null;
-}
-
-function projectDocumentAttachmentData(file) {
-  return {
-    url: `/uploads/${file.filename}`,
-    filename: file.filename,
-    originalName: decodeUploadOriginalName(file.originalname),
-    mimeType: file.mimetype,
-    size: file.size,
-    kind: "document",
-  };
-}
+const projectDocumentAttachmentData = buildProjectDocumentAttachmentData;
 
 const ProjectController = {
   createProject: async (req, res) => {

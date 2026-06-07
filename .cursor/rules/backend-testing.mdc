@@ -1,0 +1,53 @@
+---
+description: Unit-тесты backend — Vitest, Node, AAA, чистые функции lib/ и _utils
+globs: backend/**/*.{test,spec}.js
+alwaysApply: false
+---
+
+# Backend testing (Vitest)
+
+## Стек и команды
+
+- Vitest 4, `environment: "node"` (без jsdom и RTL), `globals: true` (CommonJS backend — не `require("vitest")`).
+- Конфиг: [backend/vitest.config.js](backend/vitest.config.js).
+- `npm run test` — watch; `npm run test:run` — один прогон (CI).
+
+## Размещение файлов
+
+- Тест модуля — рядом с кодом: `lib/skill-normalize.test.js`, `controllers/_utils.test.js`.
+- Общие хелперы (если появятся) — `backend/lib/test/`.
+
+## Что тестировать (unit)
+
+- **Валидация и sanitize:** [backend/controllers/_utils.js](backend/controllers/_utils.js) — `validateRegister`, `validateLogin`, `sanitizeUser`, `sanitizeOwnUser`, `displayPublicName`, `decodeUploadOriginalName`.
+- **Бизнес-логика без HTTP:** модули в [backend/lib/](backend/lib/) — `field-limits`, `project-access`, `project-field-limits`, `skill-normalize`, `skill-resolve`, `skill-mapping`, `user-flatten`, `user-directory-list`, `http-query`, `search-filters`, `feed-mappers`, `attachment-meta`, `notification-preview`, `notifications` (с моком prisma), `image-optimize` (`isSvg`/`isGif`), `id`.
+- Чистые хелперы из контроллеров выносятся в `lib/` (не дублировать в тестах).
+- Тексты assert **буквально** из хелперов (как на frontend из zod-схем).
+
+## Паттерн AAA
+
+Каждый `test` — три блока с комментариями `// Arrange`, `// Act`, `// Assert`. Названия на русском.
+
+```js
+test("возвращает null для корректных данных", () => {
+  // Arrange
+  const payload = { email: "user@example.com", password: "secret1" };
+
+  // Act
+  const error = validateLogin(payload);
+
+  // Assert
+  expect(error).toBeNull();
+});
+```
+
+## Запреты
+
+- Реальная MongoDB / `prisma` без мока.
+- supertest / HTTP в unit-тестах (отдельный уровень, если понадобится позже).
+- Дублировать логику валидации в тестах — вызывать экспортируемые функции.
+
+## Эталоны
+
+- [backend/controllers/_utils.test.js](backend/controllers/_utils.test.js) — регистрация, вход, sanitize.
+- [backend/lib/project-access.test.js](backend/lib/project-access.test.js) — права на проект.

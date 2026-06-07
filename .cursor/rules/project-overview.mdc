@@ -59,6 +59,7 @@ frontend (RTK Query)  --HTTP+JWT-->  backend (/api)
 - Боковая навигация и шапка: [frontend/src/features/navigation/app-sidebar.tsx](frontend/src/features/navigation/app-sidebar.tsx), [frontend/src/features/navigation/app-content-header.tsx](frontend/src/features/navigation/app-content-header.tsx); хлебные крошки — [frontend/src/features/navigation/lib/breadcrumb-from-path.ts](frontend/src/features/navigation/lib/breadcrumb-from-path.ts).
 - Защита роутов: [frontend/src/app/protected-loader.ts](frontend/src/app/protected-loader.ts), [frontend/src/app/protected-route.tsx](frontend/src/app/protected-route.tsx).
 - Тесты frontend / Vitest: [.cursor/rules/frontend-testing.mdc](.cursor/rules/frontend-testing.mdc), [frontend/src/shared/lib/test/](frontend/src/shared/lib/test/), эталон — [register.page.test.tsx](frontend/src/features/auth/register.page.test.tsx); `npm run test:run`.
+- Тесты backend / Vitest: [.cursor/rules/backend-testing.mdc](.cursor/rules/backend-testing.mdc), эталон — [backend/controllers/_utils.test.js](backend/controllers/_utils.test.js); `cd backend && npm run test:run`.
 
 ## Источники документации и MCP
 

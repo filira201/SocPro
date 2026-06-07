@@ -29,7 +29,7 @@ backend/
     applicationController.js
     memberController.js
     notificationController.js
-  lib/                       # общая логика без HTTP (напр. user-directory-list.js, notifications.js)
+  lib/                       # общая логика без HTTP (напр. user-directory-list.js, http-query.js, feed-mappers.js, notifications.js)
   prisma/
     schema.prisma
     prismaClient.js

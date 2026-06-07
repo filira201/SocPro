@@ -6,7 +6,9 @@
     "start": "node ./bin/www",
     "dev": "nodemon ./bin/www",
     "seed:skills": "node ./prisma/seed-skill-aliases.js",
-    "seed:demo": "node ./prisma/seed-demo-users.js"
+    "seed:demo": "node ./prisma/seed-demo-users.js",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
-    "prisma": "^6.7.0"
+    "prisma": "^6.7.0",
+    "vitest": "^4.1.6"
   }
 }
