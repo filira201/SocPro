@@ -120,6 +120,27 @@ describe("RegisterPage", () => {
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
+  test("показывает ссылки на страницу правовой информации в тексте согласия", () => {
+    // Arrange
+    renderWithProviders(<RegisterPage />);
+
+    // Assert
+    expect(screen.getByTestId("register-legal-terms-link")).toHaveAttribute(
+      "href",
+      ROUTES.LEGAL
+    );
+    expect(screen.getByTestId("register-legal-consent-link")).toHaveAttribute(
+      "href",
+      ROUTES.LEGAL
+    );
+    expect(screen.getByTestId("register-legal-terms-link")).toHaveTextContent(
+      "Пользовательским соглашением"
+    );
+    expect(screen.getByTestId("register-legal-consent-link")).toHaveTextContent(
+      "согласие на обработку персональных данных"
+    );
+  });
+
   test("показывает ошибку если не отмечено согласие на обработку персональных данных", async () => {
     // Arrange
     const { user } = renderWithProviders(<RegisterPage />);

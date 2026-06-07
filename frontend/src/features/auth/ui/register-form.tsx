@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useController, useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import { useRegisterMutation } from "../api/auth.api";
 import {
@@ -240,12 +240,28 @@ export function RegisterForm() {
               aria-invalid={!!errors.personalDataConsent}
               data-testid="register-personal-data-consent"
             />
-            <FieldContent className="grid gap-1.5 leading-none">
+            <FieldContent className="min-w-0 flex-1 gap-1">
               <FieldLabel
                 htmlFor="personal-data-consent"
-                className="cursor-pointer font-normal"
+                className="block w-full max-w-none cursor-pointer text-sm font-normal leading-relaxed [&_a]:underline [&_a]:underline-offset-4"
               >
-                Я соглашаюсь на обработку персональных данных
+                Я согласен с{" "}
+                <Link
+                  to={ROUTES.LEGAL}
+                  data-testid="register-legal-terms-link"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Пользовательским соглашением
+                </Link>{" "}
+                и даю{" "}
+                <Link
+                  to={ROUTES.LEGAL}
+                  data-testid="register-legal-consent-link"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  согласие на обработку персональных данных
+                </Link>
+                .
               </FieldLabel>
               {errors.personalDataConsent?.message ? (
                 <FieldError data-testid="register-personal-data-consent-error">

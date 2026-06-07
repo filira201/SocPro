@@ -81,6 +81,10 @@ export const router = createBrowserRouter([
         lazy: () => import("@/features/auth/register.page"),
       },
       {
+        path: ROUTES.LEGAL,
+        lazy: () => import("@/features/legal/legal.page"),
+      },
+      {
         path: ROUTES.HOME,
         loader: () => redirect(ROUTES.POSTS),
       },

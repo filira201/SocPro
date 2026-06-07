@@ -4,6 +4,7 @@ export const PUBLIC_ROUTES = {
   HOME: "/",
   LOGIN: "/login",
   REGISTER: "/register",
+  LEGAL: "/legal",
 } as const;
 
 export const APP_ROUTES = {
