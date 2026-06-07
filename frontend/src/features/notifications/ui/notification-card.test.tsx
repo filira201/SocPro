@@ -45,7 +45,7 @@ describe("NotificationCard", () => {
 
   test("показывает кнопку «прочитать» и вызывает onMarkRead без навигации", async () => {
     // Arrange
-    const notification = makeNotification({ isRead: false });
+    const notification = makeNotification();
     const { user } = renderWithProviders(
       <NotificationCard
         notification={notification}

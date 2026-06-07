@@ -22,7 +22,7 @@ alwaysApply: true
 - `Comment` — `userId`, `postId`, `content` (до **2000**, API + `VARCHAR`), `attachments`, `createdAt`, `updatedAt`. Для изменённых комментариев UI показывает `Изменено`.
 - `CommentAttachment` — файл комментария: `url`, `filename`, `originalName`, `mimeType`, `size`, `kind`, `commentId`.
 - `Follows` — `id`, `followerId`, `followingId`, уникальная пара `@@unique([followerId, followingId])`. Для API списков подписчиков/подписок курсор пагинации привязан к **`Follows.id`** (поля `createdAt` у модели нет).
-- `Notification` — входящее уведомление: `receiverId` → `User`, опционально `actorId` (кто совершил действие), опционально `subjectUserId` (второй участник, напр. приглашённый в staff-событиях), `type: NotificationType`, контекстные `postId`, `commentId`, `projectId`, `applicationId`, при удалении проекта — `projectTitleSnapshot`. `readAt?`, `deleteAt?` (см. ниже), `createdAt`. Индексы: `[receiverId, createdAt]`, `[receiverId, readAt]`, `[deleteAt]`.
+- `Notification` — входящее уведомление: `receiverId` → `User`, опционально `actorId` (кто совершил действие), опционально `subjectUserId` (второй участник, напр. приглашённый в staff-событиях), `type: NotificationType`, контекстные `postId`, `commentId`, `projectId`, `applicationId`, при удалении проекта — `projectTitleSnapshot`, `createdAt`. Индекс: `[receiverId, createdAt]`. В списке только непрочитанные — при прочтении запись удаляется.
 
 ## Связи
 
@@ -81,4 +81,4 @@ model Skill {
 - Уникальные пары — через `@@unique([a, b])` (см. `ProjectMember` и др.); у `ProjectApplication` уникальность пары (проект, соискатель) не в схеме — см. описание модели выше.
 - Mongo не требует миграций — после изменения схемы достаточно `prisma generate`. При удалении полей старые документы Prisma игнорирует.
 - Деструктивные операции (удаление проекта/поста) — в `prisma.$transaction([...])` с `deleteMany` для связанных сущностей.
-- **Уведомления и TTL в Mongo:** при отметке «прочитано» выставляются `readAt` и `deleteAt = readAt + 7 суток`. **Непрочитанные** (`readAt` / `deleteAt` не заданы) не получают `deleteAt` и не удаляются по таймеру. TTL-индекс Prisma не создаёт — один раз вручную в MongoDB: `db.Notification.createIndex({ deleteAt: 1 }, { expireAfterSeconds: 0 })` (коллекция по умолчанию совпадает с именем модели).
+- **Уведомления:** при отметке «прочитано» (одно или все) запись **удаляется сразу** в API; отдельного статуса «прочитано» в БД нет.

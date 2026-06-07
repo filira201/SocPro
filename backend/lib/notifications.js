@@ -2,8 +2,6 @@
  * Создание записей Notification. Ошибки логируются и не ломают основной запрос.
  */
 
-const READ_NOTIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 const { emitNotificationCreated } = require("./notificationSocket");
 
 /** Типы, где получатель совпадает с «инициатором» осмысленно (карточка для себя). */
@@ -12,12 +10,6 @@ const SELF_RECEIVER_TYPES = new Set([
   "PROJECT_APPLICATION_WITHDRAWN_SELF",
   "PROJECT_INVITE_DECLINED_SELF",
 ]);
-
-function computeDeleteAtFromReadAt(readAt) {
-  const t =
-    readAt instanceof Date ? readAt.getTime() : new Date(readAt).getTime();
-  return new Date(t + READ_NOTIFICATION_TTL_MS);
-}
 
 /**
  * @param {import("../generated/prisma").PrismaClient} prisma
@@ -69,9 +61,6 @@ async function createNotification(prisma, payload) {
         projectId: projectId ?? null,
         applicationId: applicationId ?? null,
         projectTitleSnapshot: projectTitleSnapshot ?? null,
-        /** Явный BSON null: иначе в Mongo поле может отсутствовать, и `readAt: null` в where не матчится. */
-        readAt: null,
-        deleteAt: null,
       },
     });
     emitNotificationCreated(receiverId);
@@ -123,8 +112,6 @@ async function notifyProjectStaffExcept(prisma, opts) {
 }
 
 module.exports = {
-  READ_NOTIFICATION_TTL_MS,
-  computeDeleteAtFromReadAt,
   createNotification,
   getProjectStaffUserIds,
   notifyProjectStaffExcept,

@@ -36,10 +36,7 @@ export type Notification = {
   projectId: string | null;
   applicationId: string | null;
   projectTitleSnapshot: string | null;
-  readAt: string | null;
-  deleteAt: string | null;
   createdAt: string;
-  isRead: boolean;
   commentPreview?: string | null;
   commentIsReply?: boolean;
   actor?: User | null;

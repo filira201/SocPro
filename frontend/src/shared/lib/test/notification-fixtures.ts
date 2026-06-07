@@ -20,10 +20,7 @@ export function makeNotification(
     projectId: null,
     applicationId: null,
     projectTitleSnapshot: null,
-    readAt: null,
-    deleteAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    isRead: false,
     actor: {
       id: ACTOR_ID,
       email: "actor@example.com",

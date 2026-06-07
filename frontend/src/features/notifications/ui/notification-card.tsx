@@ -48,12 +48,7 @@ export function NotificationCard({
     <div className="min-w-0 flex-1 space-y-1">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="font-medium leading-snug">{title}</span>
-        {!n.isRead ? (
-          <span
-            className="size-2 shrink-0 rounded-full bg-primary"
-            aria-hidden
-          />
-        ) : null}
+        <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden />
       </div>
       <NotificationDescription notification={n} />
       {when ? <p className="text-xs text-muted-foreground">{when}</p> : null}
@@ -64,7 +59,7 @@ export function NotificationCard({
     "flex gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors",
     target &&
       "cursor-pointer outline-none ring-offset-background hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring",
-    !n.isRead && "border-primary/25 bg-primary/[0.03]"
+    "border-primary/25 bg-primary/[0.03]"
   );
 
   return (
@@ -87,22 +82,20 @@ export function NotificationCard({
       <div className={cn("min-w-0 flex-1", target && "hover:text-foreground")}>
         {textBlock}
       </div>
-      {!n.isRead ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0 self-start text-muted-foreground hover:text-foreground"
-          aria-label="Отметить как прочитанное"
-          disabled={isMarking}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMarkRead(n.id);
-          }}
-        >
-          <Eye className="size-4" />
-        </Button>
-      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0 self-start text-muted-foreground hover:text-foreground"
+        aria-label="Отметить как прочитанное"
+        disabled={isMarking}
+        onClick={(e) => {
+          e.stopPropagation();
+          onMarkRead(n.id);
+        }}
+      >
+        <Eye className="size-4" />
+      </Button>
     </article>
   );
 }

@@ -16,10 +16,7 @@ function baseNotification(overrides: Partial<Notification> = {}): Notification {
     projectId: null,
     applicationId: null,
     projectTitleSnapshot: null,
-    readAt: null,
-    deleteAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    isRead: false,
     ...overrides,
   };
 }

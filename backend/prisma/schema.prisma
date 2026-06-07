@@ -338,13 +338,7 @@ enum MemberRole {
 
 /**
  * Входящее уведомление одному пользователю.
- *
- * Жизненный цикл прочитанных:
- * - `readAt` заполняется при отметке «прочитано».
- * - `deleteAt` = момент удаления документа; при прочтении выставляется `readAt + 7 дней`.
- * - Удаление по таймеру в PostgreSQL делается сервисом приложения
- *   (`backend/lib/notifications-ttl.js`): периодический `deleteMany` по `deleteAt <= now`.
- *   Пока `deleteAt` IS NULL — уведомление не истекает (непрочитанные не удаляются по времени).
+ * В списке только непрочитанные: при отметке «прочитано» (одно или все) запись удаляется.
  */
 model Notification {
   id String @id @default(cuid())
@@ -376,15 +370,9 @@ model Notification {
   /** Снимок названия для `PROJECT_DELETED`, когда проекта уже нет в БД. */
   projectTitleSnapshot String?
 
-  readAt   DateTime?
-  /** Заполняется при прочтении: `readAt + 7d` — автоудаление сервисом TTL по этому полю. */
-  deleteAt DateTime?
-
   createdAt DateTime @default(now())
 
   @@index([receiverId, createdAt])
-  @@index([receiverId, readAt])
-  @@index([deleteAt])
 }
 
 enum NotificationType {

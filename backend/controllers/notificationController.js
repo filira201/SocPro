@@ -1,6 +1,5 @@
 const { prisma } = require("../prisma/prismaClient");
 const { sanitizeUser } = require("./_utils");
-const { computeDeleteAtFromReadAt } = require("../lib/notifications");
 const { emitNotificationsInvalidate } = require("../lib/notificationSocket");
 
 const { ID_REGEX } = require("../lib/id");
@@ -74,12 +73,7 @@ function normalizeLimit(value) {
 }
 
 function mapNotification(row) {
-  const sanitized = sanitizeUser(row);
-  const isRead = row.readAt != null;
-  return {
-    ...sanitized,
-    isRead,
-  };
+  return sanitizeUser(row);
 }
 
 const NotificationController = {
@@ -87,15 +81,9 @@ const NotificationController = {
     const receiverId = req.user.userId;
 
     try {
-      /**
-       * Mongo: у непрочитанных `readAt` может быть BSON `null` или поле отсутствует.
-       * `count({ readAt: null })` не всегда учитывает отсутствие поля — считаем надёжно.
-       */
-      const rows = await prisma.notification.findMany({
+      const count = await prisma.notification.count({
         where: { receiverId },
-        select: { readAt: true },
       });
-      const count = rows.filter((r) => r.readAt == null).length;
       res.json({ count });
     } catch (error) {
       console.error("Error in NotificationController.unreadCount", error);
@@ -152,23 +140,15 @@ const NotificationController = {
     try {
       const row = await prisma.notification.findFirst({
         where: { id, receiverId },
-        select: { id: true, readAt: true },
+        select: { id: true },
       });
 
       if (!row) {
         return res.status(404).json({ error: "Уведомление не найдено" });
       }
 
-      if (row.readAt != null) {
-        return res.json({ ok: true, alreadyRead: true });
-      }
-
-      const now = new Date();
-      const deleteAt = computeDeleteAtFromReadAt(now);
-
-      await prisma.notification.update({
+      await prisma.notification.delete({
         where: { id },
-        data: { readAt: now, deleteAt },
       });
 
       emitNotificationsInvalidate(receiverId);
@@ -184,23 +164,13 @@ const NotificationController = {
     const receiverId = req.user.userId;
 
     try {
-      const now = new Date();
-      const deleteAt = computeDeleteAtFromReadAt(now);
-
-      const unread = await prisma.notification.findMany({
+      const result = await prisma.notification.deleteMany({
         where: { receiverId },
-        select: { id: true, readAt: true },
       });
-      const unreadIds = unread.filter((r) => r.readAt == null).map((r) => r.id);
 
-      if (!unreadIds.length) {
+      if (!result.count) {
         return res.json({ ok: true, updated: 0 });
       }
-
-      const result = await prisma.notification.updateMany({
-        where: { id: { in: unreadIds } },
-        data: { readAt: now, deleteAt },
-      });
 
       emitNotificationsInvalidate(receiverId);
 

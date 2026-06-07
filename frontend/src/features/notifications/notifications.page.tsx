@@ -7,12 +7,15 @@ import {
   useMarkNotificationReadMutation,
 } from "./api/notifications.api";
 import { NotificationCard } from "./ui/notification-card";
+import { NotificationReadConfirmDialog } from "./ui/notification-read-confirm-dialog";
 
 import { getApiErrorMessage } from "@/shared/lib/api-error";
 import { Button } from "@/shared/ui/kit/button";
 import { Spinner } from "@/shared/ui/kit/spinner";
 
 function NotificationsPage() {
+  const [confirmOneId, setConfirmOneId] = useState<string | null>(null);
+  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const requestedCursors = useRef(new Set<string | null>([null]));
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -65,6 +68,28 @@ function NotificationsPage() {
 
   const globalError = isError ? getApiErrorMessage(error) : "";
 
+  const handleConfirmMarkOne = async () => {
+    if (!confirmOneId) {
+      return;
+    }
+
+    try {
+      await markRead(confirmOneId).unwrap();
+      setConfirmOneId(null);
+    } catch {
+      /* диалог остаётся открытым */
+    }
+  };
+
+  const handleConfirmMarkAll = async () => {
+    try {
+      await markAllRead().unwrap();
+      setConfirmAllOpen(false);
+    } catch {
+      /* диалог остаётся открытым */
+    }
+  };
+
   return (
     <section className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -87,12 +112,12 @@ function NotificationsPage() {
           data-testid="notifications-mark-all"
           className="shrink-0 self-start sm:self-auto"
           disabled={unreadTotal === 0 || isMarkingAll}
-          onClick={() => markAllRead()}
+          onClick={() => setConfirmAllOpen(true)}
         >
           {isMarkingAll ? (
             <>
               <Spinner data-icon="inline-start" />
-              Сохранение…
+              Удаление…
             </>
           ) : (
             "Прочитать все"
@@ -120,10 +145,30 @@ function NotificationsPage() {
           <NotificationCard
             key={n.id}
             notification={n}
-            onMarkRead={(id) => markRead(id)}
+            onMarkRead={(id) => setConfirmOneId(id)}
             isMarking={isMarkingOne}
           />
         ))}
+
+        <NotificationReadConfirmDialog
+          open={confirmOneId !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmOneId(null);
+            }
+          }}
+          mode="one"
+          onConfirm={handleConfirmMarkOne}
+          isLoading={isMarkingOne}
+        />
+
+        <NotificationReadConfirmDialog
+          open={confirmAllOpen}
+          onOpenChange={setConfirmAllOpen}
+          mode="all"
+          onConfirm={handleConfirmMarkAll}
+          isLoading={isMarkingAll}
+        />
 
         {isLoading || isFetching ? (
           <div className="flex justify-center py-6 text-muted-foreground">

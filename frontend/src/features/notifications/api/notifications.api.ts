@@ -10,9 +10,7 @@ import { api } from "@/shared/api/api";
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
 
-function normalizeNotificationsQuery(
-  arg: NotificationsQuery | null | undefined | void
-) {
+function normalizeNotificationsQuery(arg: NotificationsQuery | undefined) {
   const limit = arg?.limit ?? DEFAULT_LIMIT;
 
   return {
@@ -91,10 +89,7 @@ export const notificationsApi = api.injectEndpoints({
       providesTags: [{ type: "Notification", id: "UNREAD_COUNT" }],
     }),
 
-    markNotificationRead: builder.mutation<
-      { ok: boolean; alreadyRead?: boolean },
-      string
-    >({
+    markNotificationRead: builder.mutation<{ ok: boolean }, string>({
       query: (id) => ({
         url: `/notifications/${id}/read`,
         method: "PATCH",

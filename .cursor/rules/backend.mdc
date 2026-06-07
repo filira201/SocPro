@@ -109,7 +109,7 @@ res.json(sanitizeOwnUser(currentUser));
 - Ответ поста для frontend должен включать `author`, `attachments`, `likeCount`, `commentCount`, `likedByUser`, `isOwner`, `isEdited`.
 - Ответ комментария должен включать `user`, `attachments`, `isOwner`, `isEdited`.
 - При удалении поста транзакционно удалять связанные comments, likes, post attachments и comment attachments, а также уведомления с `postId` / `commentId` этого поста.
-- **Уведомления** (`NotificationController`, [backend/lib/notifications.js](backend/lib/notifications.js)): **GET `/notifications/unread-count`** → `{ count }`; **GET `/notifications`** — курсор по `Notification.id`, `?cursor=&limit=` (по умолчанию 10, макс. 30), ответ `{ items, nextCursor }`, в элементе есть `type`, `isRead`, `readAt`, `deleteAt`, контекстные id и `actor` / `subjectUser` через `sanitizeUser`; **PATCH `/notifications/read-all`** — пометить все прочитанными (`readAt`, `deleteAt = readAt + 7 суток`); **PATCH `/notifications/:id/read`** — одно уведомление (чужое — 404).
+- **Уведомления** (`NotificationController`, [backend/lib/notifications.js](backend/lib/notifications.js)): **GET `/notifications/unread-count`** → `{ count }` (число записей получателя); **GET `/notifications`** — курсор по `Notification.id`, `?cursor=&limit=` (по умолчанию 10, макс. 30), ответ `{ items, nextCursor }`, в элементе есть `type`, контекстные id и `actor` / `subjectUser` через `sanitizeUser`; **PATCH `/notifications/read-all`** — удалить все уведомления получателя (`{ ok, updated }`); **PATCH `/notifications/:id/read`** — удалить одно уведомление (чужое — 404).
 
 ## Ошибки
 

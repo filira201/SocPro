@@ -45,6 +45,13 @@ const mockedUseMarkAllNotificationsReadMutation = vi.mocked(
 );
 
 function setupDefaultMocks() {
+  mockMarkRead.mockReturnValue({
+    unwrap: vi.fn().mockResolvedValue({ ok: true }),
+  });
+  mockMarkAllRead.mockReturnValue({
+    unwrap: vi.fn().mockResolvedValue({ ok: true, updated: 1 }),
+  });
+
   mockedUseGetUnreadNotificationCountQuery.mockReturnValue({
     data: { count: 1 },
     isLoading: false,
@@ -166,35 +173,7 @@ describe("NotificationsPage", () => {
     expect(screen.getByTestId("notifications-mark-all")).toBeDisabled();
   });
 
-  test("вызывает markAllRead при клике «Прочитать все»", async () => {
-    // Arrange
-    const { user } = renderWithProviders(<NotificationsPage />, {
-      initialRoute: ROUTES.NOTIFICATIONS,
-    });
-
-    // Act
-    await user.click(screen.getByTestId("notifications-mark-all"));
-
-    // Assert
-    expect(mockMarkAllRead).toHaveBeenCalled();
-  });
-
-  test("показывает «Сохранение…» при отметке всех прочитанными", () => {
-    // Arrange
-    mockedUseMarkAllNotificationsReadMutation.mockReturnValue([
-      mockMarkAllRead,
-      { isLoading: true, reset: vi.fn() },
-    ] as ReturnType<typeof useMarkAllNotificationsReadMutation>);
-
-    renderWithProviders(<NotificationsPage />, {
-      initialRoute: ROUTES.NOTIFICATIONS,
-    });
-
-    // Assert
-    expect(screen.getByText("Сохранение…")).toBeInTheDocument();
-  });
-
-  test("вызывает markRead при клике «Отметить как прочитанное» на карточке", async () => {
+  test("открывает диалог при клике «Отметить как прочитанное» без вызова мутации", async () => {
     // Arrange
     const { user } = renderWithProviders(<NotificationsPage />, {
       initialRoute: ROUTES.NOTIFICATIONS,
@@ -206,6 +185,140 @@ describe("NotificationsPage", () => {
     );
 
     // Assert
+    expect(
+      screen.getByRole("dialog", { name: "Вы уверены?" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Уведомление будет прочитано и удалено без возможности восстановления."
+      )
+    ).toBeInTheDocument();
+    expect(mockMarkRead).not.toHaveBeenCalled();
+  });
+
+  test("вызывает markRead после подтверждения одного уведомления", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Отметить как прочитанное" })
+    );
+    await user.click(screen.getByRole("button", { name: "Да" }));
+
+    // Assert
     expect(mockMarkRead).toHaveBeenCalledWith(NOTIFICATION_ID);
+  });
+
+  test("не вызывает markRead при отмене подтверждения одного уведомления", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Act
+    await user.click(
+      screen.getByRole("button", { name: "Отметить как прочитанное" })
+    );
+    await user.click(screen.getByRole("button", { name: "Нет" }));
+
+    // Assert
+    expect(mockMarkRead).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("dialog", { name: "Вы уверены?" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("открывает диалог при клике «Прочитать все» без вызова мутации", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Act
+    await user.click(screen.getByTestId("notifications-mark-all"));
+
+    // Assert
+    expect(
+      screen.getByRole("dialog", { name: "Вы уверены?" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Все непрочитанные уведомления будут прочитаны и удалены без возможности восстановления."
+      )
+    ).toBeInTheDocument();
+    expect(mockMarkAllRead).not.toHaveBeenCalled();
+  });
+
+  test("вызывает markAllRead после подтверждения «Прочитать все»", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Act
+    await user.click(screen.getByTestId("notifications-mark-all"));
+    await user.click(screen.getByRole("button", { name: "Да" }));
+
+    // Assert
+    expect(mockMarkAllRead).toHaveBeenCalled();
+  });
+
+  test("не вызывает markAllRead при отмене «Прочитать все»", async () => {
+    // Arrange
+    const { user } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Act
+    await user.click(screen.getByTestId("notifications-mark-all"));
+    await user.click(screen.getByRole("button", { name: "Нет" }));
+
+    // Assert
+    expect(mockMarkAllRead).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("dialog", { name: "Вы уверены?" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("показывает «Удаление…» на кнопке «Прочитать все» при загрузке", () => {
+    // Arrange
+    mockedUseMarkAllNotificationsReadMutation.mockReturnValue([
+      mockMarkAllRead,
+      { isLoading: true, reset: vi.fn() },
+    ] as ReturnType<typeof useMarkAllNotificationsReadMutation>);
+
+    renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    // Assert
+    expect(screen.getByText("Удаление…")).toBeInTheDocument();
+  });
+
+  test("показывает «Удаление…» в диалоге при отметке одного уведомления", async () => {
+    // Arrange
+    const { user, rerender } = renderWithProviders(<NotificationsPage />, {
+      initialRoute: ROUTES.NOTIFICATIONS,
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Отметить как прочитанное" })
+    );
+
+    mockedUseMarkNotificationReadMutation.mockReturnValue([
+      mockMarkRead,
+      { isLoading: true, reset: vi.fn() },
+    ] as ReturnType<typeof useMarkNotificationReadMutation>);
+
+    // Act
+    rerender(<NotificationsPage />);
+
+    // Assert
+    expect(
+      screen.getByRole("button", { name: /Удаление/ })
+    ).toBeInTheDocument();
   });
 });
