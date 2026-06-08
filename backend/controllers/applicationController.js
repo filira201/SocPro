@@ -14,6 +14,77 @@ const { ID_REGEX } = require("../lib/id");
 const { flattenSkillsDeep } = require("../lib/skill-mapping");
 const OBJECT_ID_REGEX = ID_REGEX;
 
+/**
+ * @param {import("../generated/prisma").PrismaClient} prisma
+ * @param {string} projectId
+ * @param {string} userId
+ */
+async function findMembership(prisma, projectId, userId) {
+  return prisma.projectMember.findFirst({
+    where: { projectId, userId },
+  });
+}
+
+/**
+ * Активная заявка (PENDING или ACCEPTED) на пару (проект, соискатель).
+ * @param {import("../generated/prisma").PrismaClient} prisma
+ * @param {string} projectId
+ * @param {string} applicantId
+ * @param {{ select?: object }} [options]
+ */
+async function findActiveApplication(
+  prisma,
+  projectId,
+  applicantId,
+  options = {},
+) {
+  return prisma.projectApplication.findFirst({
+    where: {
+      projectId,
+      applicantId,
+      status: { in: ["PENDING", "ACCEPTED"] },
+    },
+    ...options,
+  });
+}
+
+/**
+ * Принять заявку: статус ACCEPTED + участник MEMBER в одной транзакции.
+ * @param {import("../generated/prisma").PrismaClient} prisma
+ * @param {{ applicationId: string; projectId: string; applicantId: string; decidedById: string }} params
+ */
+async function acceptApplicationToMembership(
+  prisma,
+  { applicationId, projectId, applicantId, decidedById },
+) {
+  const results = await prisma.$transaction([
+    prisma.projectApplication.update({
+      where: { id: applicationId },
+      data: {
+        status: "ACCEPTED",
+        decidedAt: new Date(),
+        decidedById,
+      },
+    }),
+    prisma.projectMember.upsert({
+      where: {
+        projectId_userId: {
+          projectId,
+          userId: applicantId,
+        },
+      },
+      update: {},
+      create: {
+        projectId,
+        userId: applicantId,
+        role: "MEMBER",
+      },
+    }),
+  ]);
+
+  return results[0];
+}
+
 const ApplicationController = {
   apply: async (req, res) => {
     const { id: projectId } = req.params;
@@ -44,23 +115,23 @@ const ApplicationController = {
         });
       }
 
-      const existingMember = await prisma.projectMember.findFirst({
-        where: { projectId, userId: applicantId },
-      });
+      const existingMember = await findMembership(
+        prisma,
+        projectId,
+        applicantId,
+      );
       if (existingMember) {
         return res
           .status(400)
           .json({ error: "Вы уже являетесь участником проекта" });
       }
 
-      const existingApp = await prisma.projectApplication.findFirst({
-        where: {
-          projectId,
-          applicantId,
-          status: { in: ["PENDING", "ACCEPTED"] },
-        },
-        select: { id: true, invitedById: true },
-      });
+      const existingApp = await findActiveApplication(
+        prisma,
+        projectId,
+        applicantId,
+        { select: { id: true, invitedById: true } },
+      );
       if (existingApp) {
         if (existingApp.invitedById) {
           return res.status(400).json({
@@ -139,9 +210,11 @@ const ApplicationController = {
         return res.status(404).json({ error: "Проект не найден" });
       }
 
-      const membership = await prisma.projectMember.findFirst({
-        where: { projectId, userId: invitingUserId },
-      });
+      const membership = await findMembership(
+        prisma,
+        projectId,
+        invitingUserId,
+      );
 
       if (
         !canManageProjectAsAdminOrOwner(project, invitingUserId, membership)
@@ -169,22 +242,22 @@ const ApplicationController = {
         return res.status(404).json({ error: "Пользователь не найден" });
       }
 
-      const existingMember = await prisma.projectMember.findFirst({
-        where: { projectId, userId: inviteeIdStr },
-      });
+      const existingMember = await findMembership(
+        prisma,
+        projectId,
+        inviteeIdStr,
+      );
       if (existingMember) {
         return res
           .status(400)
           .json({ error: "Пользователь уже в составе проекта" });
       }
 
-      const existingApp = await prisma.projectApplication.findFirst({
-        where: {
-          projectId,
-          applicantId: inviteeIdStr,
-          status: { in: ["PENDING", "ACCEPTED"] },
-        },
-      });
+      const existingApp = await findActiveApplication(
+        prisma,
+        projectId,
+        inviteeIdStr,
+      );
       if (existingApp) {
         return res.status(400).json({ error: "Заявка уже существует" });
       }
@@ -245,9 +318,7 @@ const ApplicationController = {
         return res.status(404).json({ error: "Проект не найден" });
       }
 
-      const membership = await prisma.projectMember.findFirst({
-        where: { projectId, userId },
-      });
+      const membership = await findMembership(prisma, projectId, userId);
 
       if (!canManageProjectAsAdminOrOwner(project, userId, membership)) {
         return res.status(403).json({ error: "Нет доступа" });
@@ -312,9 +383,11 @@ const ApplicationController = {
         return res.status(400).json({ error: "Заявка уже обработана" });
       }
 
-      const existingMember = await prisma.projectMember.findFirst({
-        where: { projectId: application.projectId, userId },
-      });
+      const existingMember = await findMembership(
+        prisma,
+        application.projectId,
+        userId,
+      );
       if (existingMember) {
         return res
           .status(400)
@@ -327,30 +400,12 @@ const ApplicationController = {
         });
       }
 
-      const results = await prisma.$transaction([
-        prisma.projectApplication.update({
-          where: { id },
-          data: {
-            status: "ACCEPTED",
-            decidedAt: new Date(),
-            decidedById: userId,
-          },
-        }),
-        prisma.projectMember.upsert({
-          where: {
-            projectId_userId: {
-              projectId: application.projectId,
-              userId: application.applicantId,
-            },
-          },
-          update: {},
-          create: {
-            projectId: application.projectId,
-            userId: application.applicantId,
-            role: "MEMBER",
-          },
-        }),
-      ]);
+      const accepted = await acceptApplicationToMembership(prisma, {
+        applicationId: id,
+        projectId: application.projectId,
+        applicantId: application.applicantId,
+        decidedById: userId,
+      });
 
       await Promise.all([
         createNotification(prisma, {
@@ -369,7 +424,7 @@ const ApplicationController = {
         }),
       ]);
 
-      res.json(results[0]);
+      res.json(accepted);
     } catch (error) {
       console.error("Error in acceptAsInvitee", error);
       res.status(500).json({ error: "Internal server error" });
@@ -399,9 +454,11 @@ const ApplicationController = {
         return res.status(404).json({ error: "Заявка не найдена" });
       }
 
-      const membership = await prisma.projectMember.findFirst({
-        where: { projectId: application.projectId, userId },
-      });
+      const membership = await findMembership(
+        prisma,
+        application.projectId,
+        userId,
+      );
 
       if (
         !canManageProjectAsAdminOrOwner(application.project, userId, membership)
@@ -421,30 +478,12 @@ const ApplicationController = {
       }
 
       if (status === "ACCEPTED") {
-        const results = await prisma.$transaction([
-          prisma.projectApplication.update({
-            where: { id },
-            data: {
-              status: "ACCEPTED",
-              decidedAt: new Date(),
-              decidedById: userId,
-            },
-          }),
-          prisma.projectMember.upsert({
-            where: {
-              projectId_userId: {
-                projectId: application.projectId,
-                userId: application.applicantId,
-              },
-            },
-            update: {},
-            create: {
-              projectId: application.projectId,
-              userId: application.applicantId,
-              role: "MEMBER",
-            },
-          }),
-        ]);
+        const accepted = await acceptApplicationToMembership(prisma, {
+          applicationId: id,
+          projectId: application.projectId,
+          applicantId: application.applicantId,
+          decidedById: userId,
+        });
 
         await createNotification(prisma, {
           receiverId: application.applicantId,
@@ -454,7 +493,7 @@ const ApplicationController = {
           applicationId: application.id,
         });
 
-        return res.json(results[0]);
+        return res.json(accepted);
       }
 
       const updated = await prisma.projectApplication.update({
@@ -508,9 +547,11 @@ const ApplicationController = {
             .json({ error: "Можно отменить только PENDING заявку" });
         }
       } else {
-        const membership = await prisma.projectMember.findFirst({
-          where: { projectId: application.projectId, userId },
-        });
+        const membership = await findMembership(
+          prisma,
+          application.projectId,
+          userId,
+        );
 
         if (
           !canManageProjectAsAdminOrOwner(

@@ -428,7 +428,7 @@ const ProjectController = {
         ...sanitizeUser(normalized),
         isOwner,
         isMember,
-        myApplication,
+        myApplication: sanitizeUser(myApplication),
         ...(applications !== undefined
           ? { applications: sanitizeUser(applications) }
           : {}),
